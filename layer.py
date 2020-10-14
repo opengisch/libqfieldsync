@@ -77,6 +77,7 @@ class LayerSource(object):
     def __init__(self, layer):
         self.layer = layer
         self._action = None
+        self._cloud_action = None
         self._photo_naming = {}
         self._is_geometry_locked = None
         self.read_layer()
@@ -94,11 +95,13 @@ class LayerSource(object):
 
     def read_layer(self):
         self._action = self.layer.customProperty('QFieldSync/action')
+        self._cloud_action = self.layer.customProperty('QFieldSync/cloud_action')
         self._photo_naming = json.loads(self.layer.customProperty('QFieldSync/photo_naming') or '{}')
         self._is_geometry_locked = self.layer.customProperty('QFieldSync/is_geometry_locked', False)
 
     def apply(self):
         self.layer.setCustomProperty('QFieldSync/action', self.action)
+        self.layer.setCustomProperty('QFieldSync/cloud_action', self.cloud_action)
         self.layer.setCustomProperty('QFieldSync/photo_naming', json.dumps(self._photo_naming))
 
         # custom properties does not store the data type, so it is safer to remove boolean custom properties, rather than setting them to the string 'false' (which is boolean `True`)
@@ -118,6 +121,17 @@ class LayerSource(object):
     def action(self, action):
         self._action = action
 
+    @property
+    def cloud_action(self):
+        if self._cloud_action is None:
+            return self.default_cloud_action
+        else:
+            return self._cloud_action
+
+    @cloud_action.setter
+    def cloud_action(self, action):
+        self._cloud_action = action
+
     def photo_naming(self, field_name: str) -> str:
         return self._photo_naming.get(field_name, "'DCIM/{layername}_' || format_date(now(),'yyyyMMddhhmmsszzz') || '.jpg'".format(layername=slugify(self.layer.name())))
 
@@ -134,6 +148,10 @@ class LayerSource(object):
             return SyncAction.OFFLINE
         else:
             return SyncAction.NO_ACTION
+
+    @property
+    def default_cloud_action(self):
+        return SyncAction.NO_ACTION
 
     @property
     def is_configured(self):
@@ -163,9 +181,35 @@ class LayerSource(object):
         if self.layer.type() == QgsMapLayer.VectorLayer:
             actions.append((SyncAction.OFFLINE, QCoreApplication.translate('LayerAction', 'Offline Editing')))
 
-        actions.append((SyncAction.REMOVE, QCoreApplication.translate('LayerAction', 'Remove')))
+        actions.append((SyncAction.REMOVE, QCoreApplication.translate('LayerAction', 'Remove from Project')))
 
         return actions
+
+    @property
+    def available_cloud_actions(self):
+        actions = []
+
+        actions.append((SyncAction.NO_ACTION, QCoreApplication.translate('LayerAction', 'No Action')))
+
+        if self.layer.type() == QgsMapLayer.VectorLayer and not (self.is_file and not self.storedInlocalizedDataPath):
+            actions.append((SyncAction.OFFLINE, QCoreApplication.translate('LayerAction', 'Offline Editing')))
+
+        actions.append((SyncAction.REMOVE, QCoreApplication.translate('LayerAction', 'Remove from Project')))
+
+        return actions
+
+    def prefered_cloud_action(self, prefer_online):
+        actions = self.available_cloud_actions
+
+        for idx, (action, _text) in enumerate(actions):
+            if prefer_online:
+                if action == SyncAction.NO_ACTION:
+                    return idx, action
+            else:
+                if action == SyncAction.OFFLINE:
+                    return idx, action
+
+        return (-1, None)
 
     @property
     def is_supported(self):

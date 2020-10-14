@@ -15,6 +15,7 @@ class ProjectProperties(object):
     OFFLINE_COPY_ONLY_SELECTED_FEATURES = '/offlineCopyOnlySelectedFeatures'
     ORIGINAL_PROJECT_PATH = '/originalProjectPath'
     IMPORTED_FILES_CHECKSUMS = '/importedFilesChecksums'
+    LAYER_ACTION_PREFERENCE = '/layerActionPreference'
 
     class BaseMapType(object):
 
@@ -130,3 +131,12 @@ class ProjectConfiguration(object):
     @imported_files_checksums.setter
     def imported_files_checksums(self, value):
         self.project.writeEntry('qfieldsync', ProjectProperties.IMPORTED_FILES_CHECKSUMS, value)
+
+    @property
+    def layer_action_preference(self):
+        layer_action_preference, _ = self.project.readEntry('qfieldsync', ProjectProperties.LAYER_ACTION_PREFERENCE)
+        return layer_action_preference
+
+    @layer_action_preference.setter
+    def layer_action_preference(self, value):
+        self.project.writeEntry('qfieldsync', ProjectProperties.LAYER_ACTION_PREFERENCE, value)
