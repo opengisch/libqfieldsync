@@ -19,6 +19,7 @@
  ***************************************************************************/
 """
 
+from typing import Union
 import os
 import platform
 import subprocess
@@ -129,3 +130,18 @@ def copy_images(source_folder, destination_folder):
             # copy the file no matter if it exists or not
             shutil.copyfile(os.path.join(root, name), destination_file_path)
 
+
+def copy_multifile(source_filename: Union[str, Path], dest_filename: Union[str, Path]) -> None:
+    """Copies a file from source to destination. If the file is GPKG, also copies the "-wal" and "-shm" files""" 
+    source = str(source_filename)
+    dest = str(dest_filename)
+
+    if source.endswith('.gpkg'):
+        for suffix in ('-shm', '-wal'):
+            source_path = source + suffix
+            dest_path = dest + suffix
+
+            if Path(source_path).exists():
+                shutil.copyfile(source_path, dest_path)
+
+    shutil.copyfile(source, str(dest_filename))
