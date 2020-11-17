@@ -19,7 +19,7 @@
  ***************************************************************************/
 """
 
-from typing import Union
+from typing import List, Optional, Tuple, Union
 import os
 import platform
 import subprocess
@@ -34,9 +34,9 @@ from qfieldsync.utils.exceptions import NoProjectFoundError, QFieldSyncError
 
 from qgis.PyQt.QtCore import QCoreApplication
 
-def fileparts(fn, extension_dot=True):
-    path = os.path.dirname(fn)
-    basename = os.path.basename(fn)
+def fileparts(filename: str, extension_dot: bool = True) -> Tuple[str, str, str]:
+    path = os.path.dirname(filename)
+    basename = os.path.basename(filename)
     name, ext = os.path.splitext(basename)
     if extension_dot and not ext.startswith(".") and ext:
         ext = "." + ext
@@ -45,17 +45,17 @@ def fileparts(fn, extension_dot=True):
     return (path, name, ext)
 
 
-def get_children_with_extension(parent, specified_ext, count=1):
+def get_children_with_extension(parent: str, specified_ext: str, count: int = 1) -> List[str]:
     if not os.path.isdir(parent):
         raise QFieldSyncError(
             QCoreApplication.translate("QFieldFileUtils","The directory {} could not be found").format(parent))
 
     res = []
     extension_dot = specified_ext.startswith(".")
-    for fn in os.listdir(parent):
-        _, _, ext = fileparts(fn, extension_dot=extension_dot)
+    for filename in os.listdir(parent):
+        _, _, ext = fileparts(filename, extension_dot=extension_dot)
         if ext == specified_ext:
-            res.append(os.path.join(parent, fn))
+            res.append(os.path.join(parent, filename))
     if len(res) != count:
         raise QFieldSyncError(
             QCoreApplication.translate("QFieldFileUtils","Expected {expected_count} children with extension {file_extension} under {parent}, got {real_count}").format(
@@ -64,19 +64,19 @@ def get_children_with_extension(parent, specified_ext, count=1):
     return res
 
 
-def get_full_parent_path(fn):
-    return os.path.dirname(os.path.normpath(fn))
+def get_full_parent_path(filename: str) -> str:
+    return os.path.dirname(os.path.normpath(filename))
 
 
-def get_project_in_folder(folder):
+def get_project_in_folder(path: str) -> str:
     try:
-        return get_children_with_extension(folder, 'qgs', count=1)[0]
+        return get_children_with_extension(path, 'qgs', count=1)[0]
     except QFieldSyncError:
-        message = 'No .qgs file found in folder {}'.format(folder)
+        message = 'No .qgs file found in folder {}'.format(path)
         raise NoProjectFoundError(message)
 
 
-def open_folder(path):
+def open_folder(path: Union[Path, str]) -> None:
     """
     Opens the provided path in a file browser.
     On Windows and Mac, this will open the parent directory
@@ -91,11 +91,11 @@ def open_folder(path):
         subprocess.Popen(["xdg-open", path])
 
 
-def import_file_checksum(folder):
+def import_file_checksum(path: str) -> Optional[str]:
     md5sum = None
-    path = os.path.join(folder, "data.gpkg")
+    path = os.path.join(path, "data.gpkg")
     if not os.path.exists(path):
-        path = os.path.join(folder, "data.sqlite")
+        path = os.path.join(path, "data.sqlite")
     if os.path.exists(path):
         with open(path, 'rb') as f:
             file_data = f.read()
@@ -113,20 +113,20 @@ def slugify(text: str) -> str:
     return slug
 
 
-def copy_images(source_folder, destination_folder):
-    if os.path.isdir(source_folder):
-        if not os.path.isdir(destination_folder):
-            os.mkdir(destination_folder)
-    for root, dirs, files in os.walk(source_folder):
+def copy_images(source_path: str, destination_path: str) -> None:
+    if os.path.isdir(source_path):
+        if not os.path.isdir(destination_path):
+            os.mkdir(destination_path)
+    for root, dirs, files in os.walk(source_path):
         for name in dirs:
             dir_path = os.path.join(root, name)
-            destination_dir_path = os.path.join(destination_folder, os.path.relpath(dir_path, source_folder))
+            destination_dir_path = os.path.join(destination_path, os.path.relpath(dir_path, source_path))
             # create the folder if it does not exists
             if not os.path.isdir(destination_dir_path):
                 os.mkdir(destination_dir_path)
         for name in files:
             file_path = os.path.join(root, name)
-            destination_file_path = os.path.join(destination_folder, os.path.relpath(file_path, source_folder))
+            destination_file_path = os.path.join(destination_path, os.path.relpath(file_path, source_path))
             # copy the file no matter if it exists or not
             shutil.copyfile(os.path.join(root, name), destination_file_path)
 
