@@ -174,14 +174,14 @@ class LayerSource(object):
 
         if self.is_file and not self.storedInlocalizedDataPath:
             actions.append((SyncAction.COPY, QCoreApplication.translate('LayerAction', 'Copy')))
-            actions.append((SyncAction.KEEP_EXISTENT, QCoreApplication.translate('LayerAction', 'Keep Existent (Copy If Missing)')))
+            actions.append((SyncAction.KEEP_EXISTENT, QCoreApplication.translate('LayerAction', 'Keep existent (Copy if missing)')))
         else:
-            actions.append((SyncAction.NO_ACTION, QCoreApplication.translate('LayerAction', 'No Action')))
+            actions.append((SyncAction.NO_ACTION, QCoreApplication.translate('LayerAction', 'Directly access data source')))
 
         if self.layer.type() == QgsMapLayer.VectorLayer:
-            actions.append((SyncAction.OFFLINE, QCoreApplication.translate('LayerAction', 'Offline Editing')))
+            actions.append((SyncAction.OFFLINE, QCoreApplication.translate('LayerAction', 'Offline editing')))
 
-        actions.append((SyncAction.REMOVE, QCoreApplication.translate('LayerAction', 'Remove from Project')))
+        actions.append((SyncAction.REMOVE, QCoreApplication.translate('LayerAction', 'Remove from project')))
 
         return actions
 
@@ -189,12 +189,12 @@ class LayerSource(object):
     def available_cloud_actions(self):
         actions = []
 
-        actions.append((SyncAction.NO_ACTION, QCoreApplication.translate('LayerAction', 'No Action')))
+        actions.append((SyncAction.NO_ACTION, QCoreApplication.translate('LayerAction', 'Directly access data source')))
 
         if self.layer.type() == QgsMapLayer.VectorLayer and not (self.is_file and not self.storedInlocalizedDataPath):
-            actions.append((SyncAction.OFFLINE, QCoreApplication.translate('LayerAction', 'Offline Editing')))
+            actions.append((SyncAction.OFFLINE, QCoreApplication.translate('LayerAction', 'Offline editing')))
 
-        actions.append((SyncAction.REMOVE, QCoreApplication.translate('LayerAction', 'Remove from Project')))
+        actions.append((SyncAction.REMOVE, QCoreApplication.translate('LayerAction', 'Remove from project')))
 
         return actions
 
