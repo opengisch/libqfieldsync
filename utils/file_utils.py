@@ -30,7 +30,7 @@ import shutil
 
 from pathlib import Path
 
-from qfieldsync.utils.exceptions import NoProjectFoundError, QFieldSyncError
+from .exceptions import NoProjectFoundError, QFieldSyncError
 
 from qgis.PyQt.QtCore import QCoreApplication
 
