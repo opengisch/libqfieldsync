@@ -81,8 +81,6 @@ class OfflineConverter(QObject):
         """
 
         project = QgsProject.instance()
-        original_project = project
-
         original_project_path = project.fileName()
         project_filename, _ = os.path.splitext(os.path.basename(original_project_path))
 
