@@ -21,6 +21,7 @@
 
 import os
 import tempfile
+from enum import Enum
 
 from qgis.PyQt.QtCore import (
     QObject,
@@ -39,7 +40,9 @@ from qgis.core import (
     QgsProcessingContext,
     QgsMapLayer,
     QgsProviderRegistry,
-    QgsEditorWidgetSetup
+    QgsEditorWidgetSetup,
+    QgsOfflineEditing,
+    QgsRectangle,
 )
 import qgis
 
@@ -47,13 +50,23 @@ from .layer import LayerSource, SyncAction
 from .project import ProjectProperties, ProjectConfiguration
 from .utils.file_utils import copy_images
 
+class ExportType(Enum):
+    Cable = 'cable'
+    Cloud = 'cloud'
+
 class OfflineConverter(QObject):
     progressStopped = pyqtSignal()
     warning = pyqtSignal(str, str)
     task_progress_updated = pyqtSignal(int, int)
     total_progress_updated = pyqtSignal(int, int, str)
 
-    def __init__(self, project, export_folder, extent, offline_editing):
+    def __init__(self, 
+        project: QgsProject,
+        export_folder: str,
+        extent: QgsRectangle,
+        offline_editing: QgsOfflineEditing,
+        export_type: ExportType = ExportType.Cable):
+
         super(OfflineConverter, self).__init__(parent=None)
         self.__max_task_progress = 0
         self.__offline_layers = list()
@@ -64,6 +77,7 @@ class OfflineConverter(QObject):
         self.trUtf8 = self.tr
 
         self.export_folder = export_folder
+        self.export_type = export_type
         self.extent = extent
         self.offline_editing = offline_editing
         self.project_configuration = ProjectConfiguration(project)
@@ -72,12 +86,9 @@ class OfflineConverter(QObject):
         offline_editing.progressModeSet.connect(self.on_offline_editing_max_changed)
         offline_editing.progressUpdated.connect(self.offline_editing_task_progress)
 
-    def convert(self):
+    def convert(self) -> None:
         """
         Convert the project to a portable project.
-
-        :param offline_editing: The offline editing instance
-        :param export_folder:   The folder to export to
         """
 
         project = QgsProject.instance()
@@ -139,6 +150,7 @@ class OfflineConverter(QObject):
                                                  self.trUtf8('Copying layers…'))
 
                 layer_source = LayerSource(layer)
+                layer_action = layer_source.action if self.export_type == ExportType.Cable else layer_source.cloud_action
                 if not layer_source.is_supported:
                      project.removeMapLayer(layer)
                      continue
@@ -153,7 +165,7 @@ class OfflineConverter(QObject):
                                 # Layer stored in localized data path, skip
                                 continue
 
-                if layer_source.action == SyncAction.OFFLINE:
+                if layer_action == SyncAction.OFFLINE:
                     if self.project_configuration.offline_copy_only_aoi and not self.project_configuration.offline_copy_only_selected_features:
                         layer.selectByRect(self.extent)
                     elif self.project_configuration.offline_copy_only_aoi and self.project_configuration.offline_copy_only_selected_features:
@@ -168,11 +180,11 @@ class OfflineConverter(QObject):
                         key_fields = ','.join([layer.fields()[x].name() for x in layer.primaryKeyAttributes()])
                         layer.setCustomProperty('QFieldSync/sourceDataPrimaryKeys', key_fields)
 
-                elif layer_source.action == SyncAction.COPY:
+                elif layer_action == SyncAction.COPY:
                     copied_files = layer_source.copy(self.export_folder, copied_files)
-                elif layer_source.action == SyncAction.KEEP_EXISTENT:
+                elif layer_action == SyncAction.KEEP_EXISTENT:
                     layer_source.copy(self.export_folder, copied_files, True)
-                elif layer_source.action == SyncAction.REMOVE:
+                elif layer_action == SyncAction.REMOVE:
                     project.removeMapLayer(layer)
 
             project_path = os.path.join(self.export_folder, project_filename + "_qfield.qgs")
