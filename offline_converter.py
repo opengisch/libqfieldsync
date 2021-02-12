@@ -180,7 +180,7 @@ class OfflineConverter(QObject):
                         key_fields = ','.join([layer.fields()[x].name() for x in layer.primaryKeyAttributes()])
                         layer.setCustomProperty('QFieldSync/sourceDataPrimaryKeys', key_fields)
 
-                elif layer_action == SyncAction.COPY:
+                elif layer_action == SyncAction.COPY or layer_action == SyncAction.NO_ACTION:
                     copied_files = layer_source.copy(self.export_folder, copied_files)
                 elif layer_action == SyncAction.KEEP_EXISTENT:
                     layer_source.copy(self.export_folder, copied_files, True)
