@@ -100,15 +100,25 @@ class LayerSource(object):
         self._is_geometry_locked = self.layer.customProperty('QFieldSync/is_geometry_locked', False)
 
     def apply(self):
+        photo_naming_json = json.dumps(self._photo_naming)
+
+        has_changed = False
+        has_changed |= self.layer.customProperty('QFieldSync/action') != self.action
+        has_changed |= self.layer.customProperty('QFieldSync/cloud_action') != self.cloud_action
+        has_changed |= self.layer.customProperty('QFieldSync/photo_naming') != photo_naming_json
+        has_changed |= bool(self.layer.customProperty('QFieldSync/is_geometry_locked')) != self.is_geometry_locked
+
         self.layer.setCustomProperty('QFieldSync/action', self.action)
         self.layer.setCustomProperty('QFieldSync/cloud_action', self.cloud_action)
-        self.layer.setCustomProperty('QFieldSync/photo_naming', json.dumps(self._photo_naming))
+        self.layer.setCustomProperty('QFieldSync/photo_naming', photo_naming_json)
 
         # custom properties does not store the data type, so it is safer to remove boolean custom properties, rather than setting them to the string 'false' (which is boolean `True`)
         if self.is_geometry_locked:
             self.layer.setCustomProperty('QFieldSync/is_geometry_locked', True)
         else:
             self.layer.removeCustomProperty('QFieldSync/is_geometry_locked')
+
+        return has_changed
 
     @property
     def action(self):
