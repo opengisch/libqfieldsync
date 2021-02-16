@@ -151,7 +151,7 @@ class LayerSource(object):
 
     @property
     def default_cloud_action(self):
-        return SyncAction.NO_ACTION
+        return self.available_cloud_actions[0][0]
 
     @property
     def is_configured(self):
@@ -189,10 +189,16 @@ class LayerSource(object):
     def available_cloud_actions(self):
         actions = []
 
-        actions.append((SyncAction.NO_ACTION, QCoreApplication.translate('LayerAction', 'Directly access data source')))
-
-        if self.layer.type() == QgsMapLayer.VectorLayer and not (self.is_file and not self.storedInlocalizedDataPath):
+        if self.layer.type() == QgsMapLayer.VectorLayer:
+            # all vector layers can be converted for offline editting
             actions.append((SyncAction.OFFLINE, QCoreApplication.translate('LayerAction', 'Offline editing')))
+
+            # only online layers support direct access, e.g. PostGIS or WFS
+            if not (self.is_file and not self.storedInlocalizedDataPath):
+                actions.append((SyncAction.NO_ACTION, QCoreApplication.translate('LayerAction', 'Directly access data source')))
+        else:
+            # all other layers support direct acess too, e.g. rasters, WMS, XYZ etc
+            actions.append((SyncAction.NO_ACTION, QCoreApplication.translate('LayerAction', 'Directly access data source')))
 
         actions.append((SyncAction.REMOVE, QCoreApplication.translate('LayerAction', 'Remove from project')))
 
