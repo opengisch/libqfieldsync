@@ -219,10 +219,10 @@ class LayerSource(object):
 
         for idx, (action, _text) in enumerate(actions):
             if prefer_online:
-                if action == SyncAction.NO_ACTION:
+                if action == SyncAction.NO_ACTION.value:
                     return idx, action
             else:
-                if action == SyncAction.OFFLINE:
+                if action == SyncAction.OFFLINE.value:
                     return idx, action
 
         return (-1, None)
