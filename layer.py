@@ -10,7 +10,6 @@ from qgis.core import (
     QgsReadWriteContext,
     QgsProject,
     QgsProviderRegistry,
-    QgsProviderMetadata,
     Qgis
 )
 
@@ -214,15 +213,22 @@ class LayerSource(object):
 
         return actions
 
-    def prefered_cloud_action(self, prefer_online):
+    def preferred_cloud_action(self, prefer_online):
         actions = self.available_cloud_actions
 
         for idx, (action, _text) in enumerate(actions):
             if prefer_online:
-                if action == SyncAction.NO_ACTION.value:
+                if action == SyncAction.NO_ACTION:
                     return idx, action
             else:
-                if action == SyncAction.OFFLINE.value:
+                if (
+                    self.is_file
+                    and not self.storedInlocalizedDataPath
+                    and self.layer.type() != QgsMapLayer.VectorLayer
+                    and action == SyncAction.NO_ACTION
+                ):
+                    return idx, action
+                elif action == SyncAction.OFFLINE:
                     return idx, action
 
         return (-1, None)
