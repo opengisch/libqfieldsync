@@ -205,6 +205,8 @@ class LayerSource(object):
             # only online layers support direct access, e.g. PostGIS or WFS
             if not (self.is_file and not self.storedInlocalizedDataPath):
                 actions.append((SyncAction.NO_ACTION, QCoreApplication.translate('LayerAction', 'Directly access data source')))
+            elif self.is_file and not self.storedInlocalizedDataPath:
+                actions.append((SyncAction.NO_ACTION, QCoreApplication.translate('LayerAction', 'Directly access data source')))
         else:
             # all other layers support direct acess too, e.g. rasters, WMS, XYZ etc
             actions.append((SyncAction.NO_ACTION, QCoreApplication.translate('LayerAction', 'Directly access data source')))
@@ -222,9 +224,9 @@ class LayerSource(object):
                     return idx, action
             else:
                 if (
-                    self.is_file
-                    and not self.storedInlocalizedDataPath
-                    and self.layer.type() != QgsMapLayer.VectorLayer
+                    ((self.is_file
+                    and not self.storedInlocalizedDataPath)
+                    or self.layer.type() != QgsMapLayer.VectorLayer)
                     and action == SyncAction.NO_ACTION
                 ):
                     return idx, action
