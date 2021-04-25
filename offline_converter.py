@@ -264,6 +264,14 @@ class OfflineConverter(QObject):
                             if ews.type() == 'ValueRelation':
                                 widget_config = ews.config()
                                 online_layer_id = widget_config['Layer']
+
+                                if not online_layer_id:
+                                    self.warning.emit(
+                                        self.tr('Bad attribute form configuration'),
+                                        self.tr(f'Field "{field.name()}" in layer "{layer.name()}" has no configured layer in the value relation widget.'),
+                                    )
+                                    continue
+
                                 if project.mapLayer(online_layer_id):
                                     continue
 
