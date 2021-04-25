@@ -341,3 +341,17 @@ class LayerSource(object):
         # reload layer definition
         self.layer.readLayerXml(map_layer_element, context)
         self.layer.reload()
+
+    def find_visible_fields_idx(self, items = None):
+        if items is None:
+            items = self.layer.editFormConfig().tabs()
+
+        result = []
+
+        for item in items:
+            if hasattr(item, 'children'):
+                result += self.find_visible_fields_idx(item.children())
+            else:
+                result.append(item.idx())
+
+        return result

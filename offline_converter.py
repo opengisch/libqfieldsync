@@ -245,6 +245,9 @@ class OfflineConverter(QObject):
 
                 # check if value relations point to offline layers and adjust if necessary
                 for layer in project.mapLayers().values():
+                    layer_source = LayerSource(layer)
+                    fields = layer.fields()
+
                     if layer.type() == QgsMapLayer.VectorLayer:
 
                         # Before QGIS 3.14 the custom properties of a layer are not
@@ -259,7 +262,8 @@ class OfflineConverter(QObject):
                                     'QFieldSync/sourceDataPrimaryKeys',
                                     stored_fields)
 
-                        for field in layer.fields():
+                        for field_idx in layer_source.find_visible_fields_idx():
+                            field = fields.at(field_idx)
                             ews = field.editorWidgetSetup()
                             if ews.type() == 'ValueRelation':
                                 widget_config = ews.config()
@@ -289,7 +293,7 @@ class OfflineConverter(QObject):
                                         loose_layer_id = offline_layer.id()
                                 widget_config['Layer'] = layer_id or loose_layer_id
                                 offline_ews = QgsEditorWidgetSetup(ews.type(), widget_config)
-                                layer.setEditorWidgetSetup(layer.fields().indexOf(field.name()), offline_ews)
+                                layer.setEditorWidgetSetup(fields.indexOf(field.name()), offline_ews)
 
             # Now we have a project state which can be saved as offline project
             QgsProject.instance().write(project_path)
