@@ -10,7 +10,8 @@ from qgis.core import (
     QgsReadWriteContext,
     QgsProject,
     QgsProviderRegistry,
-    Qgis
+    Qgis,
+    QgsAttributeEditorField,
 )
 
 from .utils.file_utils import slugify
@@ -342,16 +343,17 @@ class LayerSource(object):
         self.layer.readLayerXml(map_layer_element, context)
         self.layer.reload()
 
-    def find_visible_fields_idx(self, items = None):
+    def visible_fields_names(self, items = None):
         if items is None:
             items = self.layer.editFormConfig().tabs()
 
+        fields = self.layer.fields()
         result = []
 
         for item in items:
             if hasattr(item, 'children'):
-                result += self.find_visible_fields_idx(item.children())
-            else:
-                result.append(item.idx())
+                result += self.visible_fields_names(item.children())
+            elif isinstance(item, QgsAttributeEditorField):
+                result.append(fields.at(item.idx()).name())
 
         return result
