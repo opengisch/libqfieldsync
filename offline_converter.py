@@ -107,6 +107,7 @@ class OfflineConverter(QObject):
 
             self.total_progress_updated.emit(0, 100, self.trUtf8('Converting project…'))
             self.__offline_layers = list()
+            self.__offline_layer_names = list()
             self.__layers = list(project.mapLayers().values())
 
             original_layer_info = {}
@@ -175,6 +176,7 @@ class OfflineConverter(QObject):
                             'Both "Area of Interest" and "only selected features" options were enabled, tha latter takes precedence.'),
                             'QFieldSync')
                     self.__offline_layers.append(layer)
+                    self.__offline_layer_names.append(layer.name())
 
                     # Store the primary key field name(s) as comma separated custom property
                     if layer.type() == QgsMapLayer.VectorLayer:
@@ -371,7 +373,7 @@ class OfflineConverter(QObject):
 
     @pyqtSlot(int, int)
     def on_offline_editing_next_layer(self, layer_index, layer_count):
-        msg = self.trUtf8('Packaging layer {layer_name}…').format(layer_name=self.__offline_layers[layer_index - 1].name())
+        msg = self.trUtf8('Packaging layer {layer_name}…').format(layer_name=self.__offline_layer_names[layer_index - 1])
         self.total_progress_updated.emit(layer_index, layer_count, msg)
 
     @pyqtSlot('QgsOfflineEditing::ProgressMode', int)
