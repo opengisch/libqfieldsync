@@ -19,11 +19,10 @@
  ***************************************************************************/
 """
 
-from qgis.core import QgsMessageLog, Qgis
+from qgis.core import Qgis, QgsMessageLog
 
 
 class QFieldSyncError(Exception):
-
     def __init__(self, message, exception=None, long_message=None, tag="QFieldSync"):
         """
         an Exception that automatically logs the error to the QgsMessageLog
@@ -51,7 +50,6 @@ class QFieldSyncError(Exception):
 
 
 class NoProjectFoundError(QFieldSyncError):
-
     def __init__(self, message, exception=None, long_message=None, tag="QFieldSync"):
 
         # Call the base class constructor with the parameters it needs

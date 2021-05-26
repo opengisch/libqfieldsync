@@ -19,20 +19,20 @@
  ***************************************************************************/
 """
 
-from typing import List, Optional, Tuple, Union
+import hashlib
 import os
 import platform
-import subprocess
-import hashlib
 import re
-import unicodedata
 import shutil
-
+import subprocess
+import unicodedata
 from pathlib import Path
+from typing import List, Optional, Tuple, Union
+
+from qgis.PyQt.QtCore import QCoreApplication
 
 from .exceptions import NoProjectFoundError, QFieldSyncError
 
-from qgis.PyQt.QtCore import QCoreApplication
 
 def fileparts(filename: str, extension_dot: bool = True) -> Tuple[str, str, str]:
     path = os.path.dirname(filename)
@@ -45,10 +45,15 @@ def fileparts(filename: str, extension_dot: bool = True) -> Tuple[str, str, str]
     return (path, name, ext)
 
 
-def get_children_with_extension(parent: str, specified_ext: str, count: int = 1) -> List[str]:
+def get_children_with_extension(
+    parent: str, specified_ext: str, count: int = 1
+) -> List[str]:
     if not os.path.isdir(parent):
         raise QFieldSyncError(
-            QCoreApplication.translate("QFieldFileUtils","The directory {} could not be found").format(parent))
+            QCoreApplication.translate(
+                "QFieldFileUtils", "The directory {} could not be found"
+            ).format(parent)
+        )
 
     res = []
     extension_dot = specified_ext.startswith(".")
@@ -58,8 +63,16 @@ def get_children_with_extension(parent: str, specified_ext: str, count: int = 1)
             res.append(os.path.join(parent, filename))
     if len(res) != count:
         raise QFieldSyncError(
-            QCoreApplication.translate("QFieldFileUtils","Expected {expected_count} children with extension {file_extension} under {parent}, got {real_count}").format(
-                expected_count=count, file_extension=specified_ext, parent=parent, real_count=len(res)))
+            QCoreApplication.translate(
+                "QFieldFileUtils",
+                "Expected {expected_count} children with extension {file_extension} under {parent}, got {real_count}",
+            ).format(
+                expected_count=count,
+                file_extension=specified_ext,
+                parent=parent,
+                real_count=len(res),
+            )
+        )
 
     return res
 
@@ -70,9 +83,9 @@ def get_full_parent_path(filename: str) -> str:
 
 def get_project_in_folder(path: str) -> str:
     try:
-        return get_children_with_extension(path, 'qgs', count=1)[0]
+        return get_children_with_extension(path, "qgs", count=1)[0]
     except QFieldSyncError:
-        message = 'No .qgs file found in folder {}'.format(path)
+        message = "No .qgs file found in folder {}".format(path)
         raise NoProjectFoundError(message)
 
 
@@ -86,7 +99,7 @@ def open_folder(path: Union[Path, str]) -> None:
     if platform.system() == "Windows":
         subprocess.Popen(r'explorer /select,"{}"'.format(path))
     elif platform.system() == "Darwin":
-        subprocess.Popen(["open", '-R', path])
+        subprocess.Popen(["open", "-R", path])
     else:
         subprocess.Popen(["xdg-open", path])
 
@@ -97,7 +110,7 @@ def import_file_checksum(path: str) -> Optional[str]:
     if not os.path.exists(path):
         path = os.path.join(path, "data.sqlite")
     if os.path.exists(path):
-        with open(path, 'rb') as f:
+        with open(path, "rb") as f:
             file_data = f.read()
             md5sum = hashlib.md5(file_data).hexdigest()
 
@@ -106,9 +119,9 @@ def import_file_checksum(path: str) -> Optional[str]:
 
 def slugify(text: str) -> str:
     # https://stackoverflow.com/q/5574042/1548052
-    slug = unicodedata.normalize('NFKD', text)
-    slug = re.sub(r'[^a-zA-Z0-9]+', '-', slug).strip('-')
-    slug = re.sub(r'[-]+', '-', slug)
+    slug = unicodedata.normalize("NFKD", text)
+    slug = re.sub(r"[^a-zA-Z0-9]+", "-", slug).strip("-")
+    slug = re.sub(r"[-]+", "-", slug)
     slug = slug.lower()
     return slug
 
@@ -120,24 +133,30 @@ def copy_images(source_path: str, destination_path: str) -> None:
     for root, dirs, files in os.walk(source_path):
         for name in dirs:
             dir_path = os.path.join(root, name)
-            destination_dir_path = os.path.join(destination_path, os.path.relpath(dir_path, source_path))
+            destination_dir_path = os.path.join(
+                destination_path, os.path.relpath(dir_path, source_path)
+            )
             # create the folder if it does not exists
             if not os.path.isdir(destination_dir_path):
                 os.mkdir(destination_dir_path)
         for name in files:
             file_path = os.path.join(root, name)
-            destination_file_path = os.path.join(destination_path, os.path.relpath(file_path, source_path))
+            destination_file_path = os.path.join(
+                destination_path, os.path.relpath(file_path, source_path)
+            )
             # copy the file no matter if it exists or not
             shutil.copyfile(os.path.join(root, name), destination_file_path)
 
 
-def copy_multifile(source_filename: Union[str, Path], dest_filename: Union[str, Path]) -> None:
-    """Copies a file from source to destination. If the file is GPKG, also copies the "-wal" and "-shm" files""" 
+def copy_multifile(
+    source_filename: Union[str, Path], dest_filename: Union[str, Path]
+) -> None:
+    """Copies a file from source to destination. If the file is GPKG, also copies the "-wal" and "-shm" files"""
     source = str(source_filename)
     dest = str(dest_filename)
 
-    if source.endswith('.gpkg'):
-        for suffix in ('-shm', '-wal'):
+    if source.endswith(".gpkg"):
+        for suffix in ("-shm", "-wal"):
             source_path = source + suffix
             dest_path = dest + suffix
 
