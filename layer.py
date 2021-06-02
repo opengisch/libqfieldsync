@@ -1,30 +1,40 @@
+import json
 import os
 import shutil
-import json
 
-from qgis.PyQt.QtXml import QDomDocument
-from qgis.PyQt.QtCore import QCoreApplication
 from qgis.core import (
-    QgsDataSourceUri,
-    QgsMapLayer,
-    QgsReadWriteContext,
-    QgsProject,
-    QgsProviderRegistry,
     Qgis,
     QgsAttributeEditorField,
+    QgsDataSourceUri,
+    QgsMapLayer,
+    QgsProject,
+    QgsProviderRegistry,
+    QgsReadWriteContext,
 )
+from qgis.PyQt.QtCore import QCoreApplication
+from qgis.PyQt.QtXml import QDomDocument
 
 from .utils.file_utils import slugify
-
 
 # When copying files, if any of the extension in any of the groups is found,
 # other files with the same extension in the same folder will be copied as well.
 file_extension_groups = [
-    ['.shp', '.shx', '.dbf', '.sbx', '.sbn', '.shp.xml', '.prj','.cpg','.qpj','.qix'],
-    ['.tab','.dat','.map','.xls','.xlsx','.id','.ind','.wks','.dbf'],
-    ['.png','.pgw'],
-    ['.jpg','.jgw'],
-    ['.tif','.tfw','.wld']
+    [
+        ".shp",
+        ".shx",
+        ".dbf",
+        ".sbx",
+        ".sbn",
+        ".shp.xml",
+        ".prj",
+        ".cpg",
+        ".qpj",
+        ".qix",
+    ],
+    [".tab", ".dat", ".map", ".xls", ".xlsx", ".id", ".ind", ".wks", ".dbf"],
+    [".png", ".pgw"],
+    [".jpg", ".jgw"],
+    [".tif", ".tfw", ".wld"],
 ]
 
 
@@ -39,7 +49,7 @@ def get_file_extension_group(filename):
     for group in file_extension_groups:
         for extension in group:
             if filename.endswith(extension):
-                return filename[:-len(extension)], group
+                return filename[: -len(extension)], group
     basename, ext = os.path.splitext(filename)
     return basename, [ext]
 
@@ -51,7 +61,7 @@ class SyncAction(object):
 
     # Make an offline editing copy
     def __init__(self):
-        raise RuntimeError('Should only be used as enumeration')
+        raise RuntimeError("Should only be used as enumeration")
 
     # Take an offline editing copy of this layer
     OFFLINE = "offline"
@@ -63,17 +73,16 @@ class SyncAction(object):
     # Copy action for file based layers
     # - will be made relative
     # - the file(s) will be copied
-    COPY = 'copy'
+    COPY = "copy"
 
     # Keep already copied data or files if existent
-    KEEP_EXISTENT = 'keep_existent'
+    KEEP_EXISTENT = "keep_existent"
 
     # remove from the project
     REMOVE = "remove"
 
 
 class LayerSource(object):
-
     def __init__(self, layer):
         self.layer = layer
         self._action = None
@@ -85,7 +94,9 @@ class LayerSource(object):
         self.storedInlocalizedDataPath = False
         if self.layer.dataProvider() is not None:
             pathResolver = QgsProject.instance().pathResolver()
-            metadata = QgsProviderRegistry.instance().providerMetadata(self.layer.dataProvider().name())
+            metadata = QgsProviderRegistry.instance().providerMetadata(
+                self.layer.dataProvider().name()
+            )
             if metadata is not None:
                 decoded = metadata.decodeUri(self.layer.source())
                 if "path" in decoded:
@@ -94,29 +105,40 @@ class LayerSource(object):
                         self.storedInlocalizedDataPath = True
 
     def read_layer(self):
-        self._action = self.layer.customProperty('QFieldSync/action')
-        self._cloud_action = self.layer.customProperty('QFieldSync/cloud_action')
-        self._photo_naming = json.loads(self.layer.customProperty('QFieldSync/photo_naming') or '{}')
-        self._is_geometry_locked = self.layer.customProperty('QFieldSync/is_geometry_locked', False)
+        self._action = self.layer.customProperty("QFieldSync/action")
+        self._cloud_action = self.layer.customProperty("QFieldSync/cloud_action")
+        self._photo_naming = json.loads(
+            self.layer.customProperty("QFieldSync/photo_naming") or "{}"
+        )
+        self._is_geometry_locked = self.layer.customProperty(
+            "QFieldSync/is_geometry_locked", False
+        )
 
     def apply(self):
         photo_naming_json = json.dumps(self._photo_naming)
 
         has_changed = False
-        has_changed |= self.layer.customProperty('QFieldSync/action') != self.action
-        has_changed |= self.layer.customProperty('QFieldSync/cloud_action') != self.cloud_action
-        has_changed |= self.layer.customProperty('QFieldSync/photo_naming') != photo_naming_json
-        has_changed |= bool(self.layer.customProperty('QFieldSync/is_geometry_locked')) != self.is_geometry_locked
+        has_changed |= self.layer.customProperty("QFieldSync/action") != self.action
+        has_changed |= (
+            self.layer.customProperty("QFieldSync/cloud_action") != self.cloud_action
+        )
+        has_changed |= (
+            self.layer.customProperty("QFieldSync/photo_naming") != photo_naming_json
+        )
+        has_changed |= (
+            bool(self.layer.customProperty("QFieldSync/is_geometry_locked"))
+            != self.is_geometry_locked
+        )
 
-        self.layer.setCustomProperty('QFieldSync/action', self.action)
-        self.layer.setCustomProperty('QFieldSync/cloud_action', self.cloud_action)
-        self.layer.setCustomProperty('QFieldSync/photo_naming', photo_naming_json)
+        self.layer.setCustomProperty("QFieldSync/action", self.action)
+        self.layer.setCustomProperty("QFieldSync/cloud_action", self.cloud_action)
+        self.layer.setCustomProperty("QFieldSync/photo_naming", photo_naming_json)
 
         # custom properties does not store the data type, so it is safer to remove boolean custom properties, rather than setting them to the string 'false' (which is boolean `True`)
         if self.is_geometry_locked:
-            self.layer.setCustomProperty('QFieldSync/is_geometry_locked', True)
+            self.layer.setCustomProperty("QFieldSync/is_geometry_locked", True)
         else:
-            self.layer.removeCustomProperty('QFieldSync/is_geometry_locked')
+            self.layer.removeCustomProperty("QFieldSync/is_geometry_locked")
 
         return has_changed
 
@@ -143,7 +165,12 @@ class LayerSource(object):
         self._cloud_action = action
 
     def photo_naming(self, field_name: str) -> str:
-        return self._photo_naming.get(field_name, "'DCIM/{layername}_' || format_date(now(),'yyyyMMddhhmmsszzz') || '.jpg'".format(layername=slugify(self.layer.name())))
+        return self._photo_naming.get(
+            field_name,
+            "'DCIM/{layername}_' || format_date(now(),'yyyyMMddhhmmsszzz') || '.jpg'".format(
+                layername=slugify(self.layer.name())
+            ),
+        )
 
     def set_photo_naming(self, field_name: str, expression: str):
         self._photo_naming[field_name] = expression
@@ -154,7 +181,7 @@ class LayerSource(object):
             return SyncAction.COPY
         elif not self.is_supported:
             return SyncAction.REMOVE
-        elif self.layer.providerType() == 'postgres':
+        elif self.layer.providerType() == "postgres":
             return SyncAction.OFFLINE
         else:
             return SyncAction.NO_ACTION
@@ -170,7 +197,9 @@ class LayerSource(object):
     @property
     def is_file(self):
         if self.layer.dataProvider() is not None:
-            metadata = QgsProviderRegistry.instance().providerMetadata(self.layer.dataProvider().name())
+            metadata = QgsProviderRegistry.instance().providerMetadata(
+                self.layer.dataProvider().name()
+            )
             if metadata is not None:
                 decoded = metadata.decodeUri(self.layer.source())
                 if "path" in decoded:
@@ -183,15 +212,41 @@ class LayerSource(object):
         actions = list()
 
         if self.is_file and not self.storedInlocalizedDataPath:
-            actions.append((SyncAction.COPY, QCoreApplication.translate('LayerAction', 'Copy')))
-            actions.append((SyncAction.KEEP_EXISTENT, QCoreApplication.translate('LayerAction', 'Keep existent (Copy if missing)')))
+            actions.append(
+                (SyncAction.COPY, QCoreApplication.translate("LayerAction", "Copy"))
+            )
+            actions.append(
+                (
+                    SyncAction.KEEP_EXISTENT,
+                    QCoreApplication.translate(
+                        "LayerAction", "Keep existent (Copy if missing)"
+                    ),
+                )
+            )
         else:
-            actions.append((SyncAction.NO_ACTION, QCoreApplication.translate('LayerAction', 'Directly access data source')))
+            actions.append(
+                (
+                    SyncAction.NO_ACTION,
+                    QCoreApplication.translate(
+                        "LayerAction", "Directly access data source"
+                    ),
+                )
+            )
 
         if self.layer.type() == QgsMapLayer.VectorLayer:
-            actions.append((SyncAction.OFFLINE, QCoreApplication.translate('LayerAction', 'Offline editing')))
+            actions.append(
+                (
+                    SyncAction.OFFLINE,
+                    QCoreApplication.translate("LayerAction", "Offline editing"),
+                )
+            )
 
-        actions.append((SyncAction.REMOVE, QCoreApplication.translate('LayerAction', 'Remove from project')))
+        actions.append(
+            (
+                SyncAction.REMOVE,
+                QCoreApplication.translate("LayerAction", "Remove from project"),
+            )
+        )
 
         return actions
 
@@ -201,18 +256,49 @@ class LayerSource(object):
 
         if self.layer.type() == QgsMapLayer.VectorLayer:
             # all vector layers can be converted for offline editting
-            actions.append((SyncAction.OFFLINE, QCoreApplication.translate('LayerAction', 'Offline editing')))
+            actions.append(
+                (
+                    SyncAction.OFFLINE,
+                    QCoreApplication.translate("LayerAction", "Offline editing"),
+                )
+            )
 
             # only online layers support direct access, e.g. PostGIS or WFS
             if not (self.is_file and not self.storedInlocalizedDataPath):
-                actions.append((SyncAction.NO_ACTION, QCoreApplication.translate('LayerAction', 'Directly access data source')))
+                actions.append(
+                    (
+                        SyncAction.NO_ACTION,
+                        QCoreApplication.translate(
+                            "LayerAction", "Directly access data source"
+                        ),
+                    )
+                )
             elif self.is_file and not self.storedInlocalizedDataPath:
-                actions.append((SyncAction.NO_ACTION, QCoreApplication.translate('LayerAction', 'Directly access data source')))
+                actions.append(
+                    (
+                        SyncAction.NO_ACTION,
+                        QCoreApplication.translate(
+                            "LayerAction", "Directly access data source"
+                        ),
+                    )
+                )
         else:
             # all other layers support direct acess too, e.g. rasters, WMS, XYZ etc
-            actions.append((SyncAction.NO_ACTION, QCoreApplication.translate('LayerAction', 'Directly access data source')))
+            actions.append(
+                (
+                    SyncAction.NO_ACTION,
+                    QCoreApplication.translate(
+                        "LayerAction", "Directly access data source"
+                    ),
+                )
+            )
 
-        actions.append((SyncAction.REMOVE, QCoreApplication.translate('LayerAction', 'Remove from project')))
+        actions.append(
+            (
+                SyncAction.REMOVE,
+                QCoreApplication.translate("LayerAction", "Remove from project"),
+            )
+        )
 
         return actions
 
@@ -225,11 +311,9 @@ class LayerSource(object):
                     return idx, action
             else:
                 if (
-                    ((self.is_file
-                    and not self.storedInlocalizedDataPath)
-                    or self.layer.type() != QgsMapLayer.VectorLayer)
-                    and action == SyncAction.NO_ACTION
-                ):
+                    (self.is_file and not self.storedInlocalizedDataPath)
+                    or self.layer.type() != QgsMapLayer.VectorLayer
+                ) and action == SyncAction.NO_ACTION:
                     return idx, action
                 elif action == SyncAction.OFFLINE:
                     return idx, action
@@ -239,7 +323,7 @@ class LayerSource(object):
     @property
     def is_supported(self):
         # ecw raster
-        if self.layer.source().endswith('ecw'):
+        if self.layer.source().endswith("ecw"):
             return False
         else:
             return True
@@ -258,9 +342,10 @@ class LayerSource(object):
 
     @property
     def warning(self):
-        if self.layer.source().endswith('ecw'):
-            return QCoreApplication.translate('DataSourceWarning',
-                                              'ECW layers are not supported by QField.')
+        if self.layer.source().endswith("ecw"):
+            return QCoreApplication.translate(
+                "DataSourceWarning", "ECW layers are not supported by QField."
+            )
         return None
 
     @property
@@ -280,19 +365,21 @@ class LayerSource(object):
             return
 
         parts = None
-        file_path = ''
-        suffix = ''
-        uri_parts = self.layer.source().split('|', 1)
+        file_path = ""
+        suffix = ""
+        uri_parts = self.layer.source().split("|", 1)
         if len(uri_parts) > 1:
             suffix = uri_parts[1]
 
         if self.layer.dataProvider() is not None:
-            metadata = QgsProviderRegistry.instance().providerMetadata(self.layer.dataProvider().name())
+            metadata = QgsProviderRegistry.instance().providerMetadata(
+                self.layer.dataProvider().name()
+            )
             if metadata is not None:
                 parts = metadata.decodeUri(self.layer.source())
                 if "path" in parts:
                     file_path = parts["path"]
-        if file_path == '':
+        if file_path == "":
             file_path = uri_parts[0]
 
         if os.path.isfile(file_path):
@@ -300,25 +387,31 @@ class LayerSource(object):
             basename, extensions = get_file_extension_group(file_name)
             for ext in extensions:
                 dest_file = os.path.join(target_path, basename + ext)
-                if os.path.exists(os.path.join(source_path, basename + ext)) and \
-                        (keep_existent is False or not os.path.isfile(dest_file)):
+                if os.path.exists(os.path.join(source_path, basename + ext)) and (
+                    keep_existent is False or not os.path.isfile(dest_file)
+                ):
                     shutil.copy(os.path.join(source_path, basename + ext), dest_file)
 
-            new_source = ''
+            new_source = ""
             if Qgis.QGIS_VERSION_INT >= 31200 and self.layer.dataProvider() is not None:
-                metadata = QgsProviderRegistry.instance().providerMetadata(self.layer.dataProvider().name())
+                metadata = QgsProviderRegistry.instance().providerMetadata(
+                    self.layer.dataProvider().name()
+                )
                 if metadata is not None:
                     parts["path"] = os.path.join(target_path, file_name)
                     new_source = metadata.encodeUri(parts)
-            if new_source == '':
-                if self.layer.dataProvider() and self.layer.dataProvider().name == "spatialite":
+            if new_source == "":
+                if (
+                    self.layer.dataProvider()
+                    and self.layer.dataProvider().name == "spatialite"
+                ):
                     uri = QgsDataSourceUri()
                     uri.setDatabase(os.path.join(target_path, file_name))
                     uri.setTable(parts["layerName"])
                     new_source = uri.uri()
                 else:
                     new_source = os.path.join(target_path, file_name)
-                    if suffix != '':
+                    if suffix != "":
                         new_source = "{}|{}".format(new_source, suffix)
 
             self._change_data_source(new_source)
@@ -335,7 +428,9 @@ class LayerSource(object):
         self.layer.writeLayerXml(map_layer_element, document, context)
 
         # modify DOM element with new layer reference
-        map_layer_element.firstChildElement("datasource").firstChild().setNodeValue(new_data_source)
+        map_layer_element.firstChildElement("datasource").firstChild().setNodeValue(
+            new_data_source
+        )
         map_layers_element.appendChild(map_layer_element)
         document.appendChild(map_layers_element)
 
@@ -343,7 +438,7 @@ class LayerSource(object):
         self.layer.readLayerXml(map_layer_element, context)
         self.layer.reload()
 
-    def visible_fields_names(self, items = None):
+    def visible_fields_names(self, items=None):
         if items is None:
             items = self.layer.editFormConfig().tabs()
 
@@ -351,7 +446,7 @@ class LayerSource(object):
         result = []
 
         for item in items:
-            if hasattr(item, 'children'):
+            if hasattr(item, "children"):
                 result += self.visible_fields_names(item.children())
             elif isinstance(item, QgsAttributeEditorField):
                 if item.idx() >= 0:
