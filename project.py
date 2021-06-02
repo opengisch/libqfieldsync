@@ -13,6 +13,8 @@ class ProjectProperties(object):
     ORIGINAL_PROJECT_PATH = "/originalProjectPath"
     IMPORTED_FILES_CHECKSUMS = "/importedFilesChecksums"
     LAYER_ACTION_PREFERENCE = "/layerActionPreference"
+    AREA_OF_INTEREST = "/areaOfInterest"
+    AREA_OF_INTEREST_CRS = "/areaOfInterestCrs"
 
     class BaseMapType(object):
         def __init__(self):
@@ -176,4 +178,28 @@ class ProjectConfiguration(object):
     def layer_action_preference(self, value):
         self.project.writeEntry(
             "qfieldsync", ProjectProperties.LAYER_ACTION_PREFERENCE, value
+        )
+
+    @property
+    def area_of_interest(self):
+        area_of_interest, _ = self.project.readEntry(
+            "qfieldsync", ProjectProperties.AREA_OF_INTEREST
+        )
+        return area_of_interest
+
+    @area_of_interest.setter
+    def area_of_interest(self, value):
+        self.project.writeEntry("qfieldsync", ProjectProperties.AREA_OF_INTEREST, value)
+
+    @property
+    def area_of_interest_crs(self):
+        area_of_interest_crs, _ = self.project.readEntry(
+            "qfieldsync", ProjectProperties.AREA_OF_INTEREST_CRS
+        )
+        return area_of_interest_crs
+
+    @area_of_interest_crs.setter
+    def area_of_interest_crs(self, value):
+        self.project.writeEntry(
+            "qfieldsync", ProjectProperties.AREA_OF_INTEREST_CRS, value
         )

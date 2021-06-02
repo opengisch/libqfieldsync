@@ -28,16 +28,18 @@ from qgis.core import (
     Qgis,
     QgsApplication,
     QgsBilinearRasterResampler,
+    QgsCoordinateReferenceSystem,
+    QgsCoordinateTransform,
     QgsCubicRasterResampler,
     QgsEditorWidgetSetup,
     QgsMapLayer,
     QgsOfflineEditing,
+    QgsPolygon,
     QgsProcessingContext,
     QgsProcessingFeedback,
     QgsProject,
     QgsProviderRegistry,
     QgsRasterLayer,
-    QgsRectangle,
     QgsValueRelationFieldFormatter,
 )
 from qgis.PyQt.QtCore import QCoreApplication, QObject, pyqtSignal, pyqtSlot
@@ -62,7 +64,8 @@ class OfflineConverter(QObject):
         self,
         project: QgsProject,
         export_folder: str,
-        extent: QgsRectangle,
+        area_of_interest_wkt: str,
+        area_of_interest_epsg: str,
         offline_editing: QgsOfflineEditing,
         export_type: ExportType = ExportType.Cable,
     ):
@@ -78,7 +81,13 @@ class OfflineConverter(QObject):
 
         self.export_folder = export_folder
         self.export_type = export_type
-        self.extent = extent
+        self.area_of_interest = QgsPolygon()
+        self.area_of_interest.fromWkt(area_of_interest_wkt)
+        self.area_of_interest_crs = QgsCoordinateReferenceSystem(area_of_interest_epsg)
+
+        assert self.area_of_interest.isValid()
+        assert self.area_of_interest_crs.isValid()
+
         self.offline_editing = offline_editing
         self.project_configuration = ProjectConfiguration(project)
 
@@ -200,7 +209,12 @@ class OfflineConverter(QObject):
                         self.project_configuration.offline_copy_only_aoi
                         and not self.project_configuration.offline_copy_only_selected_features
                     ):
-                        layer.selectByRect(self.extent)
+                        extent = QgsCoordinateTransform(
+                            QgsCoordinateReferenceSystem(self.area_of_interest_crs),
+                            layer.crs(),
+                            QgsProject.instance(),
+                        ).transformBoundingBox(self.area_of_interest.boundingBox())
+                        layer.selectByRect(extent)
                     elif (
                         self.project_configuration.offline_copy_only_aoi
                         and self.project_configuration.offline_copy_only_selected_features
@@ -462,22 +476,28 @@ class OfflineConverter(QObject):
 
         self.total_progress_updated.emit(100, 100, self.tr("Finished"))
 
-    def createBaseMapLayer(self, map_theme, layer, tile_size, map_units_per_pixel):
+    def createBaseMapLayer(self, map_theme, layer_id, tile_size, map_units_per_pixel):
         """
         Create a basemap from map layer(s)
 
-        :param dataPath:             The path where the basemap should be writtent to
-        :param extent:               The extent rectangle in which data shall be fetched
         :param map_theme:            The name of the map theme to be rendered
-        :param layer:                A layer id to be rendered. Will only be used if map_theme is None.
+        :param layer_id:             A layer id to be rendered. Will only be used if map_theme is None.
         :param tile_size:            The extent rectangle in which data shall be fetched
         :param map_units_per_pixel:  Number of map units per pixel (1: 1 m per pixel, 10: 10 m per pixel...)
         """
+        if not layer_id:
+            return
+        project = QgsProject.instance()
+        extent = QgsCoordinateTransform(
+            QgsCoordinateReferenceSystem(self.area_of_interest_crs),
+            project.mapLayer(layer_id).crs(),
+            project,
+        ).transformBoundingBox(self.area_of_interest.boundingBox())
         extent_string = "{},{},{},{}".format(
-            self.extent.xMinimum(),
-            self.extent.xMaximum(),
-            self.extent.yMinimum(),
-            self.extent.yMaximum(),
+            extent.xMinimum(),
+            extent.xMaximum(),
+            extent.yMinimum(),
+            extent.yMaximum(),
         )
 
         alg = (
@@ -489,7 +509,7 @@ class OfflineConverter(QObject):
         params = {
             "EXTENT": extent_string,
             "MAP_THEME": map_theme,
-            "LAYER": layer,
+            "LAYER": layer_id,
             "MAP_UNITS_PER_PIXEL": map_units_per_pixel,
             "TILE_SIZE": tile_size,
             "MAKE_BACKGROUND_TRANSPARENT": False,
