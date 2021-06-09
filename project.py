@@ -15,6 +15,7 @@ class ProjectProperties(object):
     LAYER_ACTION_PREFERENCE = "/layerActionPreference"
     AREA_OF_INTEREST = "/areaOfInterest"
     AREA_OF_INTEREST_CRS = "/areaOfInterestCrs"
+    DIGITIZING_LOGS_LAYER = "/digitizingLogsLayer"
 
     class BaseMapType(object):
         def __init__(self):
@@ -88,6 +89,19 @@ class ProjectConfiguration(object):
     @base_map_layer.setter
     def base_map_layer(self, value):
         self.project.writeEntry("qfieldsync", ProjectProperties.BASE_MAP_LAYER, value)
+
+    @property
+    def digitizing_logs_layer(self):
+        digitizing_logs_layer, _ = self.project.readEntry(
+            "qfieldsync", ProjectProperties.DIGITIZING_LOGS_LAYER
+        )
+        return digitizing_logs_layer
+
+    @digitizing_logs_layer.setter
+    def digitizing_logs_layer(self, value):
+        self.project.writeEntry(
+            "qfieldsync", ProjectProperties.DIGITIZING_LOGS_LAYER, value
+        )
 
     @property
     def base_map_tile_size(self):
