@@ -402,6 +402,10 @@ class OfflineConverter(QObject):
                         for field_name in layer_source.visible_fields_names():
                             if field_name not in original_layer_fields.names():
                                 # handles the `fid` column, that is present only for gpkg
+                                layer.setEditorWidgetSetup(
+                                    layer.fields().indexFromName(field_name),
+                                    QgsEditorWidgetSetup("Hidden", {}),
+                                )
                                 continue
 
                             field = original_layer_fields.field(field_name)
