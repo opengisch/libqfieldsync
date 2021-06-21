@@ -42,7 +42,7 @@ from qgis.core import (
     QgsRasterLayer,
     QgsValueRelationFieldFormatter,
 )
-from qgis.PyQt.QtCore import QCoreApplication, QObject, pyqtSignal, pyqtSlot
+from qgis.PyQt.QtCore import QCoreApplication, QObject, pyqtSignal
 
 from .layer import LayerSource, SyncAction
 from .project import ProjectConfiguration, ProjectProperties
@@ -552,18 +552,15 @@ class OfflineConverter(QObject):
         layer_tree = QgsProject.instance().layerTreeRoot()
         layer_tree.insertLayer(len(layer_tree.children()), new_layer)
 
-    @pyqtSlot(int, int)
     def on_offline_editing_next_layer(self, layer_index, layer_count):
         msg = self.trUtf8("Packaging layer {layer_name}…").format(
             layer_name=self.__offline_layer_names[layer_index - 1]
         )
         self.total_progress_updated.emit(layer_index, layer_count, msg)
 
-    @pyqtSlot("QgsOfflineEditing::ProgressMode", int)
     def on_offline_editing_max_changed(self, _, mode_count):
         self.__max_task_progress = mode_count
 
-    @pyqtSlot(int)
     def offline_editing_task_progress(self, progress):
         self.task_progress_updated.emit(progress, self.__max_task_progress)
 
