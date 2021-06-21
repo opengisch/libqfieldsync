@@ -120,9 +120,9 @@ class OfflineConverter(QObject):
             self.__offline_layer_names = list()
             self.__layers = list(project.mapLayers().values())
 
-            original_layer_info = {}
+            original_layers = {}
             for layer in self.__layers:
-                original_layer_info[layer.id()] = (
+                original_layers[layer.id()] = (
                     layer.source(),
                     layer.name(),
                     layer.fields() if hasattr(layer, "fields") else None,
@@ -131,7 +131,7 @@ class OfflineConverter(QObject):
             # We store the pks of the original vector layers
             # and we check that the primary key fields names don't
             # have a comma in the name
-            original_pk_fields_by_layer_name = {}
+            original_layers_by_name = {}
             for layer in self.__layers:
                 if layer.type() == QgsMapLayer.VectorLayer:
                     keys = []
@@ -139,7 +139,10 @@ class OfflineConverter(QObject):
                         key = layer.fields()[idx].name()
                         assert "," not in key, "Comma in field names not allowed"
                         keys.append(key)
-                    original_pk_fields_by_layer_name[layer.name()] = ",".join(keys)
+                    original_layers_by_name[layer.name()] = {
+                        "id": layer.id(),
+                        "pks": ",".join(keys),
+                    }
 
             self.total_progress_updated.emit(0, 1, self.trUtf8("Creating base map…"))
             # Create the base map before layers are removed
@@ -348,29 +351,53 @@ class OfflineConverter(QObject):
                 # check if value relations point to offline layers and adjust if necessary
                 for layer in project.mapLayers().values():
                     layer_source = LayerSource(layer)
+
                     if layer.type() == QgsMapLayer.VectorLayer:
                         # Before QGIS 3.14 the custom properties of a layer are not
                         # kept into the new layer during the conversion to offline project
                         # So we try to identify the new created layer by its name and
                         # we set the custom properties again.
-                        if not layer.customProperty("QFieldSync/cloudPrimaryKeys"):
+                        if not layer.customProperty("QFieldSync/sourceDataPrimaryKeys"):
                             original_layer_name = layer.name().rsplit(" ", 1)[0]
-                            original_layer_fields = layer.fields()
-                            stored_fields = original_pk_fields_by_layer_name.get(
+                            original_layer_data = original_layers_by_name.get(
                                 original_layer_name, None
                             )
-                            if stored_fields:
-                                layer.setCustomProperty(
-                                    "QFieldSync/sourceDataPrimaryKeys", stored_fields
+
+                            if original_layer_data is None:
+                                self.warning.emit(
+                                    self.tr("QFieldSync"),
+                                    self.tr(
+                                        'Failed to find layer with name "{}". QFieldSync will not package that layer.'
+                                    ).format(original_layer_name),
                                 )
-                        else:
-                            (
-                                original_layer_source,
-                                original_layer_name,
-                                original_layer_fields,
-                            ) = original_layer_info[
-                                layer.customProperty("remoteLayerId")
-                            ]
+                                continue
+
+                            layer.setCustomProperty(
+                                "remoteLayerId", original_layer_data.get("id")
+                            )
+                            layer.setCustomProperty(
+                                "QFieldSync/sourceDataPrimaryKeys",
+                                original_layer_data.get("pks"),
+                            )
+
+                        if (
+                            not layer.customProperty("remoteLayerId")
+                            or layer.customProperty("remoteLayerId")
+                            not in original_layers
+                        ):
+                            self.warning.emit(
+                                self.tr("QFieldSync"),
+                                self.tr(
+                                    'Failed to find layer with name "{}". QFieldSync will not package that layer.'
+                                ).format(layer.name()),
+                            )
+                            continue
+
+                        (
+                            _original_layer_source,
+                            original_layer_name,
+                            original_layer_fields,
+                        ) = original_layers[layer.customProperty("remoteLayerId")]
 
                         for field_name in layer_source.visible_fields_names():
                             if field_name not in original_layer_fields.names():
@@ -384,10 +411,7 @@ class OfflineConverter(QObject):
                                 widget_config = ews.config()
                                 online_referenced_layer_id = widget_config["Layer"]
 
-                                if (
-                                    online_referenced_layer_id
-                                    not in original_layer_info
-                                ):
+                                if online_referenced_layer_id not in original_layers:
                                     offline_referenced_layer = (
                                         QgsValueRelationFieldFormatter.resolveLayer(
                                             widget_config, project
@@ -401,10 +425,7 @@ class OfflineConverter(QObject):
                                             )
                                         )
 
-                                if (
-                                    online_referenced_layer_id
-                                    not in original_layer_info
-                                ):
+                                if online_referenced_layer_id not in original_layers:
                                     self.warning.emit(
                                         self.tr("Bad attribute form configuration"),
                                         self.tr(
@@ -421,9 +442,9 @@ class OfflineConverter(QObject):
                                 for offline_layer in project.mapLayers().values():
                                     if (
                                         offline_layer.customProperty("remoteSource")
-                                        == original_layer_info[
-                                            online_referenced_layer_id
-                                        ][0]
+                                        == original_layers[online_referenced_layer_id][
+                                            0
+                                        ]
                                     ):
                                         #  First try strict matching: the offline layer should have a "remoteSource" property
                                         layer_id = offline_layer.id()
@@ -431,16 +452,16 @@ class OfflineConverter(QObject):
                                     elif (
                                         Qgis.QGIS_VERSION_INT < 31601
                                         and offline_layer.name().startswith(
-                                            original_layer_info[
-                                                online_referenced_layer_id
-                                            ][1]
+                                            original_layers[online_referenced_layer_id][
+                                                1
+                                            ]
                                             + " "
                                         )
                                         or Qgis.QGIS_VERSION_INT >= 31601
                                         and offline_layer.name()
-                                        == original_layer_info[
-                                            online_referenced_layer_id
-                                        ][1]
+                                        == original_layers[online_referenced_layer_id][
+                                            1
+                                        ]
                                     ):
                                         #  If that did not work, go with loose matching
                                         #  On older versions (<31601) the offline layer should start with the online layer name + a translated version of " (offline)"
