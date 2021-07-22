@@ -1,15 +1,19 @@
 import json
 import os
+import re
 import shutil
 
 from qgis.core import (
     Qgis,
     QgsAttributeEditorField,
+    QgsCoordinateTransformContext,
     QgsDataSourceUri,
+    QgsFields,
     QgsMapLayer,
     QgsProject,
     QgsProviderRegistry,
     QgsReadWriteContext,
+    QgsVectorFileWriter,
 )
 from qgis.PyQt.QtCore import QCoreApplication
 from qgis.PyQt.QtXml import QDomDocument
@@ -417,7 +421,105 @@ class LayerSource(object):
             self._change_data_source(new_source)
         return copied_files
 
-    def _change_data_source(self, new_data_source):
+    def convert_to_gpkg(self, target_path):
+        """
+        Convert a layer to geopackage in the target path and adjust its datasource. If
+        a layer is already a geopackage, the dataset will merely be copied to the target
+        path.
+
+        :param layer: The layer to copy
+        :param target_path: A path to a folder into which the data will be copied
+        :param keep_existent: if True and target file already exists, keep it as it is
+        """
+
+        if not self.layer.type() == QgsMapLayer.VectorLayer:
+            return
+
+        parts = None
+        file_path = ""
+        suffix = ""
+        uri_parts = self.layer.source().split("|", 1)
+        if len(uri_parts) > 1:
+            suffix = uri_parts[1]
+
+        if self.layer.dataProvider() is not None:
+            metadata = QgsProviderRegistry.instance().providerMetadata(
+                self.layer.dataProvider().name()
+            )
+            if metadata is not None:
+                parts = metadata.decodeUri(self.layer.source())
+                if "path" in parts:
+                    file_path = parts["path"]
+        if file_path == "":
+            file_path = uri_parts[0]
+
+        dest_file = ""
+        new_source = ""
+        if os.path.isfile(file_path):
+            # check if the source is a geopackage, and merely copy if it's the case
+            source_path, file_name = os.path.split(file_path)
+            if file_name.endswith(".gpkg"):
+                dest_file = os.path.join(target_path, file_name)
+                if not os.path.isfile(dest_file):
+                    shutil.copy(os.path.join(source_path, file_name), dest_file)
+
+                if (
+                    Qgis.QGIS_VERSION_INT >= 31200
+                    and self.layer.dataProvider() is not None
+                ):
+                    metadata = QgsProviderRegistry.instance().providerMetadata(
+                        self.layer.dataProvider().name()
+                    )
+                    if metadata is not None:
+                        parts["path"] = dest_file
+                        new_source = metadata.encodeUri(parts)
+                if new_source == "":
+                    new_source = os.path.join(target_path, file_name)
+                    if suffix != "":
+                        new_source = "{}|{}".format(new_source, suffix)
+
+        layer_subset_string = self.layer.subsetString()
+        if new_source == "":
+            pattern = re.compile("[\W_]+")  # NOQA
+            cleaned_name = pattern.sub("", self.layer.name())
+            dest_file = os.path.join(target_path, "{}.gpkg".format(cleaned_name))
+            suffix = 0
+            while os.path.isfile(dest_file):
+                suffix += 1
+                dest_file = os.path.join(
+                    target_path, "{}_{}.gpkg".format(cleaned_name, suffix)
+                )
+
+            # clone vector layer and strip it of filter, joins, and virtual fields
+            source_layer = self.layer.clone()
+            source_layer.setSubsetString("")
+            source_layer_joins = source_layer.vectorJoins()
+            for join in source_layer_joins:
+                source_layer.removeJoin(join.joinLayerId())
+            fields = source_layer.fields()
+            virtual_field_count = 0
+            for i in range(0, len(fields)):
+                if fields.fieldOrigin(i) == QgsFields.OriginExpression:
+                    source_layer.removeExpressionField(i - virtual_field_count)
+                    virtual_field_count += 1
+
+            options = QgsVectorFileWriter.SaveVectorOptions()
+            options.fileEncoding = "UTF-8"
+            options.driverName = "GPKG"
+            (error, dest_file) = QgsVectorFileWriter.writeAsVectorFormatV2(
+                source_layer, dest_file, QgsCoordinateTransformContext(), options
+            )
+            if error != QgsVectorFileWriter.NoError:
+                return
+            new_source = dest_file
+
+        self._change_data_source(new_source, "ogr")
+        if layer_subset_string:
+            self.layer.setSubsetString(layer_subset_string)
+
+        return dest_file
+
+    def _change_data_source(self, new_data_source, new_provider=None):
         """
         Changes the datasource string of the layer
         """
@@ -433,6 +535,14 @@ class LayerSource(object):
         )
         map_layers_element.appendChild(map_layer_element)
         document.appendChild(map_layers_element)
+
+        if new_provider:
+            map_layer_element.firstChildElement("provider").setAttribute(
+                "encoding", "UTF-8"
+            )
+            map_layer_element.firstChildElement("provider").firstChild().setNodeValue(
+                new_provider
+            )
 
         # reload layer definition
         self.layer.readLayerXml(map_layer_element, context)
