@@ -432,7 +432,10 @@ class LayerSource(object):
         :param keep_existent: if True and target file already exists, keep it as it is
         """
 
-        if not self.layer.type() == QgsMapLayer.VectorLayer:
+        if (
+            not self.layer.type() == QgsMapLayer.VectorLayer
+            or not self.layer.dataProvider()
+        ):
             return
 
         parts = None
@@ -442,41 +445,39 @@ class LayerSource(object):
         if len(uri_parts) > 1:
             suffix = uri_parts[1]
 
-        if self.layer.dataProvider() is not None:
-            metadata = QgsProviderRegistry.instance().providerMetadata(
-                self.layer.dataProvider().name()
-            )
-            if metadata is not None:
-                parts = metadata.decodeUri(self.layer.source())
-                if "path" in parts:
-                    file_path = parts["path"]
+        metadata = QgsProviderRegistry.instance().providerMetadata(
+            self.layer.dataProvider().name()
+        )
+        if metadata is not None:
+            parts = metadata.decodeUri(self.layer.source())
+            if "path" in parts:
+                file_path = parts["path"]
         if file_path == "":
             file_path = uri_parts[0]
 
         dest_file = ""
         new_source = ""
-        if os.path.isfile(file_path):
-            # check if the source is a geopackage, and merely copy if it's the case
+        # check if the source is a geopackage, and merely copy if it's the case
+        if (
+            os.path.isfile(file_path)
+            and self.layer.dataProvider().storageType() == "GPKG"
+        ):
             source_path, file_name = os.path.split(file_path)
-            if file_name.endswith(".gpkg"):
-                dest_file = os.path.join(target_path, file_name)
-                if not os.path.isfile(dest_file):
-                    shutil.copy(os.path.join(source_path, file_name), dest_file)
+            dest_file = os.path.join(target_path, file_name)
+            if not os.path.isfile(dest_file):
+                shutil.copy(os.path.join(source_path, file_name), dest_file)
 
-                if (
-                    Qgis.QGIS_VERSION_INT >= 31200
-                    and self.layer.dataProvider() is not None
-                ):
-                    metadata = QgsProviderRegistry.instance().providerMetadata(
-                        self.layer.dataProvider().name()
-                    )
-                    if metadata is not None:
-                        parts["path"] = dest_file
-                        new_source = metadata.encodeUri(parts)
-                if new_source == "":
-                    new_source = os.path.join(target_path, file_name)
-                    if suffix != "":
-                        new_source = "{}|{}".format(new_source, suffix)
+            if Qgis.QGIS_VERSION_INT >= 31200:
+                metadata = QgsProviderRegistry.instance().providerMetadata(
+                    self.layer.dataProvider().name()
+                )
+                if metadata is not None:
+                    parts["path"] = dest_file
+                    new_source = metadata.encodeUri(parts)
+            if new_source == "":
+                new_source = os.path.join(target_path, file_name)
+                if suffix != "":
+                    new_source = "{}|{}".format(new_source, suffix)
 
         layer_subset_string = self.layer.subsetString()
         if new_source == "":
