@@ -541,7 +541,6 @@ class OfflineConverter(QObject):
     def on_offline_editing_max_changed(self, _, mode_count):
         self.__max_task_progress = mode_count
 
-    @pyqtSlot(int)
     def offline_editing_task_progress(self, progress):
         self.task_progress_updated.emit(progress, self.__max_task_progress)
 
