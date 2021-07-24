@@ -538,7 +538,6 @@ class OfflineConverter(QObject):
         )
         self.total_progress_updated.emit(layer_index, layer_count, msg)
 
-    @pyqtSlot("QgsOfflineEditing::ProgressMode", int)
     def on_offline_editing_max_changed(self, _, mode_count):
         self.__max_task_progress = mode_count
 
