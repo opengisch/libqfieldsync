@@ -47,6 +47,7 @@ from qgis.PyQt.QtCore import QCoreApplication, QObject, pyqtSignal, pyqtSlot
 from .layer import LayerSource, SyncAction
 from .project import ProjectConfiguration, ProjectProperties
 from .utils.file_utils import copy_images
+from .utils.xml import get_themapcanvas
 
 
 class ExportType(Enum):
@@ -103,6 +104,12 @@ class OfflineConverter(QObject):
         project = QgsProject.instance()
         original_project_path = project.fileName()
         project_filename = project.baseName()
+        xml_elements_to_preserve = {}
+
+        on_original_project_read = self._on_original_project_read_wrapper(xml_elements_to_preserve)
+        project.readProject.connect(on_original_project_read)
+        project.read(project.fileName())
+        project.readProject.disconnect(on_original_project_read)
 
         # Write a backup of the current project to a temporary file
         project_backup_folder = tempfile.mkdtemp()
@@ -455,7 +462,10 @@ class OfflineConverter(QObject):
                                 )
 
             # Now we have a project state which can be saved as offline project
+            on_original_project_write = self._on_original_project_write_wrapper(xml_elements_to_preserve)
+            project.writeProject.connect(on_original_project_write)
             QgsProject.instance().write(project_path)
+            project.writeProject.disconnect(on_original_project_write)
         finally:
             # We need to let the app handle events before loading the next project or QGIS will crash with rasters
             QCoreApplication.processEvents()
@@ -540,6 +550,18 @@ class OfflineConverter(QObject):
 
     def on_offline_editing_max_changed(self, _, mode_count):
         self.__max_task_progress = mode_count
+
+    def _on_original_project_read_wrapper(self, elements):
+        def on_original_project_read(doc):
+            if not elements.get('map_canvas'):
+                elements['map_canvas'] = elements.get('map_canvas', get_themapcanvas(doc))
+        return on_original_project_read
+
+    def _on_original_project_write_wrapper(self, elements):
+        def on_original_project_write(doc):
+            if not get_themapcanvas(doc) and elements.get('map_canvas'):
+                doc.elementsByTagName('qgis').at(0).appendChild(elements.get('map_canvas'))
+        return on_original_project_write
 
     def offline_editing_task_progress(self, progress):
         self.task_progress_updated.emit(progress, self.__max_task_progress)
