@@ -434,7 +434,7 @@ class LayerSource(object):
 
         if (
             not self.layer.type() == QgsMapLayer.VectorLayer
-            or not self.layer.dataProvider()
+            or not self.layer.isValid()
         ):
             return
 
