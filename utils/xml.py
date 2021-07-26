@@ -18,7 +18,9 @@
 """
 
 from typing import Optional
+
 from PyQt5.QtXml import QDomDocument, QDomElement
+
 
 def get_themapcanvas(doc: QDomDocument) -> Optional[QDomElement]:
     """Find the "themapcanvas" DOM element in the QGIS project file.
@@ -36,10 +38,7 @@ def get_themapcanvas(doc: QDomDocument) -> Optional[QDomElement]:
     for i in range(nodes.size()):
         node = nodes.item(i)
         el = node.toElement()
-        if (
-            el.hasAttribute("name")
-            and el.attribute("name") == "theMapCanvas"
-        ):
+        if el.hasAttribute("name") and el.attribute("name") == "theMapCanvas":
             return el
 
     return None

@@ -432,10 +432,7 @@ class LayerSource(object):
         :param keep_existent: if True and target file already exists, keep it as it is
         """
 
-        if (
-            not self.layer.type() == QgsMapLayer.VectorLayer
-            or not self.layer.isValid()
-        ):
+        if not self.layer.type() == QgsMapLayer.VectorLayer or not self.layer.isValid():
             return
 
         parts = None

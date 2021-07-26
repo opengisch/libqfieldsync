@@ -106,7 +106,9 @@ class OfflineConverter(QObject):
         project_filename = project.baseName()
         xml_elements_to_preserve = {}
 
-        on_original_project_read = self._on_original_project_read_wrapper(xml_elements_to_preserve)
+        on_original_project_read = self._on_original_project_read_wrapper(
+            xml_elements_to_preserve
+        )
         project.readProject.connect(on_original_project_read)
         project.read(project.fileName())
         project.readProject.disconnect(on_original_project_read)
@@ -487,7 +489,9 @@ class OfflineConverter(QObject):
                                 )
 
             # Now we have a project state which can be saved as offline project
-            on_original_project_write = self._on_original_project_write_wrapper(xml_elements_to_preserve)
+            on_original_project_write = self._on_original_project_write_wrapper(
+                xml_elements_to_preserve
+            )
             project.writeProject.connect(on_original_project_write)
             QgsProject.instance().write(project_path)
             project.writeProject.disconnect(on_original_project_write)
@@ -577,14 +581,20 @@ class OfflineConverter(QObject):
 
     def _on_original_project_read_wrapper(self, elements):
         def on_original_project_read(doc):
-            if not elements.get('map_canvas'):
-                elements['map_canvas'] = elements.get('map_canvas', get_themapcanvas(doc))
+            if not elements.get("map_canvas"):
+                elements["map_canvas"] = elements.get(
+                    "map_canvas", get_themapcanvas(doc)
+                )
+
         return on_original_project_read
 
     def _on_original_project_write_wrapper(self, elements):
         def on_original_project_write(doc):
-            if not get_themapcanvas(doc) and elements.get('map_canvas'):
-                doc.elementsByTagName('qgis').at(0).appendChild(elements.get('map_canvas'))
+            if not get_themapcanvas(doc) and elements.get("map_canvas"):
+                doc.elementsByTagName("qgis").at(0).appendChild(
+                    elements.get("map_canvas")
+                )
+
         return on_original_project_write
 
     def offline_editing_task_progress(self, progress):
