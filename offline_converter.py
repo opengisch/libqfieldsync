@@ -156,15 +156,23 @@ class OfflineConverter(QObject):
             self.total_progress_updated.emit(0, 1, self.trUtf8("Creating base map…"))
             # Create the base map before layers are removed
             if self.project_configuration.create_base_map:
-                if "processing" not in qgis.utils.plugins:
+                try:
+                    import qgis.utils
+
+                    if "processing" not in qgis.utils.plugins:
+                        self.warning.emit(
+                            self.tr("QFieldSync requires \"processing\" plugin"),
+                            self.tr(
+                                "Creating a basemap with QFieldSync requires the processing plugin to be enabled. Processing is not enabled on your system. Please go to Plugins > Manage and Install Plugins and enable processing."
+                            ),
+                        )
+                        self.total_progress_updated.emit(0, 0, self.trUtf8("Cancelled"))
+                        return
+                except ModuleNotFoundError:
                     self.warning.emit(
-                        self.tr("QFieldSync requires processing"),
-                        self.tr(
-                            "Creating a basemap with QFieldSync requires the processing plugin to be enabled. Processing is not enabled on your system. Please go to Plugins > Manage and Install Plugins and enable processing."
-                        ),
+                        self.tr("QFieldSync requires the \"processing\" plugin"),
+                        self.tr("Assuming the \"processing\" plugin is enabled, the automatic check failed to perform."),
                     )
-                    self.total_progress_updated.emit(0, 0, self.trUtf8("Cancelled"))
-                    return
 
                 if (
                     self.project_configuration.base_map_type
