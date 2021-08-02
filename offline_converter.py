@@ -561,6 +561,10 @@ class OfflineConverter(QObject):
 
         results, ok = alg.run(params, context, feedback)
 
+        if not ok:
+            self.warning.emit(self.tr("Failed to create basemap"), feedback.textLog())
+            return
+
         new_layer = QgsRasterLayer(results["OUTPUT"], self.tr("Basemap"))
 
         resample_filter = new_layer.resampleFilter()
