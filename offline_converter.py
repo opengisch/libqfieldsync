@@ -542,11 +542,18 @@ class OfflineConverter(QObject):
         if not layer_id:
             return
         project = QgsProject.instance()
+        basemap_extent = self.area_of_interest.boundingBox()
+
+        if basemap_extent.isNull() or not basemap_extent.isFinite():
+            self.warning.emit(self.tr("Failed to create basemap"), self.tr("Cannot create basemap for the given area of interest."))
+            return
+
         extent = QgsCoordinateTransform(
             QgsCoordinateReferenceSystem(self.area_of_interest_crs),
             project.mapLayer(layer_id).crs(),
             project,
-        ).transformBoundingBox(self.area_of_interest.boundingBox())
+        ).transformBoundingBox(basemap_extent)
+
         extent_string = "{},{},{},{}".format(
             extent.xMinimum(),
             extent.xMaximum(),
