@@ -23,7 +23,6 @@ import os
 import tempfile
 from enum import Enum
 
-import qgis
 from qgis.core import (
     Qgis,
     QgsApplication,
@@ -48,6 +47,8 @@ from .layer import LayerSource, SyncAction
 from .project import ProjectConfiguration, ProjectProperties
 from .utils.file_utils import copy_images
 from .utils.xml import get_themapcanvas
+
+FID_NULL = -4294967296
 
 
 class ExportType(Enum):
@@ -161,7 +162,7 @@ class OfflineConverter(QObject):
 
                     if "processing" not in qgis.utils.plugins:
                         self.warning.emit(
-                            self.tr("QFieldSync requires \"processing\" plugin"),
+                            self.tr('QFieldSync requires "processing" plugin'),
                             self.tr(
                                 "Creating a basemap with QFieldSync requires the processing plugin to be enabled. Processing is not enabled on your system. Please go to Plugins > Manage and Install Plugins and enable processing."
                             ),
@@ -170,8 +171,10 @@ class OfflineConverter(QObject):
                         return
                 except ModuleNotFoundError:
                     self.warning.emit(
-                        self.tr("QFieldSync requires the \"processing\" plugin"),
-                        self.tr("Assuming the \"processing\" plugin is enabled, the automatic check failed to perform."),
+                        self.tr('QFieldSync requires the "processing" plugin'),
+                        self.tr(
+                            'Assuming the "processing" plugin is enabled, the automatic check failed to perform.'
+                        ),
                     )
 
                 if (
@@ -246,6 +249,10 @@ class OfflineConverter(QObject):
                             ),
                             "QFieldSync",
                         )
+
+                    if not layer.selectedFeatureCount():
+                        layer.selectByIds([FID_NULL])
+
                     self.__offline_layers.append(layer)
                     self.__offline_layer_names.append(layer.name())
 
