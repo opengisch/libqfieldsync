@@ -164,3 +164,19 @@ def copy_multifile(
                 shutil.copyfile(source_path, dest_path)
 
     shutil.copyfile(source, str(dest_filename))
+
+
+def get_unique_empty_dirname(dirname: Union[str, Path]) -> Path:
+    dirname = Path(dirname)
+
+    if not dirname.exists() or len(list(dirname.iterdir())) == 0:
+        return dirname
+
+    i = 1
+    while True:
+        new_dirname = Path(f"{dirname}_{i}")
+
+        if not new_dirname.exists() or len(list(new_dirname.iterdir())):
+            return new_dirname
+
+        i += 1
