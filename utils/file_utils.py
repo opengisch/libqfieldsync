@@ -176,7 +176,7 @@ def get_unique_empty_dirname(dirname: Union[str, Path]) -> Path:
     while True:
         new_dirname = Path(f"{dirname}_{i}")
 
-        if not new_dirname.exists() or len(list(new_dirname.iterdir())):
+        if not new_dirname.exists() or len(list(new_dirname.iterdir())) == 0:
             return new_dirname
 
         i += 1
