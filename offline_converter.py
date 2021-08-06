@@ -31,6 +31,7 @@ from qgis.core import (
     QgsCoordinateTransform,
     QgsCubicRasterResampler,
     QgsEditorWidgetSetup,
+    QgsFields,
     QgsMapLayer,
     QgsOfflineEditing,
     QgsPolygon,
@@ -467,6 +468,7 @@ class OfflineConverter(QObject):
 
                                 layer_id = None
                                 loose_layer_id = None
+                                layer_fields: QgsFields = None
                                 for offline_layer in project.mapLayers().values():
                                     if (
                                         offline_layer.customProperty("remoteSource")
@@ -476,6 +478,7 @@ class OfflineConverter(QObject):
                                     ):
                                         #  First try strict matching: the offline layer should have a "remoteSource" property
                                         layer_id = offline_layer.id()
+                                        layer_fields = offline_layer.fields()
                                         break
                                     elif (
                                         Qgis.QGIS_VERSION_INT < 31601
@@ -494,12 +497,13 @@ class OfflineConverter(QObject):
                                         #  If that did not work, go with loose matching
                                         #  On older versions (<31601) the offline layer should start with the online layer name + a translated version of " (offline)"
                                         loose_layer_id = offline_layer.id()
+                                        layer_fields = offline_layer.fields()
                                 widget_config["Layer"] = layer_id or loose_layer_id
                                 offline_ews = QgsEditorWidgetSetup(
                                     ews.type(), widget_config
                                 )
                                 layer.setEditorWidgetSetup(
-                                    original_layer_fields.indexOf(field.name()),
+                                    layer_fields.indexOf(field.name()),
                                     offline_ews,
                                 )
 
