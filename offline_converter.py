@@ -20,17 +20,20 @@
 """
 
 import os
-import tempfile
+import sys
+import traceback
 from enum import Enum
+from pathlib import Path
+from typing import Dict, List, Optional, TypedDict
 
 from qgis.core import (
-    Qgis,
     QgsApplication,
     QgsBilinearRasterResampler,
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
     QgsCubicRasterResampler,
     QgsEditorWidgetSetup,
+    QgsField,
     QgsFields,
     QgsMapLayer,
     QgsOfflineEditing,
@@ -41,15 +44,26 @@ from qgis.core import (
     QgsProviderRegistry,
     QgsRasterLayer,
     QgsValueRelationFieldFormatter,
+    QgsVectorLayer,
 )
 from qgis.PyQt.QtCore import QCoreApplication, QObject, pyqtSignal
 
 from .layer import LayerSource, SyncAction
 from .project import ProjectConfiguration, ProjectProperties
 from .utils.file_utils import copy_images
+from .utils.qgis import make_temp_qgis_file, open_project
 from .utils.xml import get_themapcanvas
 
 FID_NULL = -4294967296
+
+
+class LayerData(TypedDict):
+    id: str
+    name: str
+    source: str
+    type: int
+    fields: Optional[QgsFields]
+    pk_names: Optional[List[str]]
 
 
 class ExportType(Enum):
@@ -75,14 +89,17 @@ class OfflineConverter(QObject):
 
         super(OfflineConverter, self).__init__(parent=None)
         self.__max_task_progress = 0
-        self.__offline_layers = list()
+        self.__offline_layers = []
         self.__convertor_progress = None  # for processing feedback
         self.__layers = list()
+        self.__layer_data_by_id: Dict[str, LayerData] = {}
+        self.__layer_data_by_name: Dict[str, LayerData] = {}
+        self.__offline_layer_names: List[str] = []
 
         # elipsis workaround
         self.trUtf8 = self.tr
 
-        self.export_folder = export_folder
+        self.export_folder = Path(export_folder)
         self.export_type = export_type
         self.area_of_interest = QgsPolygon()
         self.area_of_interest.fromWkt(area_of_interest_wkt)
@@ -94,20 +111,50 @@ class OfflineConverter(QObject):
         self.offline_editing = offline_editing
         self.project_configuration = ProjectConfiguration(project)
 
-        offline_editing.layerProgressUpdated.connect(self.on_offline_editing_next_layer)
-        offline_editing.progressModeSet.connect(self.on_offline_editing_max_changed)
-        offline_editing.progressUpdated.connect(self.offline_editing_task_progress)
-
-    def convert(self) -> None:  # noqa: C901
+    def convert(self) -> None:
         """
         Convert the project to a portable project.
         """
-
         project = QgsProject.instance()
-        original_project_path = project.fileName()
-        project_filename = project.baseName()
-        xml_elements_to_preserve = {}
+        self.original_filename = Path(project.fileName())
+        self.backup_filename = make_temp_qgis_file(project)
 
+        self.offline_editing.layerProgressUpdated.connect(
+            self._on_offline_editing_next_layer
+        )
+        self.offline_editing.progressModeSet.connect(
+            self._on_offline_editing_max_changed
+        )
+        self.offline_editing.progressUpdated.connect(self.offline_editing_task_progress)
+
+        try:
+            self._convert(project)
+        except Exception as err:
+            (_type, _value, tb) = sys.exc_info()
+            print("error", str(err))
+            print("error_origin", "orchestrator")
+            print("error_stack", traceback.format_tb(tb))
+        finally:
+            QCoreApplication.processEvents()
+            QgsProject.instance().clear()
+            QCoreApplication.processEvents()
+
+            open_project(str(self.original_filename), self.backup_filename)
+
+            self.offline_editing.layerProgressUpdated.disconnect(
+                self._on_offline_editing_next_layer
+            )
+            self.offline_editing.progressModeSet.disconnect(
+                self._on_offline_editing_max_changed
+            )
+            self.offline_editing.progressUpdated.disconnect(
+                self.offline_editing_task_progress
+            )
+            self.total_progress_updated.emit(100, 100, self.tr("Finished"))
+
+    def _convert(self, project: QgsProject) -> None:
+        project.baseName()
+        xml_elements_to_preserve = {}
         on_original_project_read = self._on_original_project_read_wrapper(
             xml_elements_to_preserve
         )
@@ -115,446 +162,355 @@ class OfflineConverter(QObject):
         project.read(project.fileName())
         project.readProject.disconnect(on_original_project_read)
 
-        # Write a backup of the current project to a temporary file
-        project_backup_folder = tempfile.mkdtemp()
-        backup_project_path = os.path.join(
-            project_backup_folder, project_filename + ".qgs"
+        self.export_folder.mkdir(parents=True, exist_ok=True)
+        self.total_progress_updated.emit(0, 100, self.trUtf8("Converting project…"))
+        self.__layers = list(project.mapLayers().values())
+
+        # We store the pks of the original vector layers
+        for layer in self.__layers:
+            pk_names = None
+            if layer.type() == QgsMapLayer.VectorLayer:
+                pk_names = []
+                for idx in layer.primaryKeyAttributes():
+                    pk_name = layer.fields()[idx].name()
+                    # and we check that the primary key fields names don't have a comma in the name
+                    if "," in pk_name:
+                        raise ValueError("Comma in field names not allowed")
+                    pk_names.append(pk_name)
+                    layer.setCustomProperty(
+                        "QFieldSync/sourceDataPrimaryKeys", ",".join(pk_names)
+                    )
+
+            layer_data: LayerData = {
+                "id": layer.id(),
+                "name": layer.name(),
+                "type": layer.type(),
+                "source": layer.source(),
+                "fields": layer.fields() if hasattr(layer, "fields") else None,
+                "pk_names": pk_names,
+            }
+
+            self.__layer_data_by_id[layer.id()] = layer_data
+            self.__layer_data_by_name[layer.name()] = layer_data
+
+        if self.project_configuration.create_base_map:
+            self._export_basemap()
+
+        # Loop through all layers and copy/remove/offline them
+        pathResolver = project.pathResolver()
+        copied_files = list()
+        for layer_idx, layer in enumerate(self.__layers):
+            self.total_progress_updated.emit(
+                layer_idx - len(self.__offline_layers),
+                len(self.__layers),
+                self.trUtf8("Copying layers…"),
+            )
+
+            layer_source = LayerSource(layer)
+            layer_action = (
+                layer_source.action
+                if self.export_type == ExportType.Cable
+                else layer_source.cloud_action
+            )
+
+            if not layer.isValid():
+                project.removeMapLayer(layer)
+                continue
+
+            if not layer_source.is_supported:
+                project.removeMapLayer(layer)
+                continue
+
+            provider_metadata = QgsProviderRegistry.instance().providerMetadata(
+                layer.dataProvider().name()
+            )
+            if provider_metadata is not None:
+                decoded = provider_metadata.decodeUri(layer.source())
+
+                if "path" in decoded:
+                    path = pathResolver.writePath(decoded["path"])
+                    if path.startswith("localized:"):
+                        # Layer stored in localized data path, skip
+                        continue
+
+            if layer_action == SyncAction.OFFLINE:
+                if (
+                    self.project_configuration.offline_copy_only_aoi
+                    and not self.project_configuration.offline_copy_only_selected_features
+                ):
+                    extent = QgsCoordinateTransform(
+                        QgsCoordinateReferenceSystem(self.area_of_interest_crs),
+                        layer.crs(),
+                        QgsProject.instance(),
+                    ).transformBoundingBox(self.area_of_interest.boundingBox())
+                    layer.selectByRect(extent)
+                elif (
+                    self.project_configuration.offline_copy_only_aoi
+                    and self.project_configuration.offline_copy_only_selected_features
+                ):
+                    # This option is only possible via API
+                    QgsApplication.instance().messageLog().logMessage(
+                        self.tr(
+                            'Both "Area of Interest" and "only selected features" options were enabled, tha latter takes precedence.'
+                        ),
+                        "QFieldSync",
+                    )
+
+                if not layer.selectedFeatureCount():
+                    layer.selectByIds([FID_NULL])
+
+                self.__offline_layers.append(layer)
+                self.__offline_layer_names.append(layer.name())
+            elif (
+                layer_action == SyncAction.COPY or layer_action == SyncAction.NO_ACTION
+            ):
+                copied_files = layer_source.copy(self.export_folder, copied_files)
+            elif layer_action == SyncAction.KEEP_EXISTENT:
+                layer_source.copy(self.export_folder, copied_files, True)
+            elif layer_action == SyncAction.REMOVE:
+                project.removeMapLayer(layer)
+
+        export_project_filename = self.export_folder.joinpath(
+            f"{self.original_filename.stem}_qfield.qgs"
         )
-        QgsProject.instance().write(backup_project_path)
 
+        # save the original project path
+        self.project_configuration.original_project_path = str(self.original_filename)
+
+        # save the offline project twice so that the offline plugin can "know" that it's a relative path
+        QgsProject.instance().write(str(export_project_filename))
+
+        # export the DCIM folder
+        copy_images(
+            str(self.original_filename.parent.joinpath("DCIM")),
+            str(export_project_filename.parent.joinpath("DCIM")),
+        )
         try:
-            if not os.path.exists(self.export_folder):
-                os.makedirs(self.export_folder)
-
-            self.total_progress_updated.emit(0, 100, self.trUtf8("Converting project…"))
-            self.__offline_layers = list()
-            self.__offline_layer_names = list()
-            self.__layers = list(project.mapLayers().values())
-
-            original_layers = {}
-            for layer in self.__layers:
-                original_layers[layer.id()] = (
-                    layer.source(),
-                    layer.name(),
-                    layer.fields() if hasattr(layer, "fields") else None,
+            # Run the offline plugin for gpkg
+            gpkg_filename = "data.gpkg"
+            if self.__offline_layers:
+                offline_layer_ids = [o_l.id() for o_l in self.__offline_layers]
+                only_selected = (
+                    self.project_configuration.offline_copy_only_aoi
+                    or self.project_configuration.offline_copy_only_selected_features
                 )
 
-            # We store the pks of the original vector layers
-            # and we check that the primary key fields names don't
-            # have a comma in the name
-            original_layers_by_name = {}
-            for layer in self.__layers:
-                if layer.type() == QgsMapLayer.VectorLayer:
-                    keys = []
-                    for idx in layer.primaryKeyAttributes():
-                        key = layer.fields()[idx].name()
-                        assert "," not in key, "Comma in field names not allowed"
-                        keys.append(key)
-                    original_layers_by_name[layer.name()] = {
-                        "id": layer.id(),
-                        "pks": ",".join(keys),
-                    }
+                if not self.offline_editing.convertToOfflineProject(
+                    str(self.export_folder),
+                    gpkg_filename,
+                    offline_layer_ids,
+                    only_selected,
+                    self.offline_editing.GPKG,
+                    None,
+                ):
+                    raise Exception(
+                        self.tr("Error trying to convert layers to offline layers")
+                    )
+        except AttributeError:
+            # Run the offline plugin for spatialite
+            spatialite_filename = "data.sqlite"
+            if self.__offline_layers:
+                offline_layer_ids = [o_l.id() for o_l in self.__offline_layers]
+                only_selected = (
+                    self.project_configuration.offline_copy_only_aoi
+                    or self.project_configuration.offline_copy_only_selected_features
+                )
 
-            self.total_progress_updated.emit(0, 1, self.trUtf8("Creating base map…"))
-            # Create the base map before layers are removed
-            if self.project_configuration.create_base_map:
-                try:
-                    import qgis.utils
+                if not self.offline_editing.convertToOfflineProject(
+                    str(self.export_folder),
+                    spatialite_filename,
+                    offline_layer_ids,
+                    only_selected,
+                    self.offline_editing.SpatiaLite,
+                    None,
+                ):
+                    raise Exception(
+                        self.tr("Error trying to convert layers to offline layers")
+                    )
 
-                    if "processing" not in qgis.utils.plugins:
+        # Disable project options that could create problems on a portable
+        # project with offline layers
+        self.post_process_layers()
+
+        # Now we have a project state which can be saved as offline project
+        on_original_project_write = self._on_original_project_write_wrapper(
+            xml_elements_to_preserve
+        )
+        project.writeProject.connect(on_original_project_write)
+        QgsProject.instance().write(str(export_project_filename))
+        project.writeProject.disconnect(on_original_project_write)
+
+    def post_process_layers(self):
+        if not self.__offline_layers:
+            return
+
+        project = QgsProject.instance()
+        project.setEvaluateDefaultValues(False)
+        project.setAutoTransaction(False)
+
+        # check if value relations point to offline layers and adjust if necessary
+        for e_layer in project.mapLayers().values():
+            if e_layer.type() == QgsMapLayer.VectorLayer:
+                # Before QGIS 3.14 the custom properties of a layer are not
+                # kept into the new layer during the conversion to offline project
+                # So we try to identify the new created layer by its name and
+                # we set the custom properties again.
+                if not e_layer.customProperty("QFieldSync/sourceDataPrimaryKeys"):
+                    o_layer_name = e_layer.name().rsplit(" ", 1)[0]
+                    o_layer_data = self.__layer_data_by_name.get(o_layer_name, None)
+
+                    if not o_layer_data:
                         self.warning.emit(
-                            self.tr('QFieldSync requires "processing" plugin'),
+                            self.tr("QFieldSync"),
                             self.tr(
-                                "Creating a basemap with QFieldSync requires the processing plugin to be enabled. Processing is not enabled on your system. Please go to Plugins > Manage and Install Plugins and enable processing."
-                            ),
+                                'Failed to find layer with name "{}". QFieldSync will not package that layer.'
+                            ).format(o_layer_name),
                         )
-                        self.total_progress_updated.emit(0, 0, self.trUtf8("Cancelled"))
-                        return
-                except ModuleNotFoundError:
-                    self.warning.emit(
-                        self.tr('QFieldSync requires the "processing" plugin'),
-                        self.tr(
-                            'Assuming the "processing" plugin is enabled, the automatic check failed to perform.'
-                        ),
+                        continue
+
+                    e_layer.setCustomProperty("remoteLayerId", o_layer_data["id"])
+                    e_layer.setCustomProperty(
+                        "QFieldSync/sourceDataPrimaryKeys",
+                        o_layer_data["pk_names"],
                     )
 
                 if (
-                    self.project_configuration.base_map_type
-                    == ProjectProperties.BaseMapType.SINGLE_LAYER
+                    not e_layer.customProperty("remoteLayerId")
+                    or e_layer.customProperty("remoteLayerId")
+                    not in self.__layer_data_by_id
                 ):
-                    self.createBaseMapLayer(
-                        None,
-                        self.project_configuration.base_map_layer,
-                        self.project_configuration.base_map_tile_size,
-                        self.project_configuration.base_map_mupp,
+                    self.warning.emit(
+                        self.tr("QFieldSync"),
+                        self.tr(
+                            'Failed to find layer with name "{}". QFieldSync will not package that layer.'
+                        ).format(e_layer.name()),
                     )
-                else:
-                    self.createBaseMapLayer(
-                        self.project_configuration.base_map_theme,
-                        None,
-                        self.project_configuration.base_map_tile_size,
-                        self.project_configuration.base_map_mupp,
-                    )
-
-            # Loop through all layers and copy/remove/offline them
-            pathResolver = QgsProject.instance().pathResolver()
-            copied_files = list()
-            for current_layer_index, layer in enumerate(self.__layers):
-                self.total_progress_updated.emit(
-                    current_layer_index - len(self.__offline_layers),
-                    len(self.__layers),
-                    self.trUtf8("Copying layers…"),
-                )
-
-                layer_source = LayerSource(layer)
-                layer_action = (
-                    layer_source.action
-                    if self.export_type == ExportType.Cable
-                    else layer_source.cloud_action
-                )
-                if not layer_source.is_supported:
-                    project.removeMapLayer(layer)
                     continue
 
-                if layer.dataProvider() is not None:
-                    md = QgsProviderRegistry.instance().providerMetadata(
-                        layer.dataProvider().name()
-                    )
-                    if md is not None:
-                        decoded = md.decodeUri(layer.source())
-                        if "path" in decoded:
-                            path = pathResolver.writePath(decoded["path"])
-                            if path.startswith("localized:"):
-                                # Layer stored in localized data path, skip
-                                continue
+                self.post_process_fields(e_layer)
 
-                if layer_action == SyncAction.OFFLINE:
-                    if (
-                        self.project_configuration.offline_copy_only_aoi
-                        and not self.project_configuration.offline_copy_only_selected_features
-                    ):
-                        extent = QgsCoordinateTransform(
-                            QgsCoordinateReferenceSystem(self.area_of_interest_crs),
-                            layer.crs(),
-                            QgsProject.instance(),
-                        ).transformBoundingBox(self.area_of_interest.boundingBox())
-                        layer.selectByRect(extent)
-                    elif (
-                        self.project_configuration.offline_copy_only_aoi
-                        and self.project_configuration.offline_copy_only_selected_features
-                    ):
-                        # This option is only possible via API
-                        QgsApplication.instance().messageLog().logMessage(
-                            self.tr(
-                                'Both "Area of Interest" and "only selected features" options were enabled, tha latter takes precedence.'
-                            ),
-                            "QFieldSync",
-                        )
+    def post_process_fields(self, e_layer: QgsVectorLayer) -> None:
+        QgsProject.instance()
+        e_layer_source = LayerSource(e_layer)
+        o_layer_data = self.__layer_data_by_id[e_layer.customProperty("remoteLayerId")]
+        o_layer_fields: QgsFields = o_layer_data["fields"]
+        o_layer_field_names = o_layer_fields.names()
 
-                    if not layer.selectedFeatureCount():
-                        layer.selectByIds([FID_NULL])
+        for e_field_name in e_layer_source.visible_fields_names():
+            if e_field_name not in o_layer_field_names:
+                # handles the `fid` column, that is present only for gpkg
+                e_layer.setEditorWidgetSetup(
+                    e_layer.fields().indexFromName(e_field_name),
+                    QgsEditorWidgetSetup("Hidden", {}),
+                )
+                continue
 
-                    self.__offline_layers.append(layer)
-                    self.__offline_layer_names.append(layer.name())
+            o_field = o_layer_fields.field(e_field_name)
+            o_ews = o_field.editorWidgetSetup()
 
-                    # Store the primary key field name(s) as comma separated custom property
-                    if layer.type() == QgsMapLayer.VectorLayer:
-                        key_fields = ",".join(
-                            [
-                                layer.fields()[x].name()
-                                for x in layer.primaryKeyAttributes()
-                            ]
-                        )
-                        layer.setCustomProperty(
-                            "QFieldSync/sourceDataPrimaryKeys", key_fields
-                        )
+            if o_ews.type() == "ValueRelation":
+                self.post_process_value_relation_fields(e_layer, o_field)
 
-                elif (
-                    layer_action == SyncAction.COPY
-                    or layer_action == SyncAction.NO_ACTION
-                ):
-                    copied_files = layer_source.copy(self.export_folder, copied_files)
-                elif layer_action == SyncAction.KEEP_EXISTENT:
-                    layer_source.copy(self.export_folder, copied_files, True)
-                elif layer_action == SyncAction.REMOVE:
-                    project.removeMapLayer(layer)
+    def post_process_value_relation_fields(
+        self, e_layer: QgsVectorLayer, o_field: QgsField
+    ):
+        project = QgsProject.instance()
+        o_ews = o_field.editorWidgetSetup()
+        o_widget_config = o_ews.config()
+        o_referenced_layer_id = o_widget_config["Layer"]
 
-            project_path = os.path.join(
-                self.export_folder, project_filename + "_qfield.qgs"
+        if o_referenced_layer_id not in self.__layer_data_by_id:
+            e_referenced_layer = QgsValueRelationFieldFormatter.resolveLayer(
+                o_widget_config, project
             )
 
-            # save the original project path
-            ProjectConfiguration(project).original_project_path = original_project_path
+            if e_referenced_layer:
+                o_referenced_layer_id = e_referenced_layer.customProperty(
+                    "remoteLayerId"
+                )
 
-            # save the offline project twice so that the offline plugin can "know" that it's a relative path
-            QgsProject.instance().write(project_path)
-
-            # export the DCIM folder
-            copy_images(
-                os.path.join(os.path.dirname(original_project_path), "DCIM"),
-                os.path.join(os.path.dirname(project_path), "DCIM"),
+        # yet another check whether value relation resolver succeeded
+        if o_referenced_layer_id not in self.__layer_data_by_id:
+            self.warning.emit(
+                self.tr("Bad attribute form configuration"),
+                self.tr(
+                    'Field "{}" in layer "{}" has no configured layer in the value relation widget.'
+                ).format(o_field.name(), e_layer.name()),
             )
-            try:
-                # Run the offline plugin for gpkg
-                gpkg_filename = "data.gpkg"
-                if self.__offline_layers:
-                    offline_layer_ids = [o_l.id() for o_l in self.__offline_layers]
-                    only_selected = (
-                        self.project_configuration.offline_copy_only_aoi
-                        or self.project_configuration.offline_copy_only_selected_features
-                    )
-                    if Qgis.QGIS_VERSION_INT < 31601:
-                        if not self.offline_editing.convertToOfflineProject(
-                            self.export_folder,
-                            gpkg_filename,
-                            offline_layer_ids,
-                            only_selected,
-                            self.offline_editing.GPKG,
-                        ):
-                            raise Exception(
-                                self.tr(
-                                    "Error trying to convert layers to offline layers"
-                                )
-                            )
-                    else:
-                        if not self.offline_editing.convertToOfflineProject(
-                            self.export_folder,
-                            gpkg_filename,
-                            offline_layer_ids,
-                            only_selected,
-                            self.offline_editing.GPKG,
-                            None,
-                        ):
-                            raise Exception(
-                                self.tr(
-                                    "Error trying to convert layers to offline layers"
-                                )
-                            )
-            except AttributeError:
-                # Run the offline plugin for spatialite
-                spatialite_filename = "data.sqlite"
-                if self.__offline_layers:
-                    offline_layer_ids = [o_l.id() for o_l in self.__offline_layers]
-                    only_selected = (
-                        self.project_configuration.offline_copy_only_aoi
-                        or self.project_configuration.offline_copy_only_selected_features
-                    )
-                    if Qgis.QGIS_VERSION_INT < 31601:
-                        if not self.offline_editing.convertToOfflineProject(
-                            self.export_folder,
-                            spatialite_filename,
-                            offline_layer_ids,
-                            only_selected,
-                            self.offline_editing.SpatiaLite,
-                        ):
-                            raise Exception(
-                                self.tr(
-                                    "Error trying to convert layers to offline layers"
-                                )
-                            )
-                    else:
-                        if not self.offline_editing.convertToOfflineProject(
-                            self.export_folder,
-                            spatialite_filename,
-                            offline_layer_ids,
-                            only_selected,
-                            self.offline_editing.SpatiaLite,
-                            None,
-                        ):
-                            raise Exception(
-                                self.tr(
-                                    "Error trying to convert layers to offline layers"
-                                )
-                            )
-
-            # Disable project options that could create problems on a portable
-            # project with offline layers
-            if self.__offline_layers:
-                QgsProject.instance().setEvaluateDefaultValues(False)
-                QgsProject.instance().setAutoTransaction(False)
-
-                # check if value relations point to offline layers and adjust if necessary
-                for layer in project.mapLayers().values():
-                    layer_source = LayerSource(layer)
-
-                    if layer.type() == QgsMapLayer.VectorLayer:
-                        # Before QGIS 3.14 the custom properties of a layer are not
-                        # kept into the new layer during the conversion to offline project
-                        # So we try to identify the new created layer by its name and
-                        # we set the custom properties again.
-                        if not layer.customProperty("QFieldSync/sourceDataPrimaryKeys"):
-                            original_layer_name = layer.name().rsplit(" ", 1)[0]
-                            original_layer_data = original_layers_by_name.get(
-                                original_layer_name, None
-                            )
-
-                            if original_layer_data is None:
-                                self.warning.emit(
-                                    self.tr("QFieldSync"),
-                                    self.tr(
-                                        'Failed to find layer with name "{}". QFieldSync will not package that layer.'
-                                    ).format(original_layer_name),
-                                )
-                                continue
-
-                            layer.setCustomProperty(
-                                "remoteLayerId", original_layer_data.get("id")
-                            )
-                            layer.setCustomProperty(
-                                "QFieldSync/sourceDataPrimaryKeys",
-                                original_layer_data.get("pks"),
-                            )
-
-                        if (
-                            not layer.customProperty("remoteLayerId")
-                            or layer.customProperty("remoteLayerId")
-                            not in original_layers
-                        ):
-                            self.warning.emit(
-                                self.tr("QFieldSync"),
-                                self.tr(
-                                    'Failed to find layer with name "{}". QFieldSync will not package that layer.'
-                                ).format(layer.name()),
-                            )
-                            continue
-
-                        (
-                            _original_layer_source,
-                            original_layer_name,
-                            original_layer_fields,
-                        ) = original_layers[layer.customProperty("remoteLayerId")]
-
-                        for field_name in layer_source.visible_fields_names():
-                            if field_name not in original_layer_fields.names():
-                                # handles the `fid` column, that is present only for gpkg
-                                layer.setEditorWidgetSetup(
-                                    layer.fields().indexFromName(field_name),
-                                    QgsEditorWidgetSetup("Hidden", {}),
-                                )
-                                continue
-
-                            field = original_layer_fields.field(field_name)
-                            ews = field.editorWidgetSetup()
-
-                            if ews.type() == "ValueRelation":
-                                widget_config = ews.config()
-                                online_referenced_layer_id = widget_config["Layer"]
-
-                                if online_referenced_layer_id not in original_layers:
-                                    offline_referenced_layer = (
-                                        QgsValueRelationFieldFormatter.resolveLayer(
-                                            widget_config, project
-                                        )
-                                    )
-
-                                    if offline_referenced_layer:
-                                        online_referenced_layer_id = (
-                                            offline_referenced_layer.customProperty(
-                                                "remoteLayerId"
-                                            )
-                                        )
-
-                                if online_referenced_layer_id not in original_layers:
-                                    self.warning.emit(
-                                        self.tr("Bad attribute form configuration"),
-                                        self.tr(
-                                            'Field "{}" in layer "{}" has no configured layer in the value relation widget.'
-                                        ).format(field.name(), layer.name()),
-                                    )
-                                    continue
-
-                                if project.mapLayer(online_referenced_layer_id):
-                                    continue
-
-                                layer_id = None
-                                loose_layer_id = None
-                                layer_fields: QgsFields = None
-                                for offline_layer in project.mapLayers().values():
-                                    if (
-                                        offline_layer.customProperty("remoteSource")
-                                        == original_layers[online_referenced_layer_id][
-                                            0
-                                        ]
-                                    ):
-                                        #  First try strict matching: the offline layer should have a "remoteSource" property
-                                        layer_id = offline_layer.id()
-                                        layer_fields = offline_layer.fields()
-                                        break
-                                    elif (
-                                        Qgis.QGIS_VERSION_INT < 31601
-                                        and offline_layer.name().startswith(
-                                            original_layers[online_referenced_layer_id][
-                                                1
-                                            ]
-                                            + " "
-                                        )
-                                        or Qgis.QGIS_VERSION_INT >= 31601
-                                        and offline_layer.name()
-                                        == original_layers[online_referenced_layer_id][
-                                            1
-                                        ]
-                                    ):
-                                        #  If that did not work, go with loose matching
-                                        #  On older versions (<31601) the offline layer should start with the online layer name + a translated version of " (offline)"
-                                        loose_layer_id = offline_layer.id()
-                                        layer_fields = offline_layer.fields()
-                                widget_config["Layer"] = layer_id or loose_layer_id
-                                offline_ews = QgsEditorWidgetSetup(
-                                    ews.type(), widget_config
-                                )
-                                layer.setEditorWidgetSetup(
-                                    layer_fields.indexOf(field.name()),
-                                    offline_ews,
-                                )
-
-            # Now we have a project state which can be saved as offline project
-            on_original_project_write = self._on_original_project_write_wrapper(
-                xml_elements_to_preserve
-            )
-            project.writeProject.connect(on_original_project_write)
-            QgsProject.instance().write(project_path)
-            project.writeProject.disconnect(on_original_project_write)
-        finally:
-            # We need to let the app handle events before loading the next project or QGIS will crash with rasters
-            QCoreApplication.processEvents()
-            QgsProject.instance().clear()
-            QCoreApplication.processEvents()
-            QgsProject.instance().read(backup_project_path)
-            QgsProject.instance().setFileName(original_project_path)
-
-        self.offline_editing.layerProgressUpdated.disconnect(
-            self.on_offline_editing_next_layer
-        )
-        self.offline_editing.progressModeSet.disconnect(
-            self.on_offline_editing_max_changed
-        )
-        self.offline_editing.progressUpdated.disconnect(
-            self.offline_editing_task_progress
-        )
-
-        self.total_progress_updated.emit(100, 100, self.tr("Finished"))
-
-    def createBaseMapLayer(self, map_theme, layer_id, tile_size, map_units_per_pixel):
-        """
-        Create a basemap from map layer(s)
-
-        :param map_theme:            The name of the map theme to be rendered
-        :param layer_id:             A layer id to be rendered. Will only be used if map_theme is None.
-        :param tile_size:            The extent rectangle in which data shall be fetched
-        :param map_units_per_pixel:  Number of map units per pixel (1: 1 m per pixel, 10: 10 m per pixel...)
-        """
-        if not layer_id:
             return
+
+        e_referenced_layer_id = None
+        for e_layer in project.mapLayers().values():
+            o_layer_data = self.__layer_data_by_id[o_referenced_layer_id]
+
+            if e_layer.customProperty("remoteSource") == o_layer_data["source"]:
+                #  First try strict matching: the offline layer should have a "remoteSource" property
+                e_referenced_layer_id = e_layer.id()
+                break
+            elif e_layer.name() == o_layer_data["name"]:
+                #  If that did not work, go with loose matching
+                e_referenced_layer_id = e_layer.id()
+                break
+
+        if not e_referenced_layer_id:
+            self.warning.emit(
+                self.tr("Bad attribute form configuration"),
+                self.tr(
+                    'Field "{}" in layer "{}" has no configured layer in the value relation widget.'
+                ).format(o_field.name(), e_layer.name()),
+            )
+            return
+
+        e_widget_config = o_widget_config
+        e_widget_config["Layer"] = e_referenced_layer_id
+        e_layer.setEditorWidgetSetup(
+            e_layer.fields().indexOf(o_field.name()),
+            QgsEditorWidgetSetup(o_ews.type(), e_widget_config),
+        )
+
+    def _export_basemap_requirements_check(self) -> bool:
+        try:
+            # NOTE if qgis is built without GUI, there is no `qgis.utils`, since it depends on `qgis.gui`
+            import qgis.utils
+
+            # TODO investigate why starPlugin fails in docker
+            # print(1111111111010301, qgis.utils.loadPlugin("processing"))
+            # print(1111111111010302, qgis.utils.startPlugin("processing"))
+
+            if "processing" in qgis.utils.plugins:
+                return True
+
+            self.warning.emit(
+                self.tr('QFieldSync requires "processing" plugin'),
+                self.tr(
+                    "Creating a basemap with QFieldSync requires the processing plugin to be enabled. Processing is not enabled on your system. Please go to Plugins > Manage and Install Plugins and enable processing."
+                ),
+            )
+            self.total_progress_updated.emit(0, 0, self.trUtf8("Cancelled"))
+        except Exception:
+            pass
+
+        return False
+
+    def _export_basemap(self) -> bool:
+        self.total_progress_updated.emit(0, 1, self.trUtf8("Creating base map…"))
+
+        if not self._export_basemap_requirements_check():
+            return False
+
         project = QgsProject.instance()
         basemap_extent = self.area_of_interest.boundingBox()
 
         if basemap_extent.isNull() or not basemap_extent.isFinite():
-            self.warning.emit(self.tr("Failed to create basemap"), self.tr("Cannot create basemap for the given area of interest."))
-            return
+            self.warning.emit(
+                self.tr("Failed to create basemap"),
+                self.tr("Cannot create basemap for the given area of interest."),
+            )
+            return False
 
         extent = QgsCoordinateTransform(
             QgsCoordinateReferenceSystem(self.area_of_interest_crs),
-            project.mapLayer(layer_id).crs(),
+            project.mapLayer(self.project_configuration.base_map_layer).crs(),
             project,
         ).transformBoundingBox(basemap_extent)
 
@@ -573,13 +529,17 @@ class OfflineConverter(QObject):
 
         params = {
             "EXTENT": extent_string,
-            "MAP_THEME": map_theme,
-            "LAYER": layer_id,
-            "MAP_UNITS_PER_PIXEL": map_units_per_pixel,
-            "TILE_SIZE": tile_size,
+            "MAP_UNITS_PER_PIXEL": self.project_configuration.base_map_mupp,
+            "TILE_SIZE": self.project_configuration.base_map_tile_size,
             "MAKE_BACKGROUND_TRANSPARENT": False,
             "OUTPUT": os.path.join(self.export_folder, "basemap.gpkg"),
         }
+
+        base_map_type = self.project_configuration.base_map_type
+        if base_map_type == ProjectProperties.BaseMapType.SINGLE_LAYER:
+            params["LAYER"] = self.project_configuration.base_map_layer
+        elif base_map_type == ProjectProperties.BaseMapType.MAP_THEME:
+            params["MAP_THEME"] = self.project_configuration.base_map_theme
 
         feedback = QgsProcessingFeedback()
         context = QgsProcessingContext()
@@ -589,7 +549,7 @@ class OfflineConverter(QObject):
 
         if not ok:
             self.warning.emit(self.tr("Failed to create basemap"), feedback.textLog())
-            return
+            return False
 
         new_layer = QgsRasterLayer(results["OUTPUT"], self.tr("Basemap"))
 
@@ -600,13 +560,15 @@ class OfflineConverter(QObject):
         layer_tree = QgsProject.instance().layerTreeRoot()
         layer_tree.insertLayer(len(layer_tree.children()), new_layer)
 
-    def on_offline_editing_next_layer(self, layer_index, layer_count):
+        return True
+
+    def _on_offline_editing_next_layer(self, layer_index, layer_count):
         msg = self.trUtf8("Packaging layer {layer_name}…").format(
             layer_name=self.__offline_layer_names[layer_index - 1]
         )
         self.total_progress_updated.emit(layer_index, layer_count, msg)
 
-    def on_offline_editing_max_changed(self, _, mode_count):
+    def _on_offline_editing_max_changed(self, _, mode_count):
         self.__max_task_progress = mode_count
 
     def _on_original_project_read_wrapper(self, elements):
