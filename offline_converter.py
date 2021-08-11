@@ -390,7 +390,6 @@ class OfflineConverter(QObject):
                 self.post_process_fields(e_layer)
 
     def post_process_fields(self, e_layer: QgsVectorLayer) -> None:
-        QgsProject.instance()
         e_layer_source = LayerSource(e_layer)
         o_layer_data = self.__layer_data_by_id[e_layer.customProperty("remoteLayerId")]
         o_layer_fields: QgsFields = o_layer_data["fields"]
