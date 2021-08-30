@@ -19,12 +19,12 @@
  ***************************************************************************/
 """
 
-import tempfile
 import os
-from typing import List, Union
+import tempfile
 from pathlib import Path
+from typing import List, Union
 
-from qgis.core import QgsProject, QgsMapLayer
+from qgis.core import QgsMapLayer, QgsProject
 
 
 def get_project_title(project: QgsProject) -> str:
