@@ -2,6 +2,8 @@ import json
 import os
 import re
 import shutil
+from pathlib import Path
+from typing import Dict, Optional
 
 from qgis.core import (
     Qgis,
@@ -11,6 +13,7 @@ from qgis.core import (
     QgsFields,
     QgsMapLayer,
     QgsProject,
+    QgsProviderMetadata,
     QgsProviderRegistry,
     QgsReadWriteContext,
     QgsVectorFileWriter,
@@ -94,19 +97,7 @@ class LayerSource(object):
         self._photo_naming = {}
         self._is_geometry_locked = None
         self.read_layer()
-
-        self.storedInlocalizedDataPath = False
-        if self.layer.dataProvider() is not None:
-            pathResolver = QgsProject.instance().pathResolver()
-            metadata = QgsProviderRegistry.instance().providerMetadata(
-                self.layer.dataProvider().name()
-            )
-            if metadata is not None:
-                decoded = metadata.decodeUri(self.layer.source())
-                if "path" in decoded:
-                    path = pathResolver.writePath(decoded["path"])
-                    if path.startswith("localized:"):
-                        self.storedInlocalizedDataPath = True
+        self.project = QgsProject.instance()
 
     def read_layer(self):
         self._action = self.layer.customProperty("QFieldSync/action")
@@ -200,22 +191,13 @@ class LayerSource(object):
 
     @property
     def is_file(self):
-        if self.layer.dataProvider() is not None:
-            metadata = QgsProviderRegistry.instance().providerMetadata(
-                self.layer.dataProvider().name()
-            )
-            if metadata is not None:
-                decoded = metadata.decodeUri(self.layer.source())
-                if "path" in decoded:
-                    if os.path.isfile(decoded["path"]):
-                        return True
-        return False
+        return Path(self.filename).exists()
 
     @property
     def available_actions(self):
         actions = list()
 
-        if self.is_file and not self.storedInlocalizedDataPath:
+        if self.is_file and not self.is_localized_path:
             actions.append(
                 (SyncAction.COPY, QCoreApplication.translate("LayerAction", "Copy"))
             )
@@ -268,7 +250,7 @@ class LayerSource(object):
             )
 
             # only online layers support direct access, e.g. PostGIS or WFS
-            if not (self.is_file and not self.storedInlocalizedDataPath):
+            if not (self.is_file and not self.is_localized_path):
                 actions.append(
                     (
                         SyncAction.NO_ACTION,
@@ -277,7 +259,7 @@ class LayerSource(object):
                         ),
                     )
                 )
-            elif self.is_file and not self.storedInlocalizedDataPath:
+            elif self.is_file and not self.is_localized_path:
                 actions.append(
                     (
                         SyncAction.NO_ACTION,
@@ -315,7 +297,7 @@ class LayerSource(object):
                     return idx, action
             else:
                 if (
-                    (self.is_file and not self.storedInlocalizedDataPath)
+                    (self.is_file and not self.is_localized_path)
                     or self.layer.type() != QgsMapLayer.VectorLayer
                 ) and action == SyncAction.NO_ACTION:
                     return idx, action
@@ -356,6 +338,52 @@ class LayerSource(object):
     def name(self):
         return self.layer.name()
 
+    @property
+    def metadata(self) -> Optional[QgsProviderMetadata]:
+        if not self.layer.isValid():
+            return None
+
+        return QgsProviderRegistry.instance().providerMetadata(
+            self.layer.dataProvider().name()
+        )
+
+    @property
+    def decoded_metadata(self) -> Dict:
+        metadata = self.metadata
+
+        if metadata is None:
+            return {}
+
+        return metadata.decodeUri(self.layer.source())
+
+    @property
+    def filename(self) -> str:
+        metadata = self.decoded_metadata
+        filename = ""
+        uri_parts = self.layer.source().split("|", 1)
+
+        if self.layer.dataProvider() is None:
+            return ""
+
+        filename = metadata.get("path", "")
+
+        if filename == "":
+            filename = uri_parts[0]
+
+        path_resolver = self.project.pathResolver()
+        resolved_filename = path_resolver.writePath(filename)
+        if resolved_filename.startswith("localized:"):
+            return resolved_filename[10:]
+
+        return filename
+
+    @property
+    def is_localized_path(self) -> bool:
+        path_resolver = self.project.pathResolver()
+        path = path_resolver.writePath(self.filename)
+
+        return path.startswith("localized:")
+
     def copy(self, target_path, copied_files, keep_existent=False):
         """
         Copy a layer to a new path and adjust its datasource.
@@ -368,26 +396,13 @@ class LayerSource(object):
             # Copy will also be called on non-file layers like WMS. In this case, just do nothing.
             return
 
-        parts = None
-        file_path = ""
         suffix = ""
         uri_parts = self.layer.source().split("|", 1)
         if len(uri_parts) > 1:
             suffix = uri_parts[1]
 
-        if self.layer.dataProvider() is not None:
-            metadata = QgsProviderRegistry.instance().providerMetadata(
-                self.layer.dataProvider().name()
-            )
-            if metadata is not None:
-                parts = metadata.decodeUri(self.layer.source())
-                if "path" in parts:
-                    file_path = parts["path"]
-        if file_path == "":
-            file_path = uri_parts[0]
-
-        if os.path.isfile(file_path):
-            source_path, file_name = os.path.split(file_path)
+        if self.is_file:
+            source_path, file_name = os.path.split(self.filename)
             basename, extensions = get_file_extension_group(file_name)
             for ext in extensions:
                 dest_file = os.path.join(target_path, basename + ext)
@@ -397,13 +412,13 @@ class LayerSource(object):
                     shutil.copy(os.path.join(source_path, basename + ext), dest_file)
 
             new_source = ""
+            decoded_metadata = self.decoded_metadata
             if Qgis.QGIS_VERSION_INT >= 31200 and self.layer.dataProvider() is not None:
-                metadata = QgsProviderRegistry.instance().providerMetadata(
-                    self.layer.dataProvider().name()
-                )
-                if metadata is not None:
-                    parts["path"] = os.path.join(target_path, file_name)
-                    new_source = metadata.encodeUri(parts)
+                metadata = self.metadata
+
+                if metadata:
+                    decoded_metadata["path"] = os.path.join(target_path, file_name)
+                    new_source = metadata.encodeUri(decoded_metadata)
             if new_source == "":
                 if (
                     self.layer.dataProvider()
@@ -411,7 +426,7 @@ class LayerSource(object):
                 ):
                     uri = QgsDataSourceUri()
                     uri.setDatabase(os.path.join(target_path, file_name))
-                    uri.setTable(parts["layerName"])
+                    uri.setTable(decoded_metadata["layerName"])
                     new_source = uri.uri()
                 else:
                     new_source = os.path.join(target_path, file_name)
@@ -435,22 +450,11 @@ class LayerSource(object):
         if not self.layer.type() == QgsMapLayer.VectorLayer or not self.layer.isValid():
             return
 
-        parts = None
-        file_path = ""
+        file_path = self.filename
         suffix = ""
         uri_parts = self.layer.source().split("|", 1)
         if len(uri_parts) > 1:
             suffix = uri_parts[1]
-
-        metadata = QgsProviderRegistry.instance().providerMetadata(
-            self.layer.dataProvider().name()
-        )
-        if metadata is not None:
-            parts = metadata.decodeUri(self.layer.source())
-            if "path" in parts:
-                file_path = parts["path"]
-        if file_path == "":
-            file_path = uri_parts[0]
 
         dest_file = ""
         new_source = ""
@@ -465,12 +469,11 @@ class LayerSource(object):
                 shutil.copy(os.path.join(source_path, file_name), dest_file)
 
             if Qgis.QGIS_VERSION_INT >= 31200:
-                metadata = QgsProviderRegistry.instance().providerMetadata(
-                    self.layer.dataProvider().name()
-                )
+                metadata = self.metadata
                 if metadata is not None:
-                    parts["path"] = dest_file
-                    new_source = metadata.encodeUri(parts)
+                    decoded_metadata = self.decoded_metadata
+                    decoded_metadata["path"] = dest_file
+                    new_source = self.metadata.encodeUri(decoded_metadata)
             if new_source == "":
                 new_source = os.path.join(target_path, file_name)
                 if suffix != "":

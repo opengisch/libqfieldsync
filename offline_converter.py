@@ -46,7 +46,6 @@ from qgis.core import (
     QgsProcessingContext,
     QgsProcessingFeedback,
     QgsProject,
-    QgsProviderRegistry,
     QgsRasterLayer,
     QgsValueRelationFieldFormatter,
     QgsVectorLayer,
@@ -202,7 +201,6 @@ class OfflineConverter(QObject):
             self._export_basemap()
 
         # Loop through all layers and copy/remove/offline them
-        pathResolver = project.pathResolver()
         copied_files = list()
         for layer_idx, layer in enumerate(self.__layers):
             self.total_progress_updated.emit(
@@ -226,17 +224,8 @@ class OfflineConverter(QObject):
                 project.removeMapLayer(layer)
                 continue
 
-            provider_metadata = QgsProviderRegistry.instance().providerMetadata(
-                layer.dataProvider().name()
-            )
-            if provider_metadata is not None:
-                decoded = provider_metadata.decodeUri(layer.source())
-
-                if "path" in decoded:
-                    path = pathResolver.writePath(decoded["path"])
-                    if path.startswith("localized:"):
-                        # Layer stored in localized data path, skip
-                        continue
+            if layer_source.is_localized_path:
+                continue
 
             if layer_action == SyncAction.OFFLINE:
                 if (
