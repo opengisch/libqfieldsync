@@ -180,3 +180,14 @@ def get_unique_empty_dirname(dirname: Union[str, Path]) -> Path:
             return new_dirname
 
         i += 1
+
+
+def isascii(filename: str) -> bool:
+    try:
+        return filename.isascii()
+    except Exception:
+        try:
+            filename.encode("ascii")
+            return True
+        except UnicodeEncodeError:
+            return False

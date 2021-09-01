@@ -54,7 +54,7 @@ from qgis.PyQt.QtCore import QCoreApplication, QObject, pyqtSignal
 
 from .layer import LayerSource, SyncAction
 from .project import ProjectConfiguration, ProjectProperties
-from .utils.file_utils import copy_images
+from .utils.file_utils import copy_images, isascii
 from .utils.qgis import make_temp_qgis_file, open_project
 from .utils.xml import get_themapcanvas
 
@@ -224,8 +224,33 @@ class OfflineConverter(QObject):
                 project.removeMapLayer(layer)
                 continue
 
+            if layer_source.is_file and isascii(layer_source.filename):
+                self.warning.emit(
+                    self.tr("QFieldSync"),
+                    self.tr(
+                        'Layer "{}" stored at "{}" is not using ASCII encoded filename. Working with the layer might cause problems, please rename it using only ASCII charasters.'
+                    ).format(
+                        layer.name(),
+                        layer_source.filename,
+                    ),
+                )
+
             if layer_source.is_localized_path:
                 continue
+
+            if (
+                layer.type() == QgsMapLayer.VectorLayer
+                and layer.dataProvider().encoding() != "UTF-8"
+            ):
+                self.warning.emit(
+                    self.tr("QFieldSync"),
+                    self.tr(
+                        'Layer "{}" is not using UTF-8 encoding, but "{}". Working with the layer might cause problems, please convert it to UTF-8 layer.'
+                    ).format(
+                        layer.name(),
+                        layer.dataProvider().encoding(),
+                    ),
+                )
 
             if layer_action == SyncAction.OFFLINE:
                 if (
