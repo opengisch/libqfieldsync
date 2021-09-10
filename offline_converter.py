@@ -26,11 +26,6 @@ from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Optional
 
-if sys.version_info >= (3, 8):
-    from typing import TypedDict
-else:
-    from typing_extensions import TypedDict
-
 from qgis.core import (
     QgsApplication,
     QgsBilinearRasterResampler,
@@ -60,14 +55,20 @@ from .utils.xml import get_themapcanvas
 
 FID_NULL = -4294967296
 
+if sys.version_info >= (3, 8):
+    from typing import TypedDict
 
-class LayerData(TypedDict):
-    id: str
-    name: str
-    source: str
-    type: int
-    fields: Optional[QgsFields]
-    pk_names: Optional[List[str]]
+    class LayerData(TypedDict):
+        id: str
+        name: str
+        source: str
+        type: int
+        fields: Optional[QgsFields]
+        pk_names: Optional[List[str]]
+
+
+else:
+    LayerData = Dict
 
 
 class ExportType(Enum):
