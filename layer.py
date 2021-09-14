@@ -2,7 +2,6 @@ import json
 import os
 import re
 import shutil
-from pathlib import Path
 from typing import Dict, Optional
 
 from qgis.core import (
@@ -191,7 +190,7 @@ class LayerSource(object):
 
     @property
     def is_file(self):
-        return Path(self.filename).exists()
+        return os.path.isfile(self.filename)
 
     @property
     def available_actions(self):
@@ -358,6 +357,11 @@ class LayerSource(object):
 
     @property
     def filename(self) -> str:
+        """Returns the filename of the file if the layer is file based. E.g. GPKG, CSV, but not PostGIS, WFS
+
+        Note: This may return garbage path, e.g. on online layers such as PostGIS or WFS. Always check with os.path.isfile(),
+        as Path.is_file() raises an exception prior to Python 3.8
+        """
         metadata = self.decoded_metadata
         filename = ""
         uri_parts = self.layer.source().split("|", 1)
