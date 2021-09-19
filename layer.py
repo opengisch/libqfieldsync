@@ -339,7 +339,7 @@ class LayerSource(object):
 
     @property
     def metadata(self) -> Optional[QgsProviderMetadata]:
-        if not self.layer.isValid():
+        if not self.layer.isValid() or not self.layer.dataProvider():
             return None
 
         return QgsProviderRegistry.instance().providerMetadata(
@@ -366,7 +366,11 @@ class LayerSource(object):
         filename = ""
         uri_parts = self.layer.source().split("|", 1)
 
-        if self.layer.dataProvider() is None:
+        if self.layer.type() == QgsMapLayer.VectorTileLayer:
+            uri = QgsDataSourceUri()
+            uri.setEncodedUri(self.layer.source())
+            return uri.param("url")
+        elif self.layer.dataProvider() is None:
             return ""
 
         filename = metadata.get("path", "")
@@ -432,6 +436,10 @@ class LayerSource(object):
                     uri.setDatabase(os.path.join(target_path, file_name))
                     uri.setTable(decoded_metadata["layerName"])
                     new_source = uri.uri()
+                elif self.layer.type() == QgsMapLayer.VectorTileLayer:
+                    uri = QgsDataSourceUri()
+                    uri.setEncodedUri(self.layer.source())
+                    uri.setParam("url", os.path.join(target_path, file_name))
                 else:
                     new_source = os.path.join(target_path, file_name)
                     if suffix != "":
