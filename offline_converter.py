@@ -225,7 +225,7 @@ class OfflineConverter(QObject):
                 project.removeMapLayer(layer)
                 continue
 
-            if layer_source.is_file and isascii(layer_source.filename):
+            if layer_source.is_file and not isascii(layer_source.filename):
                 self.warning.emit(
                     self.tr("QFieldSync"),
                     self.tr(
