@@ -241,7 +241,10 @@ class OfflineConverter(QObject):
 
             if (
                 layer.type() == QgsMapLayer.VectorLayer
+                and layer.dataProvider()
                 and layer.dataProvider().encoding() != "UTF-8"
+                # some providers return empty string as encoding, just ignore them
+                and layer.dataProvider().encoding() != ""
             ):
                 self.warning.emit(
                     self.tr("QFieldSync"),
