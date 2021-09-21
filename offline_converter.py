@@ -225,7 +225,7 @@ class OfflineConverter(QObject):
                 project.removeMapLayer(layer)
                 continue
 
-            if layer_source.is_file and isascii(layer_source.filename):
+            if layer_source.is_file and not isascii(layer_source.filename):
                 self.warning.emit(
                     self.tr("QFieldSync"),
                     self.tr(
@@ -241,7 +241,10 @@ class OfflineConverter(QObject):
 
             if (
                 layer.type() == QgsMapLayer.VectorLayer
+                and layer.dataProvider()
                 and layer.dataProvider().encoding() != "UTF-8"
+                # some providers return empty string as encoding, just ignore them
+                and layer.dataProvider().encoding() != ""
             ):
                 self.warning.emit(
                     self.tr("QFieldSync"),
