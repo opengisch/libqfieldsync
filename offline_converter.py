@@ -21,7 +21,6 @@
 
 import os
 import sys
-import traceback
 from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -134,11 +133,6 @@ class OfflineConverter(QObject):
 
         try:
             self._convert(project)
-        except Exception as err:
-            (_type, _value, tb) = sys.exc_info()
-            print("error", str(err))
-            print("error_origin", "orchestrator")
-            print("error_stack", traceback.format_tb(tb))
         finally:
             QCoreApplication.processEvents()
             QgsProject.instance().clear()
