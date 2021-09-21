@@ -524,6 +524,15 @@ class OfflineConverter(QObject):
             )
             return False
 
+        if project.mapLayer(self.project_configuration.base_map_layer):
+            self.warning.emit(
+                self.tr("Failed to create basemap"),
+                self.tr(
+                    'Cannot find the configured base layer with id "{}". Please check the project configuration.'
+                ).format(self.project_configuration.base_map_layer),
+            )
+            return False
+
         extent = QgsCoordinateTransform(
             QgsCoordinateReferenceSystem(self.area_of_interest_crs),
             project.mapLayer(self.project_configuration.base_map_layer).crs(),
