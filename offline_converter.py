@@ -89,6 +89,7 @@ class OfflineConverter(QObject):
         area_of_interest_epsg: str,
         offline_editing: QgsOfflineEditing,
         export_type: ExportType = ExportType.Cable,
+        create_basemap: bool = True,
     ):
 
         super(OfflineConverter, self).__init__(parent=None)
@@ -105,6 +106,7 @@ class OfflineConverter(QObject):
 
         self.export_folder = Path(export_folder)
         self.export_type = export_type
+        self.create_basemap = create_basemap
         self.area_of_interest = QgsPolygon()
         self.area_of_interest.fromWkt(area_of_interest_wkt)
         self.area_of_interest_crs = QgsCoordinateReferenceSystem(area_of_interest_epsg)
@@ -192,7 +194,7 @@ class OfflineConverter(QObject):
             self.__layer_data_by_id[layer.id()] = layer_data
             self.__layer_data_by_name[layer.name()] = layer_data
 
-        if self.project_configuration.create_base_map:
+        if self.create_basemap and self.project_configuration.create_base_map:
             self._export_basemap()
 
         # Loop through all layers and copy/remove/offline them
