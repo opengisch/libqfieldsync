@@ -519,12 +519,15 @@ class LayerSource(object):
             options = QgsVectorFileWriter.SaveVectorOptions()
             options.fileEncoding = "UTF-8"
             options.driverName = "GPKG"
-            (error, dest_file) = QgsVectorFileWriter.writeAsVectorFormatV2(
+            (error, returned_dest_file) = QgsVectorFileWriter.writeAsVectorFormatV2(
                 source_layer, dest_file, QgsCoordinateTransformContext(), options
             )
             if error != QgsVectorFileWriter.NoError:
                 return
-            new_source = dest_file
+            if returned_dest_file:
+                new_source = returned_dest_file
+            else:
+                new_source = dest_file
 
         self._change_data_source(new_source, "ogr")
         if layer_subset_string:
