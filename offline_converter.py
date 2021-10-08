@@ -199,6 +199,8 @@ class OfflineConverter(QObject):
 
         # Loop through all layers and copy/remove/offline them
         copied_files = list()
+        non_ascii_filename_layers: Dict[str, str] = {}
+        non_utf8_encoding_layers: Dict[str, str] = {}
         for layer_idx, layer in enumerate(self.__layers):
             self.total_progress_updated.emit(
                 layer_idx - len(self.__offline_layers),
@@ -222,15 +224,7 @@ class OfflineConverter(QObject):
                 continue
 
             if layer_source.is_file and not isascii(layer_source.filename):
-                self.warning.emit(
-                    self.tr("QFieldSync"),
-                    self.tr(
-                        'Layer "{}" stored at "{}" is not using ASCII encoded filename. Working with the layer might cause problems, please rename it using only ASCII charasters.'
-                    ).format(
-                        layer.name(),
-                        layer_source.filename,
-                    ),
-                )
+                non_ascii_filename_layers[layer.name()] = layer_source.filename
 
             if layer_source.is_localized_path:
                 continue
@@ -242,15 +236,7 @@ class OfflineConverter(QObject):
                 # some providers return empty string as encoding, just ignore them
                 and layer.dataProvider().encoding() != ""
             ):
-                self.warning.emit(
-                    self.tr("QFieldSync"),
-                    self.tr(
-                        'Layer "{}" is not using UTF-8 encoding, but "{}". Working with the layer might cause problems, please convert it to UTF-8 layer.'
-                    ).format(
-                        layer.name(),
-                        layer.dataProvider().encoding(),
-                    ),
-                )
+                non_utf8_encoding_layers[layer.name()] = layer.dataProvider().encoding()
 
             if layer_action == SyncAction.OFFLINE:
                 if (
@@ -288,6 +274,30 @@ class OfflineConverter(QObject):
                 layer_source.copy(self.export_folder, copied_files, True)
             elif layer_action == SyncAction.REMOVE:
                 project.removeMapLayer(layer)
+
+        if non_ascii_filename_layers:
+            layers = ", ".join(
+                [
+                    f'"{name}" at "{path}"'
+                    for name, path in non_ascii_filename_layers.items()
+                ]
+            )
+            message = self.tr(
+                "Some layers are stored at file paths that are not ASCII encoded: {}. Working with paths that are not in ASCII might cause problems. It is highly recommended to rename them to ASCII encoded paths."
+            ).format(layers)
+            self.warning.emit(self.tr("QFieldSync"), message)
+
+        if non_utf8_encoding_layers:
+            layers = ", ".join(
+                [
+                    f"{name} ({encoding})"
+                    for name, encoding in non_utf8_encoding_layers.items()
+                ]
+            )
+            message = self.tr(
+                "Some layers do not use UTF-8 encoding: {}. Working with layers that do not use UTF-8 encoding might cause problems. It is highly recommended to convert them to UTF-8 encoded layers."
+            ).format(layers)
+            self.warning.emit(self.tr("QFieldSync"), message)
 
         export_project_filename = self.export_folder.joinpath(
             f"{self.original_filename.stem}_qfield.qgs"
