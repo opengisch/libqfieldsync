@@ -536,7 +536,18 @@ class OfflineConverter(QObject):
             )
             return False
 
-        if project.mapLayer(self.project_configuration.base_map_layer):
+        if not self.project_configuration.base_map_layer.strip():
+            self.warning.emit(
+                self.tr("Failed to create basemap"),
+                self.tr(
+                    "No basemap layer selected. Please check the project configuration."
+                ).format(self.project_configuration.base_map_layer),
+            )
+            return False
+
+        basemap_layer = project.mapLayer(self.project_configuration.base_map_layer)
+
+        if not basemap_layer:
             self.warning.emit(
                 self.tr("Failed to create basemap"),
                 self.tr(
@@ -547,7 +558,7 @@ class OfflineConverter(QObject):
 
         extent = QgsCoordinateTransform(
             QgsCoordinateReferenceSystem(self.area_of_interest_crs),
-            project.mapLayer(self.project_configuration.base_map_layer).crs(),
+            basemap_layer.crs(),
             project,
         ).transformBoundingBox(basemap_extent)
 
