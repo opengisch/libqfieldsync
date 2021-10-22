@@ -364,7 +364,6 @@ class LayerSource(object):
         """
         metadata = self.decoded_metadata
         filename = ""
-        uri_parts = self.layer.source().split("|", 1)
 
         if self.layer.type() == QgsMapLayer.VectorTileLayer:
             uri = QgsDataSourceUri()
@@ -374,10 +373,6 @@ class LayerSource(object):
             return ""
 
         filename = metadata.get("path", "")
-
-        if filename == "":
-            filename = uri_parts[0]
-
         path_resolver = self.project.pathResolver()
         resolved_filename = path_resolver.writePath(filename)
         if resolved_filename.startswith("localized:"):
