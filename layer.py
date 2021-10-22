@@ -5,7 +5,6 @@ import shutil
 from typing import Dict, Optional
 
 from qgis.core import (
-    Qgis,
     QgsAttributeEditorField,
     QgsCoordinateTransformContext,
     QgsDataSourceUri,
@@ -416,12 +415,11 @@ class LayerSource(object):
 
             new_source = ""
             decoded_metadata = self.decoded_metadata
-            if Qgis.QGIS_VERSION_INT >= 31200 and self.layer.dataProvider() is not None:
-                metadata = self.metadata
 
-                if metadata:
-                    decoded_metadata["path"] = os.path.join(target_path, file_name)
-                    new_source = metadata.encodeUri(decoded_metadata)
+            if self.metadata:
+                decoded_metadata["path"] = os.path.join(target_path, file_name)
+                new_source = self.metadata.encodeUri(decoded_metadata)
+
             if new_source == "":
                 if (
                     self.layer.dataProvider()
@@ -475,12 +473,11 @@ class LayerSource(object):
             if not os.path.isfile(dest_file):
                 shutil.copy(os.path.join(source_path, file_name), dest_file)
 
-            if Qgis.QGIS_VERSION_INT >= 31200:
-                metadata = self.metadata
-                if metadata is not None:
-                    decoded_metadata = self.decoded_metadata
-                    decoded_metadata["path"] = dest_file
-                    new_source = self.metadata.encodeUri(decoded_metadata)
+            if self.metadata is not None:
+                decoded_metadata = self.decoded_metadata
+                decoded_metadata["path"] = dest_file
+                new_source = self.metadata.encodeUri(decoded_metadata)
+
             if new_source == "":
                 new_source = os.path.join(target_path, file_name)
                 if suffix != "":
