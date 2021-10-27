@@ -239,27 +239,13 @@ class OfflineConverter(QObject):
                 non_utf8_encoding_layers[layer.name()] = layer.dataProvider().encoding()
 
             if layer_action == SyncAction.OFFLINE:
-                if (
-                    self.project_configuration.offline_copy_only_aoi
-                    and not self.project_configuration.offline_copy_only_selected_features
-                ):
+                if self.project_configuration.offline_copy_only_aoi:
                     extent = QgsCoordinateTransform(
                         QgsCoordinateReferenceSystem(self.area_of_interest_crs),
                         layer.crs(),
                         QgsProject.instance(),
                     ).transformBoundingBox(self.area_of_interest.boundingBox())
                     layer.selectByRect(extent)
-                elif (
-                    self.project_configuration.offline_copy_only_aoi
-                    and self.project_configuration.offline_copy_only_selected_features
-                ):
-                    # This option is only possible via API
-                    QgsApplication.instance().messageLog().logMessage(
-                        self.tr(
-                            'Both "Area of Interest" and "only selected features" options were enabled, tha latter takes precedence.'
-                        ),
-                        "QFieldSync",
-                    )
 
                 if not layer.selectedFeatureCount():
                     layer.selectByIds([FID_NULL])
@@ -319,16 +305,12 @@ class OfflineConverter(QObject):
             gpkg_filename = "data.gpkg"
             if self.__offline_layers:
                 offline_layer_ids = [o_l.id() for o_l in self.__offline_layers]
-                only_selected = (
-                    self.project_configuration.offline_copy_only_aoi
-                    or self.project_configuration.offline_copy_only_selected_features
-                )
 
                 if not self.offline_editing.convertToOfflineProject(
                     str(self.export_folder),
                     gpkg_filename,
                     offline_layer_ids,
-                    only_selected,
+                    self.project_configuration.offline_copy_only_aoi,
                     self.offline_editing.GPKG,
                     None,
                 ):
@@ -340,16 +322,12 @@ class OfflineConverter(QObject):
             spatialite_filename = "data.sqlite"
             if self.__offline_layers:
                 offline_layer_ids = [o_l.id() for o_l in self.__offline_layers]
-                only_selected = (
-                    self.project_configuration.offline_copy_only_aoi
-                    or self.project_configuration.offline_copy_only_selected_features
-                )
 
                 if not self.offline_editing.convertToOfflineProject(
                     str(self.export_folder),
                     spatialite_filename,
                     offline_layer_ids,
-                    only_selected,
+                    self.project_configuration.offline_copy_only_aoi,
                     self.offline_editing.SpatiaLite,
                     None,
                 ):
