@@ -523,22 +523,37 @@ class OfflineConverter(QObject):
             )
             return False
 
-        basemap_layer = project.mapLayer(self.project_configuration.base_map_layer)
+        extent = basemap_extent
+        base_map_type = self.project_configuration.base_map_type
+        if base_map_type == ProjectProperties.BaseMapType.SINGLE_LAYER:
+            basemap_layer = project.mapLayer(self.project_configuration.base_map_layer)
 
-        if not basemap_layer:
-            self.warning.emit(
-                self.tr("Failed to create basemap"),
-                self.tr(
-                    'Cannot find the configured base layer with id "{}". Please check the project configuration.'
-                ).format(self.project_configuration.base_map_layer),
-            )
-            return False
+            if not basemap_layer:
+                self.warning.emit(
+                    self.tr("Failed to create basemap"),
+                    self.tr(
+                        'Cannot find the configured base layer with id "{}". Please check the project configuration.'
+                    ).format(self.project_configuration.base_map_layer),
+                )
+                return False
 
-        extent = QgsCoordinateTransform(
-            QgsCoordinateReferenceSystem(self.area_of_interest_crs),
-            basemap_layer.crs(),
-            project,
-        ).transformBoundingBox(basemap_extent)
+            # we need to transform the extent to match the one of the selected layer
+            extent = QgsCoordinateTransform(
+                QgsCoordinateReferenceSystem(self.area_of_interest_crs),
+                basemap_layer.crs(),
+                project,
+            ).transformBoundingBox(basemap_extent)
+        elif base_map_type == ProjectProperties.BaseMapType.MAP_THEME:
+            if not project.mapThemeCollection().hasMapTheme(
+                self.project_configuration.base_map_theme
+            ):
+                self.warning.emit(
+                    self.tr("Failed to create basemap"),
+                    self.tr(
+                        'Cannot find the configured base theme with name "{}". Please check the project configuration.'
+                    ).format(self.project_configuration.base_map_theme),
+                )
+                return False
 
         extent_string = "{},{},{},{}".format(
             extent.xMinimum(),
@@ -561,7 +576,6 @@ class OfflineConverter(QObject):
             "OUTPUT": os.path.join(self.export_folder, "basemap.gpkg"),
         }
 
-        base_map_type = self.project_configuration.base_map_type
         if base_map_type == ProjectProperties.BaseMapType.SINGLE_LAYER:
             params["LAYER"] = self.project_configuration.base_map_layer
         elif base_map_type == ProjectProperties.BaseMapType.MAP_THEME:
