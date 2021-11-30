@@ -565,19 +565,20 @@ class OfflineConverter(QObject):
         alg = (
             QgsApplication.instance()
             .processingRegistry()
-            .createAlgorithmById("qgis:rasterize")
+            .createAlgorithmById("native:rasterize")
         )
 
         params = {
             "EXTENT": extent_string,
-            "MAP_UNITS_PER_PIXEL": self.project_configuration.base_map_mupp,
+            "EXTENT_BUFFER": 0,
             "TILE_SIZE": self.project_configuration.base_map_tile_size,
+            "MAP_UNITS_PER_PIXEL": self.project_configuration.base_map_mupp,
             "MAKE_BACKGROUND_TRANSPARENT": False,
             "OUTPUT": os.path.join(self.export_folder, "basemap.gpkg"),
         }
 
         if base_map_type == ProjectProperties.BaseMapType.SINGLE_LAYER:
-            params["LAYER"] = self.project_configuration.base_map_layer
+            params["LAYERS"] = [self.project_configuration.base_map_layer]
         elif base_map_type == ProjectProperties.BaseMapType.MAP_THEME:
             params["MAP_THEME"] = self.project_configuration.base_map_theme
 
