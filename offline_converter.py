@@ -540,7 +540,7 @@ class OfflineConverter(QObject):
             # we need to transform the extent to match the one of the selected layer
             extent = QgsCoordinateTransform(
                 QgsCoordinateReferenceSystem(self.area_of_interest_crs),
-                basemap_layer.crs(),
+                project.crs(),
                 project,
             ).transformBoundingBox(basemap_extent)
         elif base_map_type == ProjectProperties.BaseMapType.MAP_THEME:
