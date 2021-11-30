@@ -111,7 +111,7 @@ class OfflineConverter(QObject):
         self.area_of_interest.fromWkt(area_of_interest_wkt)
         self.area_of_interest_crs = QgsCoordinateReferenceSystem(area_of_interest_epsg)
 
-        assert self.area_of_interest.isValid()
+        assert self.area_of_interest.isValid()[0]
         assert self.area_of_interest_crs.isValid()
 
         self.offline_editing = offline_editing
