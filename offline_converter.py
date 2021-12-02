@@ -160,7 +160,7 @@ class OfflineConverter(QObject):
             xml_elements_to_preserve
         )
         project.readProject.connect(on_original_project_read)
-        project.read(project.fileName())
+        project.read(self.backup_filename)
         project.readProject.disconnect(on_original_project_read)
 
         self.export_folder.mkdir(parents=True, exist_ok=True)
