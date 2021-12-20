@@ -160,7 +160,19 @@ class OfflineConverter(QObject):
             xml_elements_to_preserve
         )
         project.readProject.connect(on_original_project_read)
-        project.read(self.backup_filename)
+
+        if self.export_type == ExportType.Cable:
+            # the `backup_filename` is copied right after packaging is requested. It has all the unsaved
+            # project settings, which means they will be available in the packaged project too.
+            project.read(self.backup_filename)
+        elif self.export_type == ExportType.Cloud:
+            # if you save the project without QGIS GUI, the project no longer has `theMapCanvas` canvas
+            # so we should use the original project file that already has `theMapCanvas`. There is no
+            # gain using the `backup_filename`, since there is no user to modify the project.
+            project.read(project.fileName())
+        else:
+            raise NotImplementedError(f"Unknown package type: {self.export_type}")
+
         project.readProject.disconnect(on_original_project_read)
 
         self.export_folder.mkdir(parents=True, exist_ok=True)
