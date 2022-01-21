@@ -188,6 +188,10 @@ class LayerSource(object):
         return self._action is not None
 
     @property
+    def is_cloud_configured(self):
+        return self._cloud_action is not None
+
+    @property
     def is_file(self):
         return os.path.isfile(self.filename)
 
