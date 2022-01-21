@@ -1,5 +1,6 @@
+import sys
 from enum import Enum
-from typing import Callable, Dict, List, Optional, TypedDict
+from typing import Callable, Dict, List, Optional
 
 from qfieldsync.libqfieldsync.layer import LayerSource, SyncAction
 from qfieldsync.libqfieldsync.project import ProjectConfiguration, ProjectProperties
@@ -8,6 +9,11 @@ from qgis.core import Qgis, QgsMapLayer, QgsProject, QgsSettings
 from qgis.PyQt.QtCore import QObject
 
 from .offline_converter import ExportType
+
+if sys.version_info >= (3, 8):
+    from typing import TypedDict
+else:
+    TypedDict = Dict
 
 
 class FeedbackResult:
