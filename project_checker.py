@@ -117,6 +117,11 @@ class ProjectChecker:
                 "fn": self.check_files_have_unsupported_characters,
                 "scope": None,
             },
+            {
+                "type": Feedback.Level.WARNING,
+                "fn": self.check_project_is_dirty,
+                "scope": None,
+            },
         ]
         self.layer_checks: List[ProjectChecker.CheckConfig] = [
             {
@@ -265,6 +270,15 @@ class ProjectChecker:
                     'Forbidden characters in filesystem path(s) "{}". '
                     'Please make sure there are no files and directories with "<", ">", ":", "/", "\\", "|", "?", "*" or double quotes (") characters in their path.'
                 ).format(", ".join([f'"{path}"' for path in problematic_paths]))
+            )
+
+    def check_project_is_dirty(self) -> Optional[FeedbackResult]:
+        if self.project.isDirty():
+            return FeedbackResult(
+                self.tr(
+                    "QGIS project has unsaved changes. "
+                    "Unsaved changes will not be uploaded to QFieldCloud."
+                )
             )
 
     def check_layer_has_utf8_datasources(
