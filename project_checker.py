@@ -261,6 +261,10 @@ class ProjectChecker:
         home_path = Path(self.project.fileName()).parent
         for path in home_path.rglob("*"):
             relative_path = path.relative_to(home_path)
+
+            if str(relative_path).startswith(".qfieldsync"):
+                continue
+
             if regexp.search(str(relative_path)) is not None:
                 problematic_paths.append(relative_path)
 
