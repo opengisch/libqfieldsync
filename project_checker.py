@@ -1,5 +1,7 @@
+import re
 import sys
 from enum import Enum
+from pathlib import Path
 from typing import Callable, Dict, List, Optional
 
 from qfieldsync.libqfieldsync.layer import LayerSource, SyncAction
@@ -108,6 +110,11 @@ class ProjectChecker:
             {
                 "type": Feedback.Level.ERROR,
                 "fn": self.check_no_homepath,
+                "scope": None,
+            },
+            {
+                "type": Feedback.Level.ERROR,
+                "fn": self.check_files_have_unsupported_characters,
                 "scope": None,
             },
         ]
@@ -242,6 +249,23 @@ class ProjectChecker:
                         'Please change this configuration in "File -> Project settings -> QField" first.'
                     ).format(project_configuration.base_map_theme),
                 )
+
+    def check_files_have_unsupported_characters(self) -> Optional[FeedbackResult]:
+        problematic_paths = []
+        regexp = re.compile(r'[<>:"\\|?*]')
+        home_path = Path(self.project.fileName()).parent
+        for path in home_path.rglob("*"):
+            relative_path = path.relative_to(home_path)
+            if regexp.search(str(relative_path)) is not None:
+                problematic_paths.append(relative_path)
+
+        if problematic_paths:
+            return FeedbackResult(
+                self.tr(
+                    'Forbidden characters in filesystem path(s) "{}". '
+                    'Please make sure there are no files and directories with "<", ">", ":", "/", "\\", "|", "?", "*" or double quotes (") characters in their path.'
+                ).format(", ".join([f'"{path}"' for path in problematic_paths]))
+            )
 
     def check_layer_has_utf8_datasources(
         self, layer_source: LayerSource
