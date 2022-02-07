@@ -145,7 +145,7 @@ class ProjectChecker:
                 "scope": None,
             },
             {
-                "type": Feedback.Level.ERROR,
+                "type": Feedback.Level.WARNING,
                 "fn": self.check_layer_configured,
                 "scope": None,
             },
@@ -369,6 +369,7 @@ class ProjectChecker:
             return FeedbackResult(
                 self.tr(
                     "The layer is not configured with neither cable, nor cloud action yet. "
-                    'Please select appropriate layer action in "Layer Properties -> QField". '
+                    "Default action will be selected only for this time. "
+                    'Please select and save appropriate layer action in "Layer Properties -> QField". '
                 ),
             )
