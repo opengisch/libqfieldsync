@@ -265,7 +265,7 @@ class ProjectChecker:
             if str(relative_path).startswith(".qfieldsync"):
                 continue
 
-            if regexp.search(str(relative_path)) is not None:
+            if regexp.search(str(relative_path.as_posix())) is not None:
                 problematic_paths.append(relative_path)
 
         if problematic_paths:
