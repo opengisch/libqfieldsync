@@ -341,7 +341,7 @@ class LayerSource(object):
         return self.layer.name()
 
     @property
-    def metadata(self) -> Optional[QgsProviderMetadata]:
+    def provider_metadata(self) -> Optional[QgsProviderMetadata]:
         if not self.layer.dataProvider():
             return None
 
@@ -350,13 +350,11 @@ class LayerSource(object):
         )
 
     @property
-    def decoded_metadata(self) -> Dict:
-        metadata = self.metadata
-
-        if metadata is None:
+    def metadata(self) -> Dict:
+        if self.provider_metadata is None:
             return {}
 
-        return metadata.decodeUri(self.layer.source())
+        return self.provider_metadata.decodeUri(self.layer.source())
 
     @property
     def filename(self) -> str:
@@ -365,7 +363,7 @@ class LayerSource(object):
         Note: This may return garbage path, e.g. on online layers such as PostGIS or WFS. Always check with os.path.isfile(),
         as Path.is_file() raises an exception prior to Python 3.8
         """
-        metadata = self.decoded_metadata
+        metadata = self.metadata
         filename = ""
 
         if self.layer.type() == QgsMapLayer.VectorTileLayer:
@@ -418,11 +416,11 @@ class LayerSource(object):
                     shutil.copy(os.path.join(source_path, basename + ext), dest_file)
 
             new_source = ""
-            decoded_metadata = self.decoded_metadata
+            metadata = self.metadata
 
-            if self.metadata:
-                decoded_metadata["path"] = os.path.join(target_path, file_name)
-                new_source = self.metadata.encodeUri(decoded_metadata)
+            if self.provider_metadata:
+                metadata["path"] = os.path.join(target_path, file_name)
+                new_source = self.provider_metadata.encodeUri(metadata)
 
             if new_source == "":
                 if (
@@ -431,7 +429,7 @@ class LayerSource(object):
                 ):
                     uri = QgsDataSourceUri()
                     uri.setDatabase(os.path.join(target_path, file_name))
-                    uri.setTable(decoded_metadata["layerName"])
+                    uri.setTable(metadata["layerName"])
                     new_source = uri.uri()
                 elif self.layer.type() == QgsMapLayer.VectorTileLayer:
                     uri = QgsDataSourceUri()
@@ -477,10 +475,10 @@ class LayerSource(object):
             if not os.path.isfile(dest_file):
                 shutil.copy(os.path.join(source_path, file_name), dest_file)
 
-            if self.metadata is not None:
-                decoded_metadata = self.decoded_metadata
-                decoded_metadata["path"] = dest_file
-                new_source = self.metadata.encodeUri(decoded_metadata)
+            if self.provider_metadata is not None:
+                metadata = self.metadata
+                metadata["path"] = dest_file
+                new_source = self.provider_metadata.encodeUri(metadata)
 
             if new_source == "":
                 new_source = os.path.join(target_path, file_name)
