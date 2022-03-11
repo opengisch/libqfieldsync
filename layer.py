@@ -342,7 +342,7 @@ class LayerSource(object):
 
     @property
     def metadata(self) -> Optional[QgsProviderMetadata]:
-        if not self.layer.isValid() or not self.layer.dataProvider():
+        if not self.layer.dataProvider():
             return None
 
         return QgsProviderRegistry.instance().providerMetadata(
