@@ -28,7 +28,7 @@ from qgis.core import QgsMapLayer, QgsProject
 
 
 def get_project_title(project: QgsProject) -> str:
-    """ Gets project title, or if non available, the basename of the filename"""
+    """Gets project title, or if non available, the basename of the filename"""
     if project.title():
         return project.title()
     else:
