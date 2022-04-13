@@ -65,7 +65,6 @@ if sys.version_info >= (3, 8):
         fields: Optional[QgsFields]
         pk_names: Optional[List[str]]
 
-
 else:
     LayerData = Dict
 
