@@ -15,6 +15,7 @@ class ProjectProperties(object):
     AREA_OF_INTEREST = "/areaOfInterest"
     AREA_OF_INTEREST_CRS = "/areaOfInterestCrs"
     DIGITIZING_LOGS_LAYER = "/digitizingLogsLayer"
+    MAXIMUM_IMAGE_WIDTH_HEIGHT = "/maximumImageWidthHeight"
 
     class BaseMapType(object):
         def __init__(self):
@@ -100,6 +101,19 @@ class ProjectConfiguration(object):
     def digitizing_logs_layer(self, value):
         self.project.writeEntry(
             "qfieldsync", ProjectProperties.DIGITIZING_LOGS_LAYER, value
+        )
+
+    @property
+    def maximum_image_width_height(self):
+        maximum_image_width_height, _ = self.project.readNumEntry(
+            "qfieldsync", ProjectProperties.MAXIMUM_IMAGE_WIDTH_HEIGHT, 0
+        )
+        return maximum_image_width_height
+
+    @maximum_image_width_height.setter
+    def maximum_image_width_height(self, value):
+        self.project.writeEntry(
+            "qfieldsync", ProjectProperties.MAXIMUM_IMAGE_WIDTH_HEIGHT, value
         )
 
     @property
