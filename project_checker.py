@@ -314,7 +314,7 @@ class ProjectChecker:
                     "Non ASCII character detected in the layer filename."
                     "Working with file paths that are not in ASCII might cause problems."
                     "It is highly recommended to rename them to ASCII encoded paths."
-                ).format(layer_source.layer.dataProvider().encoding()),
+                ),
             )
 
     def check_layer_primary_key(
