@@ -189,9 +189,10 @@ class OfflineConverter(QObject):
                     if "," in pk_name:
                         raise ValueError("Comma in field names not allowed")
                     pk_names.append(pk_name)
-                    layer.setCustomProperty(
-                        "QFieldSync/sourceDataPrimaryKeys", ",".join(pk_names)
-                    )
+
+                layer.setCustomProperty(
+                    "QFieldSync/sourceDataPrimaryKeys", ",".join(pk_names)
+                )
 
             layer_data: LayerData = {
                 "id": layer.id(),
