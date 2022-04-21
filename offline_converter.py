@@ -375,29 +375,6 @@ class OfflineConverter(QObject):
         # check if value relations point to offline layers and adjust if necessary
         for e_layer in project.mapLayers().values():
             if e_layer.type() == QgsMapLayer.VectorLayer:
-                # Before QGIS 3.14 the custom properties of a layer are not
-                # kept into the new layer during the conversion to offline project
-                # So we try to identify the new created layer by its name and
-                # we set the custom properties again.
-                if not e_layer.customProperty("QFieldSync/sourceDataPrimaryKeys"):
-                    o_layer_name = e_layer.name().rsplit(" ", 1)[0]
-                    o_layer_data = self.__layer_data_by_name.get(o_layer_name, None)
-
-                    if not o_layer_data:
-                        self.warning.emit(
-                            self.tr("QFieldSync"),
-                            self.tr(
-                                'Failed to find layer with name "{}". QFieldSync will not package that layer.'
-                            ).format(o_layer_name),
-                        )
-                        continue
-
-                    e_layer.setCustomProperty("remoteLayerId", o_layer_data["id"])
-                    e_layer.setCustomProperty(
-                        "QFieldSync/sourceDataPrimaryKeys",
-                        o_layer_data["pk_names"],
-                    )
-
                 remote_layer_id = e_layer.customProperty("QFieldSync/remoteLayerId")
                 if (
                     not remote_layer_id
