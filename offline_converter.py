@@ -205,6 +205,8 @@ class OfflineConverter(QObject):
             self.__layer_data_by_id[layer.id()] = layer_data
             self.__layer_data_by_name[layer.name()] = layer_data
 
+            layer.setCustomProperty("QFieldSync/remoteLayerId", layer.id())
+
         if self.create_basemap and self.project_configuration.create_base_map:
             self._export_basemap()
 
@@ -396,10 +398,10 @@ class OfflineConverter(QObject):
                         o_layer_data["pk_names"],
                     )
 
+                remote_layer_id = e_layer.customProperty("QFieldSync/remoteLayerId")
                 if (
-                    not e_layer.customProperty("remoteLayerId")
-                    or e_layer.customProperty("remoteLayerId")
-                    not in self.__layer_data_by_id
+                    not remote_layer_id
+                    or remote_layer_id not in self.__layer_data_by_id
                 ):
                     self.warning.emit(
                         self.tr("QFieldSync"),
@@ -412,9 +414,10 @@ class OfflineConverter(QObject):
                 self.post_process_fields(e_layer)
 
     def post_process_fields(self, e_layer: QgsVectorLayer) -> None:
+        remote_layer_id = e_layer.customProperty("QFieldSync/remoteLayerId")
         e_layer_source = LayerSource(e_layer)
-        o_layer_data = self.__layer_data_by_id[e_layer.customProperty("remoteLayerId")]
-        o_layer_fields: QgsFields = o_layer_data["fields"]
+        o_layer_data = self.__layer_data_by_id[remote_layer_id]
+        o_layer_fields: QgsFields = o_layer_data["fields"]  # type: ignore
         o_layer_field_names = o_layer_fields.names()
 
         for e_field_name in e_layer_source.visible_fields_names():
