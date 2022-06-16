@@ -259,14 +259,19 @@ class ProjectChecker:
         problematic_paths = []
         regexp = re.compile(r'[<>:"\\|?*]')
         home_path = Path(self.project.fileName()).parent
-        for path in home_path.rglob("*"):
-            relative_path = path.relative_to(home_path)
+        try:
+            for path in home_path.rglob("*"):
+                relative_path = path.relative_to(home_path)
 
-            if str(relative_path).startswith(".qfieldsync"):
-                continue
+                if str(relative_path).startswith(".qfieldsync"):
+                    continue
 
-            if regexp.search(str(relative_path.as_posix())) is not None:
-                problematic_paths.append(relative_path)
+                if regexp.search(str(relative_path.as_posix())) is not None:
+                    problematic_paths.append(relative_path)
+        except FileNotFoundError:
+            # long paths on windows will raise a FileNotFoundError in rglob, so we have to handle
+            # that gracefully
+            pass
 
         if problematic_paths:
             return FeedbackResult(
