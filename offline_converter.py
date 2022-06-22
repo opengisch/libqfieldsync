@@ -48,7 +48,7 @@ from qgis.PyQt.QtCore import QCoreApplication, QObject, pyqtSignal
 
 from .layer import LayerSource, SyncAction
 from .project import ProjectConfiguration, ProjectProperties
-from .utils.file_utils import copy_images, isascii
+from .utils.file_utils import copy_attachments, isascii
 from .utils.qgis import make_temp_qgis_file, open_project
 from .utils.xml import get_themapcanvas
 
@@ -86,6 +86,7 @@ class OfflineConverter(QObject):
         export_folder: str,
         area_of_interest_wkt: str,
         area_of_interest_epsg: str,
+        attachment_dirs: List[str],
         offline_editing: QgsOfflineEditing,
         export_type: ExportType = ExportType.Cable,
         create_basemap: bool = True,
@@ -109,6 +110,7 @@ class OfflineConverter(QObject):
         self.area_of_interest = QgsPolygon()
         self.area_of_interest.fromWkt(area_of_interest_wkt)
         self.area_of_interest_crs = QgsCoordinateReferenceSystem(area_of_interest_epsg)
+        self.attachment_dirs = attachment_dirs
 
         assert self.area_of_interest.isValid()[0]
         assert self.area_of_interest_crs.isValid()
@@ -309,11 +311,12 @@ class OfflineConverter(QObject):
         # save the offline project twice so that the offline plugin can "know" that it's a relative path
         QgsProject.instance().write(str(export_project_filename))
 
-        # export the DCIM folder
-        copy_images(
-            str(self.original_filename.parent.joinpath("DCIM")),
-            str(export_project_filename.parent.joinpath("DCIM")),
-        )
+        for attachment_dir in self.attachment_dirs:
+            copy_attachments(
+                self.original_filename.parent,
+                export_project_filename.parent,
+                attachment_dir,
+            )
         try:
             # Run the offline plugin for gpkg
             gpkg_filename = "data.gpkg"

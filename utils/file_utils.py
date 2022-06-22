@@ -126,26 +126,25 @@ def slugify(text: str) -> str:
     return slug
 
 
-def copy_images(source_path: str, destination_path: str) -> None:
-    if os.path.isdir(source_path):
-        if not os.path.isdir(destination_path):
-            os.mkdir(destination_path)
-    for root, dirs, files in os.walk(source_path):
-        for name in dirs:
-            dir_path = os.path.join(root, name)
-            destination_dir_path = os.path.join(
-                destination_path, os.path.relpath(dir_path, source_path)
-            )
-            # create the folder if it does not exists
-            if not os.path.isdir(destination_dir_path):
-                os.mkdir(destination_dir_path)
-        for name in files:
-            file_path = os.path.join(root, name)
-            destination_file_path = os.path.join(
-                destination_path, os.path.relpath(file_path, source_path)
-            )
-            # copy the file no matter if it exists or not
-            shutil.copyfile(os.path.join(root, name), destination_file_path)
+def copy_attachments(source: Path, dest: Path, dirname: str) -> None:
+    source = source.joinpath(dirname)
+    dest = dest.joinpath(dirname)
+
+    if source.is_dir():
+        dest.mkdir(parents=True, exist_ok=True)
+
+    for filename in source.glob("**/*"):
+        relative_filename = filename.relative_to(source)
+        dest_filename = dest.joinpath(relative_filename)
+
+        # create the folder
+        if filename.is_dir():
+            dest_filename.mkdir(parents=True, exist_ok=True)
+            copy_attachments(source, dest, relative_filename)
+            continue
+
+        # copy the file no matter if it exists or not
+        shutil.copyfile(filename, dest_filename)
 
 
 def copy_multifile(
