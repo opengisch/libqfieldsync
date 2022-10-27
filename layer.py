@@ -93,6 +93,7 @@ class LayerSource(object):
         self._action = None
         self._cloud_action = None
         self._photo_naming = {}
+        self._relationship_maximum_visible = {}
         self._is_geometry_locked = None
         self.read_layer()
         self.project = QgsProject.instance()
@@ -103,12 +104,18 @@ class LayerSource(object):
         self._photo_naming = json.loads(
             self.layer.customProperty("QFieldSync/photo_naming") or "{}"
         )
+        self._relationship_maximum_visible = json.loads(
+            self.layer.customProperty("QFieldSync/relationship_maximum_visible") or "{}"
+        )
         self._is_geometry_locked = self.layer.customProperty(
             "QFieldSync/is_geometry_locked", False
         )
 
     def apply(self):
         photo_naming_json = json.dumps(self._photo_naming)
+        relationship_maximum_visible_json = json.dumps(
+            self._relationship_maximum_visible
+        )
 
         has_changed = False
         has_changed |= self.layer.customProperty("QFieldSync/action") != self.action
@@ -119,6 +126,10 @@ class LayerSource(object):
             self.layer.customProperty("QFieldSync/photo_naming") != photo_naming_json
         )
         has_changed |= (
+            self.layer.customProperty("QFieldSync/relationship_maximum_visible")
+            != relationship_maximum_visible_json
+        )
+        has_changed |= (
             bool(self.layer.customProperty("QFieldSync/is_geometry_locked"))
             != self.is_geometry_locked
         )
@@ -126,6 +137,9 @@ class LayerSource(object):
         self.layer.setCustomProperty("QFieldSync/action", self.action)
         self.layer.setCustomProperty("QFieldSync/cloud_action", self.cloud_action)
         self.layer.setCustomProperty("QFieldSync/photo_naming", photo_naming_json)
+        self.layer.setCustomProperty(
+            "QFieldSync/relationship_maximum_visible", relationship_maximum_visible_json
+        )
 
         # custom properties does not store the data type, so it is safer to remove boolean custom properties, rather than setting them to the string 'false' (which is boolean `True`)
         if self.is_geometry_locked:
@@ -167,6 +181,17 @@ class LayerSource(object):
 
     def set_photo_naming(self, field_name: str, expression: str):
         self._photo_naming[field_name] = expression
+
+    def relationship_maximum_visible(self, relation_id: str) -> int:
+        return self._relationship_maximum_visible.get(
+            relation_id,
+            4,
+        )
+
+    def set_relationship_maximum_visible(
+        self, relation_id: str, relationship_maximum_visible: int
+    ):
+        self._relationship_maximum_visible[relation_id] = relationship_maximum_visible
 
     @property
     def default_action(self):
