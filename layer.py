@@ -88,11 +88,19 @@ class SyncAction(object):
 
 
 class LayerSource(object):
+    EXTERNAL_RESOURCE_EXPRESSIONS = [
+        "'files/{layername}_' || format_date(now(),'yyyyMMddhhmmsszzz') || '_#~filename~#'",  # Files
+        "'DCIM/{layername}_' || format_date(now(),'yyyyMMddhhmmsszzz') || '.#~extension~#'",  # Image
+        "",  # Web
+        "'audio/{layername}_' || format_date(now(),'yyyyMMddhhmmsszzz') || '.#~extension~#'",  # Audio
+        "'video/{layername}_' || format_date(now(),'yyyyMMddhhmmsszzz') || '.#~extension~#'",  # Video
+    ]
+
     def __init__(self, layer):
         self.layer = layer
         self._action = None
         self._cloud_action = None
-        self._photo_naming = {}
+        self._resource_naming = {}
         self._relationship_maximum_visible = {}
         self._is_geometry_locked = None
         self.read_layer()
@@ -101,8 +109,8 @@ class LayerSource(object):
     def read_layer(self):
         self._action = self.layer.customProperty("QFieldSync/action")
         self._cloud_action = self.layer.customProperty("QFieldSync/cloud_action")
-        self._photo_naming = json.loads(
-            self.layer.customProperty("QFieldSync/photo_naming") or "{}"
+        self._resource_naming = json.loads(
+            self.layer.customProperty("QFieldSync/resource_naming") or "{}"
         )
         self._relationship_maximum_visible = json.loads(
             self.layer.customProperty("QFieldSync/relationship_maximum_visible") or "{}"
@@ -112,7 +120,7 @@ class LayerSource(object):
         )
 
     def apply(self):
-        photo_naming_json = json.dumps(self._photo_naming)
+        resource_naming_json = json.dumps(self._resource_naming)
         relationship_maximum_visible_json = json.dumps(
             self._relationship_maximum_visible
         )
@@ -123,7 +131,8 @@ class LayerSource(object):
             self.layer.customProperty("QFieldSync/cloud_action") != self.cloud_action
         )
         has_changed |= (
-            self.layer.customProperty("QFieldSync/photo_naming") != photo_naming_json
+            self.layer.customProperty("QFieldSync/resource_naming")
+            != resource_naming_json
         )
         has_changed |= (
             self.layer.customProperty("QFieldSync/relationship_maximum_visible")
@@ -136,7 +145,7 @@ class LayerSource(object):
 
         self.layer.setCustomProperty("QFieldSync/action", self.action)
         self.layer.setCustomProperty("QFieldSync/cloud_action", self.cloud_action)
-        self.layer.setCustomProperty("QFieldSync/photo_naming", photo_naming_json)
+        self.layer.setCustomProperty("QFieldSync/resource_naming", resource_naming_json)
         self.layer.setCustomProperty(
             "QFieldSync/relationship_maximum_visible", relationship_maximum_visible_json
         )
@@ -171,16 +180,16 @@ class LayerSource(object):
     def cloud_action(self, action):
         self._cloud_action = action
 
-    def photo_naming(self, field_name: str) -> str:
-        return self._photo_naming.get(
+    def resource_naming(self, field_name, external_resource_type: str) -> str:
+        return self._resource_naming.get(
             field_name,
-            "'DCIM/{layername}_' || format_date(now(),'yyyyMMddhhmmsszzz') || '.jpg'".format(
+            self.EXTERNAL_RESOURCE_EXPRESSIONS[external_resource_type].format(
                 layername=slugify(self.layer.name())
             ),
         )
 
-    def set_photo_naming(self, field_name: str, expression: str):
-        self._photo_naming[field_name] = expression
+    def set_resource_naming(self, field_name: str, expression: str):
+        self._resource_naming[field_name] = expression
 
     def relationship_maximum_visible(self, relation_id: str) -> int:
         return self._relationship_maximum_visible.get(
