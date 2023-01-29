@@ -2,6 +2,7 @@ import json
 import os
 import re
 import shutil
+from enum import Enum
 from typing import Dict, Optional
 
 from qgis.core import (
@@ -88,13 +89,22 @@ class SyncAction(object):
 
 
 class LayerSource(object):
-    ATTACHMENT_EXPRESSIONS = [
-        "'files/{layername}_' || format_date(now(),'yyyyMMddhhmmsszzz') || '_#~filename~#'",  # Files
-        "'DCIM/{layername}_' || format_date(now(),'yyyyMMddhhmmsszzz') || '.#~extension~#'",  # Image
-        "",  # Web
-        "'audio/{layername}_' || format_date(now(),'yyyyMMddhhmmsszzz') || '.#~extension~#'",  # Audio
-        "'video/{layername}_' || format_date(now(),'yyyyMMddhhmmsszzz') || '.#~extension~#'",  # Video
-    ]
+    class AttachmentType(
+        Enum
+    ):  # Matches QGIS gui QgsExternalResourceWidget.DocumentViewerContent enum values
+        FILE = 0  # QgsExternalResourceWidget.NoContent
+        IMAGE = 1  # QgsExternalResourceWidget.Image
+        WEB = 2  # QgsExternalResourceWidget.Web
+        AUDIO = 3  # QgsExternalResourceWidget.Audio
+        VIDEO = 4  # QgsExternalResourceWidget.Video
+
+    ATTACHMENT_EXPRESSIONS = {
+        AttachmentType.FILE: "'files/{layername}_' || format_date(now(),'yyyyMMddhhmmsszzz') || '_{{filename}}'",
+        AttachmentType.IMAGE: "'DCIM/{layername}_' || format_date(now(),'yyyyMMddhhmmsszzz') || '.{{extension}}'",
+        AttachmentType.WEB: "",
+        AttachmentType.AUDIO: "'audio/{layername}_' || format_date(now(),'yyyyMMddhhmmsszzz') || '.{{extension}}'",
+        AttachmentType.VIDEO: "'video/{layername}_' || format_date(now(),'yyyyMMddhhmmsszzz') || '.{{extension}}'",
+    }
 
     def __init__(self, layer):
         self.layer = layer
@@ -145,7 +155,9 @@ class LayerSource(object):
 
         self.layer.setCustomProperty("QFieldSync/action", self.action)
         self.layer.setCustomProperty("QFieldSync/cloud_action", self.cloud_action)
-        self.layer.setCustomProperty("QFieldSync/attachment_naming", attachment_naming_json)
+        self.layer.setCustomProperty(
+            "QFieldSync/attachment_naming", attachment_naming_json
+        )
         self.layer.setCustomProperty(
             "QFieldSync/relationship_maximum_visible", relationship_maximum_visible_json
         )
@@ -180,10 +192,10 @@ class LayerSource(object):
     def cloud_action(self, action):
         self._cloud_action = action
 
-    def attachment_naming(self, field_name, attachment_type: str) -> str:
+    def attachment_naming(self, field_name, attachment_type: int) -> str:
         return self._attachment_naming.get(
             field_name,
-            self.ATTACHMENT_EXPRESSIONS[attachment_type].format(
+            self.ATTACHMENT_EXPRESSIONS[self.AttachmentType(attachment_type)].format(
                 layername=slugify(self.layer.name())
             ),
         )
