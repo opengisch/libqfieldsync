@@ -192,10 +192,16 @@ class LayerSource(object):
     def cloud_action(self, action):
         self._cloud_action = action
 
-    def attachment_naming(self, field_name, attachment_type: int) -> str:
+    def get_attachment_type_by_int_value(self, value: int) -> AttachmentType:
+        try:
+            return self.AttachmentType(value)
+        except ValueError:
+            return self.AttachmentType.FILE
+
+    def attachment_naming(self, field_name, attachment_type: AttachmentType) -> str:
         return self._attachment_naming.get(
             field_name,
-            self.ATTACHMENT_EXPRESSIONS[self.AttachmentType(attachment_type)].format(
+            self.ATTACHMENT_EXPRESSIONS[attachment_type].format(
                 layername=slugify(self.layer.name())
             ),
         )
