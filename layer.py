@@ -192,6 +192,36 @@ class LayerSource(object):
     def cloud_action(self, action):
         self._cloud_action = action
 
+    def get_attachment_field_type(self, field_name: str) -> None:
+        if self.layer.type() != QgsMapLayer.VectorLayer:
+            return None
+
+        field_idx = self.layer.fields().indexFromName(field_name)
+        ews = self.layer.editorWidgetSetup(field_idx)
+
+        if ews.type() != "ExternalResource":
+            return
+
+        resource_type = (
+            ews.config()["DocumentViewer"] if "DocumentViewer" in ews.config() else 0
+        )
+        return self.get_attachment_type_by_int_value(resource_type)
+
+    def get_attachment_fields(self) -> Dict[str, AttachmentType]:
+        if self.layer.type() != QgsMapLayer.VectorLayer:
+            return {}
+
+        attachment_fields = {}
+
+        for field in self.layer.fields():
+            field_name = field.name()
+            attachment_type = self.get_attachment_field_type(field_name)
+
+            if attachment_type:
+                attachment_fields[field_name] = attachment_type
+
+        return attachment_fields
+
     def get_attachment_type_by_int_value(self, value: int) -> AttachmentType:
         try:
             return self.AttachmentType(value)
