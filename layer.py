@@ -111,6 +111,8 @@ class LayerSource(object):
         self._action = None
         self._cloud_action = None
         self._attachment_naming = {}
+        # compatibility with QFieldSync <4.3 and QField <2.7
+        self._photo_naming = {}
         self._relationship_maximum_visible = {}
         self._is_geometry_locked = None
         self.read_layer()
@@ -122,6 +124,10 @@ class LayerSource(object):
         self._attachment_naming = json.loads(
             self.layer.customProperty("QFieldSync/attachment_naming") or "{}"
         )
+        # compatibility with QFieldSync <4.3 and QField <2.7
+        self._photo_naming = json.loads(
+            self.layer.customProperty("QFieldSync/photo_naming") or "{}"
+        )
         self._relationship_maximum_visible = json.loads(
             self.layer.customProperty("QFieldSync/relationship_maximum_visible") or "{}"
         )
@@ -131,6 +137,9 @@ class LayerSource(object):
 
     def apply(self):
         attachment_naming_json = json.dumps(self._attachment_naming)
+        # compatibility with QFieldSync <4.3 and QField <2.7
+        photo_naming_json = json.dumps(self._photo_naming)
+
         relationship_maximum_visible_json = json.dumps(
             self._relationship_maximum_visible
         )
@@ -158,6 +167,8 @@ class LayerSource(object):
         self.layer.setCustomProperty(
             "QFieldSync/attachment_naming", attachment_naming_json
         )
+        # compatibility with QFieldSync <4.3 and QField <2.7
+        self.layer.setCustomProperty("QFieldSync/photo_naming", photo_naming_json)
         self.layer.setCustomProperty(
             "QFieldSync/relationship_maximum_visible", relationship_maximum_visible_json
         )
@@ -228,15 +239,30 @@ class LayerSource(object):
         except ValueError:
             return LayerSource.AttachmentType.FILE
 
-    def attachment_naming(self, field_name, attachment_type: AttachmentType) -> str:
-        return self._attachment_naming.get(
-            field_name,
+    def attachment_naming(self, field_name) -> str:
+        attachment_type = self.get_attachment_field_type(field_name)
+        default_name_setting_value = (
             self.ATTACHMENT_EXPRESSIONS[attachment_type].format(
                 layername=slugify(self.layer.name())
             ),
         )
 
+        # compatibility with QFieldSync <4.3 and QField <2.7
+        legacy_name_setting_value = None
+        if attachment_type == LayerSource.AttachmentType.IMAGE:
+            legacy_name_setting_value = self._photo_naming.get(field_name)
+
+        return self._attachment_naming.get(
+            field_name,
+            legacy_name_setting_value or default_name_setting_value,
+        )
+
     def set_attachment_naming(self, field_name: str, expression: str):
+        # compatibility with QFieldSync <4.3 and QField <2.7
+        attachment_type = self.get_attachment_field_type(field_name)
+        if attachment_type == LayerSource.AttachmentType.IMAGE:
+            self._photo_naming[field_name] = expression
+
         self._attachment_naming[field_name] = expression
 
     def relationship_maximum_visible(self, relation_id: str) -> int:
