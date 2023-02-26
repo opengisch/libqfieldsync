@@ -224,9 +224,9 @@ class LayerSource(object):
 
     def get_attachment_type_by_int_value(self, value: int) -> AttachmentType:
         try:
-            return self.AttachmentType(value)
+            return LayerSource.AttachmentType(value)
         except ValueError:
-            return self.AttachmentType.FILE
+            return LayerSource.AttachmentType.FILE
 
     def attachment_naming(self, field_name, attachment_type: AttachmentType) -> str:
         return self._attachment_naming.get(
