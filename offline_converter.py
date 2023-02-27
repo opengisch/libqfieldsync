@@ -90,6 +90,7 @@ class OfflineConverter(QObject):
         offline_editing: QgsOfflineEditing,
         export_type: ExportType = ExportType.Cable,
         create_basemap: bool = True,
+        dirs_to_copy: Optional[Dict[str, bool]] = None,
     ):
 
         super(OfflineConverter, self).__init__(parent=None)
@@ -111,6 +112,7 @@ class OfflineConverter(QObject):
         self.area_of_interest.fromWkt(area_of_interest_wkt)
         self.area_of_interest_crs = QgsCoordinateReferenceSystem(area_of_interest_epsg)
         self.attachment_dirs = attachment_dirs
+        self.dirs_to_copy = dirs_to_copy
 
         assert self.area_of_interest.isValid()[0]
         assert self.area_of_interest_crs.isValid()
@@ -118,6 +120,7 @@ class OfflineConverter(QObject):
         self.offline_editing = offline_editing
         self.project_configuration = ProjectConfiguration(project)
 
+    # flake8: noqa: max-complexity: 33
     def convert(self) -> None:
         """
         Convert the project to a portable project.
@@ -311,11 +314,21 @@ class OfflineConverter(QObject):
         # save the offline project twice so that the offline plugin can "know" that it's a relative path
         QgsProject.instance().write(str(export_project_filename))
 
-        for attachment_dir in self.attachment_dirs:
+        if self.dirs_to_copy is None:
+            dirs_to_copy = {}
+            for d in self.attachment_dirs:
+                dirs_to_copy[d] = True
+        else:
+            dirs_to_copy = self.dirs_to_copy
+
+        for source_dir, should_copy in dirs_to_copy.items():
+            if not should_copy:
+                continue
+
             copy_attachments(
                 self.original_filename.parent,
                 export_project_filename.parent,
-                attachment_dir,
+                source_dir,
             )
         try:
             # Run the offline plugin for gpkg
