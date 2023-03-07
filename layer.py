@@ -241,11 +241,9 @@ class LayerSource(object):
 
     def attachment_naming(self, field_name) -> str:
         attachment_type = self.get_attachment_field_type(field_name)
-        default_name_setting_value = (
-            self.ATTACHMENT_EXPRESSIONS[attachment_type].format(
-                layername=slugify(self.layer.name())
-            )
-        )
+        default_name_setting_value = self.ATTACHMENT_EXPRESSIONS[
+            attachment_type
+        ].format(layername=slugify(self.layer.name()))
 
         # compatibility with QFieldSync <4.3 and QField <2.7
         legacy_name_setting_value = None
