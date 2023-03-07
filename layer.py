@@ -244,7 +244,7 @@ class LayerSource(object):
         default_name_setting_value = (
             self.ATTACHMENT_EXPRESSIONS[attachment_type].format(
                 layername=slugify(self.layer.name())
-            ),
+            )
         )
 
         # compatibility with QFieldSync <4.3 and QField <2.7
