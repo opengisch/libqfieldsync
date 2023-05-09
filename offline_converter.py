@@ -69,6 +69,10 @@ else:
     LayerData = Dict
 
 
+class UnsupportedPrimaryKeyError(Exception):
+    ...
+
+
 class ExportType(Enum):
     Cable = "cable"
     Cloud = "cloud"
@@ -185,19 +189,58 @@ class OfflineConverter(QObject):
 
         # We store the pks of the original vector layers
         for layer in self.__layers:
-            pk_names = None
+            pk_name: str = ""
             if layer.type() == QgsMapLayer.VectorLayer:
-                pk_names = []
-                for idx in layer.primaryKeyAttributes():
-                    pk_name = layer.fields()[idx].name()
+                pk_indexes = layer.primaryKeyAttributes()
+                fields = layer.fields()
+
+                if len(pk_indexes) == 1:
+                    pk_name = fields[pk_indexes[0]].name()
+
                     # and we check that the primary key fields names don't have a comma in the name
                     if "," in pk_name:
                         raise ValueError("Comma in field names not allowed")
-                    pk_names.append(pk_name)
+                elif len(pk_indexes) > 1:
+                    raise UnsupportedPrimaryKeyError(
+                        "Composite (multi-column) primary keys are not supported!"
+                    )
+                else:
+                    self.warning.emit(
+                        self.tr("libqfieldsync"),
+                        self.tr(
+                            f'Layer "{layer.name()}" does not have a primary key. Trying to fallback to `fid`…'
+                        ),
+                    )
 
-                layer.setCustomProperty(
-                    "QFieldSync/sourceDataPrimaryKeys", ",".join(pk_names)
+                    if fields.indexFromName("fid") >= 0:
+                        self.warning.emit(
+                            self.tr("libqfieldsync"),
+                            self.tr(
+                                f'Layer "{layer.name()}" does not have a primary key so it uses the `fid` attribute as a fallback primary key.'
+                                "This is an unstable feature!"
+                                "Consult the documentation to convert to GeoPackages instead."
+                            ),
+                        )
+                        pk_name = "fid"
+
+                if not pk_name:
+                    self.warning.emit(
+                        self.tr("libqfieldsync"),
+                        self.tr(
+                            f'Layer "{layer.name()}" does not have a primary key, nor a unique attribute `fid`.'
+                        ),
+                    )
+                    raise UnsupportedPrimaryKeyError(
+                        f'The layer "{layer.name()}" cannot be packaged because it neither have a primary key, nor a unique attribute `fid`!'
+                    )
+
+                self.warning.emit(
+                    self.tr("libqfieldsync"),
+                    self.tr(
+                        f'Layer "{layer.name()}" has attribute {pk_name} as a primary key.'
+                    ),
                 )
+                layer.setCustomProperty("QFieldSync/sourceDataPrimaryKeys", pk_name)
 
             layer_data: LayerData = {
                 "id": layer.id(),
@@ -205,12 +248,16 @@ class OfflineConverter(QObject):
                 "type": layer.type(),
                 "source": layer.source(),
                 "fields": layer.fields() if hasattr(layer, "fields") else None,
-                "pk_names": pk_names,
+                "pk_names": None,
             }
+
+            if pk_name:
+                layer_data["pk_names"] = [pk_name]
 
             self.__layer_data_by_id[layer.id()] = layer_data
             self.__layer_data_by_name[layer.name()] = layer_data
 
+            # TODO replace `QFieldSync/remoteLayerId` with `remoteLayerId`, which is already set by `QgsOfflineEditing`
             layer.setCustomProperty("QFieldSync/remoteLayerId", layer.id())
 
         if self.create_basemap and self.project_configuration.create_base_map:
