@@ -98,7 +98,6 @@ class OfflineConverter(QObject):
         self.__convertor_progress = None  # for processing feedback
         self.__layers = list()
         self.__layer_data_by_id: Dict[str, LayerData] = {}
-        self.__layer_data_by_name: Dict[str, LayerData] = {}
         self.__offline_layer_names: List[str] = []
 
         # elipsis workaround
@@ -231,7 +230,6 @@ class OfflineConverter(QObject):
                         )
 
             self.__layer_data_by_id[layer.id()] = layer_data
-            self.__layer_data_by_name[layer.name()] = layer_data
 
             # TODO replace `QFieldSync/remoteLayerId` with `remoteLayerId`, which is already set by `QgsOfflineEditing`
             layer.setCustomProperty("QFieldSync/remoteLayerId", layer.id())
