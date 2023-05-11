@@ -155,7 +155,7 @@ class ProjectChecker:
         checked_feedback = ProjectCheckerFeedback()
 
         for check in self.project_checks:
-            if check["scope"] != scope:
+            if scope and check["scope"] and check["scope"] != scope:
                 continue
 
             feedback_result = check["fn"]()
@@ -181,7 +181,7 @@ class ProjectChecker:
                 ):
                     break
 
-                if check["scope"] != scope:
+                if scope and check["scope"] and check["scope"] != scope:
                     continue
 
                 feedback_result = check["fn"](layer_source)
