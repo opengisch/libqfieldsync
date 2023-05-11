@@ -54,6 +54,11 @@ def addLoggingLevel(level_name, levelno, method_name=None):
 # add QGIS success log level
 addLoggingLevel("SUCCESS", logging.DEBUG - 5)
 
+if Qgis.QGIS_VERSION_INT >= 32000:
+    LogNoLevel = Qgis.MessageLevel.NoLevel
+else:
+    LogNoLevel = getattr(Qgis.MessageLevel, "None")
+
 _pythonLevelToQgisLogLevel = {
     logging.CRITICAL: Qgis.MessageLevel.Critical,
     logging.ERROR: Qgis.MessageLevel.Critical,
@@ -61,7 +66,7 @@ _pythonLevelToQgisLogLevel = {
     logging.INFO: Qgis.MessageLevel.Info,
     logging.DEBUG: Qgis.MessageLevel.Info,
     logging.SUCCESS: Qgis.MessageLevel.Success,  # type: ignore
-    logging.NOTSET: Qgis.MessageLevel.NoLevel,
+    logging.NOTSET: LogNoLevel,
 }
 
 
@@ -80,7 +85,7 @@ class QgisLogHandler(logging.Handler):
         super().__init__(*args, **kwargs)
 
     def _get_qgis_log_level(self, record: logging.LogRecord) -> int:
-        return _pythonLevelToQgisLogLevel.get(record.levelno, Qgis.MessageLevel.NoLevel)
+        return _pythonLevelToQgisLogLevel.get(record.levelno, LogNoLevel)
 
     def emit(self, record):
         try:
