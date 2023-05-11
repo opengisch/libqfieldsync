@@ -304,9 +304,9 @@ class ProjectChecker:
         ):
             return FeedbackResult(
                 self.tr(
-                    'Layer does not use UTF-8, but "{}" encoding.'
-                    "Working with layers that do not use UTF-8 encoding might cause problems."
-                    "It is highly recommended to convert them to UTF-8 encoded layers."
+                    'Layer does not use UTF-8, but "{}" encoding. '
+                    "Working with layers that do not use UTF-8 encoding might cause problems. "
+                    "It is highly recommended to convert them to UTF-8 encoded layers. "
                 ).format(layer.dataProvider().encoding()),
             )
 
@@ -316,9 +316,9 @@ class ProjectChecker:
         if layer_source.is_file and not isascii(layer_source.filename):
             return FeedbackResult(
                 self.tr(
-                    "Non ASCII character detected in the layer filename {}."
-                    "Working with file paths that are not in ASCII might cause problems."
-                    "It is highly recommended to rename them to ASCII encoded paths."
+                    "Non ASCII character detected in the layer filename {}. "
+                    "Working with file paths that are not in ASCII might cause problems. "
+                    "It is highly recommended to rename them to ASCII encoded paths. "
                 ).format(layer_source.filename),
             )
 
