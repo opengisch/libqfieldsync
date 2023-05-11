@@ -4,7 +4,11 @@ from enum import Enum
 from pathlib import Path
 from typing import Callable, Dict, List, Optional
 
-from qfieldsync.libqfieldsync.layer import LayerSource, SyncAction
+from qfieldsync.libqfieldsync.layer import (
+    LayerSource,
+    SyncAction,
+    UnsupportedPrimaryKeyError,
+)
 from qfieldsync.libqfieldsync.project import ProjectConfiguration, ProjectProperties
 from qfieldsync.libqfieldsync.utils.file_utils import isascii
 from qgis.core import Qgis, QgsMapLayer, QgsProject, QgsSettings
@@ -106,7 +110,7 @@ class ProjectChecker:
                 "scope": None,
             },
             {
-                "type": Feedback.Level.ERROR,
+                "type": Feedback.Level.WARNING,
                 "fn": self.check_layer_primary_key,
                 "scope": ExportType.Cloud,
             },
@@ -301,7 +305,6 @@ class ProjectChecker:
         if layer.type() != QgsMapLayer.VectorLayer:
             return
 
-        layer_source = LayerSource(layer)
         # when the layer is configured as "no_action" and it is an "online" layer, then QFieldCloud is not responsible for the PKs,
         # therefore we should accept them
         if (
@@ -310,22 +313,14 @@ class ProjectChecker:
         ):
             return
 
-        pkeys_count = len(layer.primaryKeyAttributes())
-        if pkeys_count == 0:
-            suggestion = (
-                'Please change the layer action to "Remove" in "Layer Properties -> QField".'
-                if layer_source.is_file
-                else 'Please change the layer action to either "Remove" or "Directly access data source" in "Layer Properties -> QField".'
+        try:
+            layer_source.get_pk_attr_name()
+        except UnsupportedPrimaryKeyError as err:
+            suffix = self.tr(
+                "The layer will be packaged **as a read-only layer on QFieldCloud**. "
+                "Geopackages are [the recommended data format for QFieldCloud](https://docs.qfield.org/get-started/tutorials/get-started-qfc/#configure-your-project-layers-for-qfield). "
             )
-            return FeedbackResult(
-                self.tr(
-                    "Missing primary key. "
-                    "QFieldCloud supports only layers with a defined single-column primary key. "
-                    "{}"
-                ).format(suggestion),
-            )
-        elif pkeys_count > 1:
-            return FeedbackResult(self.tr("Composite primary keys are not supported."))
+            return FeedbackResult(f"{str(err)} {suffix}")
 
     def check_layer_memory(self, layer_source: LayerSource) -> Optional[FeedbackResult]:
         layer = layer_source.layer
