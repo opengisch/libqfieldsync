@@ -208,7 +208,7 @@ class LayerSource(object):
     def cloud_action(self, action):
         self._cloud_action = action
 
-    def get_attachment_field_type(self, field_name: str) -> None:
+    def get_attachment_field_type(self, field_name: str) -> Optional[AttachmentType]:
         if self.layer.type() != QgsMapLayer.VectorLayer:
             raise ExpectedVectorLayerError(
                 f'Cannot get attachment field types for non-vector layer "{self.layer.name()}"!'
