@@ -124,6 +124,11 @@ class ProjectChecker:
                 "fn": self.check_layer_configured,
                 "scope": None,
             },
+            {
+                "type": Feedback.Level.WARNING,
+                "fn": self.check_layer_package_prevention,
+                "scope": None,
+            },
         ]
 
     def check(self, scope: ExportType = None) -> ProjectCheckerFeedback:
@@ -300,6 +305,10 @@ class ProjectChecker:
     def check_layer_primary_key(
         self, layer_source: LayerSource
     ) -> Optional[FeedbackResult]:
+        # Do not show primary key feedback if the layer cannot be packaged
+        if layer_source.package_prevention_reasons:
+            return
+
         layer = layer_source.layer
 
         if layer.type() != QgsMapLayer.VectorLayer:
@@ -344,3 +353,24 @@ class ProjectChecker:
                     'Please select and save appropriate layer action in "Layer Properties -> QField". '
                 ),
             )
+
+    def check_layer_package_prevention(
+        self, layer_source: LayerSource
+    ) -> Optional[FeedbackResult]:
+        if layer_source.package_prevention_reasons:
+            if any(
+                r in layer_source.package_prevention_reasons
+                for r in LayerSource.PREVENTION_REASONS_TO_REMOVE_LAYER
+            ):
+                reasons = self.tr(
+                    "The layer will be removed from the packaged project."
+                )
+            else:
+                reasons = self.tr("The layer will not be packaged!")
+
+            reasons += "\n\n"
+
+            for msg in layer_source.package_prevention_reasons.values():
+                reasons += f" - {msg}"
+
+            return FeedbackResult(reasons)
