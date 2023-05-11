@@ -63,14 +63,9 @@ if sys.version_info >= (3, 8):
         source: str
         type: int
         fields: Optional[QgsFields]
-        pk_names: Optional[List[str]]
 
 else:
     LayerData = Dict
-
-
-class UnsupportedPrimaryKeyError(Exception):
-    ...
 
 
 class ExportType(Enum):
@@ -187,60 +182,24 @@ class OfflineConverter(QObject):
         self.total_progress_updated.emit(0, 100, self.trUtf8("Converting project…"))
         self.__layers = list(project.mapLayers().values())
 
+        if self.create_basemap and self.project_configuration.create_base_map:
+            self._export_basemap()
+
+        copied_files = list()
+
         # We store the pks of the original vector layers
-        for layer in self.__layers:
-            pk_name: str = ""
-            if layer.type() == QgsMapLayer.VectorLayer:
-                pk_indexes = layer.primaryKeyAttributes()
-                fields = layer.fields()
+        for layer_idx, layer in enumerate(self.__layers):
+            layer_source = LayerSource(layer)
 
-                if len(pk_indexes) == 1:
-                    pk_name = fields[pk_indexes[0]].name()
+            # remove the layer if it is prevented to be packaged, e.g. it is invalid or no supported on QField
+            if any(
+                r in layer_source.package_prevention_reasons
+                for r in LayerSource.PREVENTION_REASONS_TO_REMOVE_LAYER
+            ):
+                project.removeMapLayer(layer)
 
-                    # and we check that the primary key fields names don't have a comma in the name
-                    if "," in pk_name:
-                        raise ValueError("Comma in field names not allowed")
-                elif len(pk_indexes) > 1:
-                    raise UnsupportedPrimaryKeyError(
-                        "Composite (multi-column) primary keys are not supported!"
-                    )
-                else:
-                    self.warning.emit(
-                        self.tr("libqfieldsync"),
-                        self.tr(
-                            f'Layer "{layer.name()}" does not have a primary key. Trying to fallback to `fid`…'
-                        ),
-                    )
-
-                    if fields.indexFromName("fid") >= 0:
-                        self.warning.emit(
-                            self.tr("libqfieldsync"),
-                            self.tr(
-                                f'Layer "{layer.name()}" does not have a primary key so it uses the `fid` attribute as a fallback primary key.'
-                                "This is an unstable feature!"
-                                "Consult the documentation to convert to GeoPackages instead."
-                            ),
-                        )
-                        pk_name = "fid"
-
-                if not pk_name:
-                    self.warning.emit(
-                        self.tr("libqfieldsync"),
-                        self.tr(
-                            f'Layer "{layer.name()}" does not have a primary key, nor a unique attribute `fid`.'
-                        ),
-                    )
-                    raise UnsupportedPrimaryKeyError(
-                        f'The layer "{layer.name()}" cannot be packaged because it neither have a primary key, nor a unique attribute `fid`!'
-                    )
-
-                self.warning.emit(
-                    self.tr("libqfieldsync"),
-                    self.tr(
-                        f'Layer "{layer.name()}" has attribute {pk_name} as a primary key.'
-                    ),
-                )
-                layer.setCustomProperty("QFieldSync/sourceDataPrimaryKeys", pk_name)
+            if layer_source.package_prevention_reasons:
+                continue
 
             layer_data: LayerData = {
                 "id": layer.id(),
@@ -248,11 +207,28 @@ class OfflineConverter(QObject):
                 "type": layer.type(),
                 "source": layer.source(),
                 "fields": layer.fields() if hasattr(layer, "fields") else None,
-                "pk_names": None,
             }
 
-            if pk_name:
-                layer_data["pk_names"] = [pk_name]
+            layer_action = (
+                layer_source.action
+                if self.export_type == ExportType.Cable
+                else layer_source.cloud_action
+            )
+
+            if layer.type() == QgsMapLayer.VectorLayer:
+                if layer_source.pk_attr_name:
+                    # NOTE even though `QFieldSync/sourceDataPrimaryKeys` is in plural, we never supported composite (multi-column) PKs and always stored a single value
+                    layer.setCustomProperty(
+                        "QFieldSync/sourceDataPrimaryKeys", layer_source.pk_attr_name
+                    )
+                else:
+                    # The layer has no PK, so we mark it as readonly and just copy it when packaging in the cloud
+                    if self.export_type == ExportType.Cloud:
+                        layer_action = SyncAction.NO_ACTION
+                        layer.setReadOnly(True)
+                        layer.setCustomProperty(
+                            "QFieldSync/missingSourcePrimaryKey", "1"
+                        )
 
             self.__layer_data_by_id[layer.id()] = layer_data
             self.__layer_data_by_name[layer.name()] = layer_data
@@ -260,35 +236,11 @@ class OfflineConverter(QObject):
             # TODO replace `QFieldSync/remoteLayerId` with `remoteLayerId`, which is already set by `QgsOfflineEditing`
             layer.setCustomProperty("QFieldSync/remoteLayerId", layer.id())
 
-        if self.create_basemap and self.project_configuration.create_base_map:
-            self._export_basemap()
-
-        # Loop through all layers and copy/remove/offline them
-        copied_files = list()
-        for layer_idx, layer in enumerate(self.__layers):
             self.total_progress_updated.emit(
                 layer_idx - len(self.__offline_layers),
                 len(self.__layers),
                 self.trUtf8("Copying layers…"),
             )
-
-            layer_source = LayerSource(layer)
-            layer_action = (
-                layer_source.action
-                if self.export_type == ExportType.Cable
-                else layer_source.cloud_action
-            )
-
-            if not layer.isValid():
-                project.removeMapLayer(layer)
-                continue
-
-            if not layer_source.is_supported:
-                project.removeMapLayer(layer)
-                continue
-
-            if layer_source.is_localized_path:
-                continue
 
             if layer_action == SyncAction.OFFLINE:
                 if self.project_configuration.offline_copy_only_aoi:
