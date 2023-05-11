@@ -48,7 +48,7 @@ from qgis.PyQt.QtCore import QCoreApplication, QObject, pyqtSignal
 
 from .layer import LayerSource, SyncAction
 from .project import ProjectConfiguration, ProjectProperties
-from .utils.file_utils import copy_attachments, isascii
+from .utils.file_utils import copy_attachments
 from .utils.qgis import make_temp_qgis_file, open_project
 from .utils.xml import get_themapcanvas
 
@@ -265,8 +265,6 @@ class OfflineConverter(QObject):
 
         # Loop through all layers and copy/remove/offline them
         copied_files = list()
-        non_ascii_filename_layers: Dict[str, str] = {}
-        non_utf8_encoding_layers: Dict[str, str] = {}
         for layer_idx, layer in enumerate(self.__layers):
             self.total_progress_updated.emit(
                 layer_idx - len(self.__offline_layers),
@@ -289,20 +287,8 @@ class OfflineConverter(QObject):
                 project.removeMapLayer(layer)
                 continue
 
-            if layer_source.is_file and not isascii(layer_source.filename):
-                non_ascii_filename_layers[layer.name()] = layer_source.filename
-
             if layer_source.is_localized_path:
                 continue
-
-            if (
-                layer.type() == QgsMapLayer.VectorLayer
-                and layer.dataProvider()
-                and layer.dataProvider().encoding() != "UTF-8"
-                # some providers return empty string as encoding, just ignore them
-                and layer.dataProvider().encoding() != ""
-            ):
-                non_utf8_encoding_layers[layer.name()] = layer.dataProvider().encoding()
 
             if layer_action == SyncAction.OFFLINE:
                 if self.project_configuration.offline_copy_only_aoi:
@@ -326,30 +312,6 @@ class OfflineConverter(QObject):
                 layer_source.copy(self.export_folder, copied_files, True)
             elif layer_action == SyncAction.REMOVE:
                 project.removeMapLayer(layer)
-
-        if non_ascii_filename_layers:
-            layers = ", ".join(
-                [
-                    f'"{name}" at "{path}"'
-                    for name, path in non_ascii_filename_layers.items()
-                ]
-            )
-            message = self.tr(
-                "Some layers are stored at file paths that are not ASCII encoded: {}. Working with paths that are not in ASCII might cause problems. It is highly recommended to rename them to ASCII encoded paths."
-            ).format(layers)
-            self.warning.emit(self.tr("QFieldSync"), message)
-
-        if non_utf8_encoding_layers:
-            layers = ", ".join(
-                [
-                    f"{name} ({encoding})"
-                    for name, encoding in non_utf8_encoding_layers.items()
-                ]
-            )
-            message = self.tr(
-                "Some layers do not use UTF-8 encoding: {}. Working with layers that do not use UTF-8 encoding might cause problems. It is highly recommended to convert them to UTF-8 encoded layers."
-            ).format(layers)
-            self.warning.emit(self.tr("QFieldSync"), message)
 
         export_project_filename = self.export_folder.joinpath(
             f"{self.original_filename.stem}_qfield.qgs"
