@@ -21,9 +21,14 @@ from qgis.PyQt.QtCore import QCoreApplication
 from qgis.PyQt.QtXml import QDomDocument
 
 from .utils.file_utils import slugify
+from .utils.logger import logger
 
 
 class ExpectedVectorLayerError(Exception):
+    ...
+
+
+class UnsupportedPrimaryKeyError(Exception):
     ...
 
 
@@ -541,6 +546,59 @@ class LayerSource(object):
             )
 
         return reasons
+
+    @property
+    def pk_attr_name(self) -> str:
+        try:
+            return self.get_pk_attr_name()
+        except (ExpectedVectorLayerError, UnsupportedPrimaryKeyError):
+            return ""
+
+    def get_pk_attr_name(self) -> str:
+        pk_attr_name: str = ""
+
+        if self.layer.type() != QgsMapLayer.VectorLayer:
+            raise ExpectedVectorLayerError()
+
+        pk_indexes = self.layer.primaryKeyAttributes()
+        fields = self.layer.fields()
+
+        if len(pk_indexes) == 1:
+            pk_attr_name = fields[pk_indexes[0]].name()
+        elif len(pk_indexes) > 1:
+            raise UnsupportedPrimaryKeyError(
+                "Composite (multi-column) primary keys are not supported!"
+            )
+        else:
+            logger.info(
+                f'Layer "{self.layer.name()}" does not have a primary key. Trying to fallback to `fid`…'
+            )
+
+            # NOTE `QgsFields.lookupField(str)` is case insensitive (so we support "fid", "FID", "Fid" etc),
+            # but also looks for the field alias, that's why we check the `field.name().lower() == "fid"`
+            fid_idx = fields.lookupField("fid")
+            if fid_idx >= 0 and fields.at(fid_idx).name().lower() == "fid":
+                fid_name = fields.at(fid_idx).name()
+                logger.info(
+                    f'Layer "{self.layer.name()}" does not have a primary key so it uses the `fid` attribute as a fallback primary key. '
+                    "This is an unstable feature! "
+                    "Consult the documentation to convert to GeoPackages instead. "
+                )
+                pk_attr_name = fid_name
+
+        if not pk_attr_name:
+            raise UnsupportedPrimaryKeyError(
+                f'Layer "{self.layer.name()}" neither has a primary key, nor a unique attribute `fid`! '
+            )
+
+        if "," in pk_attr_name:
+            raise UnsupportedPrimaryKeyError("Comma in field names not allowed!")
+
+        logger.info(
+            f'Layer "{self.layer.name()}" has attribute {pk_attr_name} as a primary key.'
+        )
+
+        return pk_attr_name
 
     def copy(self, target_path, copied_files, keep_existent=False):
         """
