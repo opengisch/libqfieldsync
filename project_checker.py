@@ -91,7 +91,7 @@ class ProjectChecker:
             {
                 "type": Feedback.Level.WARNING,
                 "fn": self.check_project_is_dirty,
-                "scope": None,
+                "scope": ExportType.Cloud,
             },
         ]
         self.layer_checks: List[ProjectChecker.CheckConfig] = [
