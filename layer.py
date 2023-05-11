@@ -103,6 +103,16 @@ class LayerSource(object):
         AUDIO = 3  # QgsExternalResourceWidget.Audio
         VIDEO = 4  # QgsExternalResourceWidget.Video
 
+    class PackagePreventionReason(Enum):
+        INVALID = 1
+        UNSUPPORTED_DATASOURCE = 2
+        LOCALIZED_PATH = 3
+
+    PREVENTION_REASONS_TO_REMOVE_LAYER = (
+        PackagePreventionReason.INVALID,
+        PackagePreventionReason.UNSUPPORTED_DATASOURCE,
+    )
+
     ATTACHMENT_EXPRESSIONS = {
         AttachmentType.FILE: "'files/{layername}_' || format_date(now(),'yyyyMMddhhmmsszzz') || '_{{filename}}'",
         AttachmentType.IMAGE: "'DCIM/{layername}_' || format_date(now(),'yyyyMMddhhmmsszzz') || '.{{extension}}'",
@@ -500,6 +510,37 @@ class LayerSource(object):
         path = path_resolver.writePath(self.filename)
 
         return path.startswith("localized:")
+
+    @property
+    def package_prevention_reasons(
+        self,
+    ) -> Dict["LayerSource.PackagePreventionReason", str]:
+        reasons = {}
+
+        # remove invalid layers from the packaged project
+        if not self.layer.isValid():
+            reasons[
+                LayerSource.PackagePreventionReason.INVALID
+            ] = QCoreApplication.translate("LayerSource", "The layer is invalid!")
+
+        # remove unsupported layers from the packaged project
+        if not self.is_supported:
+            reasons[
+                LayerSource.PackagePreventionReason.UNSUPPORTED_DATASOURCE
+            ] = QCoreApplication.translate(
+                "LayerSource", "The layer datasource is not supported on QField!"
+            )
+
+        # do not package the layers within localized paths (stored outside project dir and shared among multiple projects)
+        if self.is_localized_path:
+            reasons[
+                LayerSource.PackagePreventionReason.LOCALIZED_PATH
+            ] = QCoreApplication.translate(
+                "LayerSource",
+                "The layer is using localized path and cannot be converted into QField layer!",
+            )
+
+        return reasons
 
     def copy(self, target_path, copied_files, keep_existent=False):
         """
