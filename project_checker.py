@@ -49,7 +49,6 @@ class ProjectCheckerFeedback:
         self.count = 0
         self.error_feedbacks: List[Feedback] = []
         self.longest_level_name = len(Feedback.Level.WARNING.value)
-        self.longest_layer_name = len("project")
 
     def add(self, feedback: Feedback):
         # if the key is "", it is considered as project feedback
@@ -60,34 +59,6 @@ class ProjectCheckerFeedback:
 
         if feedback.level == Feedback.Level.ERROR:
             self.error_feedbacks.append(feedback)
-
-        if feedback.layer_name and len(feedback.layer_name) > self.longest_layer_name:
-            self.longest_layer_name = len(feedback.layer_name)
-
-    def __str__(self):
-        lines = []
-
-        for layer_id, feedbacks in self.feedbacks.items():
-            for feedback in feedbacks:
-                level: str = feedback.level.value
-                level = level.upper().ljust(self.longest_level_name)
-
-                if layer_id == "":
-                    layer_name = self.tr("Project").ljust(self.longest_layer_name)
-                    lines.append(
-                        "{}\t{}\t{}".format(level, layer_name, feedback.message)
-                    )
-                else:
-                    assert feedback.layer_name is not None
-
-                    layer_name = feedback.layer_name.ljust(self.longest_layer_name)
-                    lines.append(
-                        self.tr("{}\t{}\t{}").format(
-                            level, layer_name, feedback.message
-                        )
-                    )
-
-        return "\r\n".join(lines)
 
 
 class ProjectChecker:
