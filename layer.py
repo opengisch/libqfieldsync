@@ -22,6 +22,11 @@ from qgis.PyQt.QtXml import QDomDocument
 
 from .utils.file_utils import slugify
 
+
+class ExpectedVectorLayerError(Exception):
+    ...
+
+
 # When copying files, if any of the extension in any of the groups is found,
 # other files with the same extension in the same folder will be copied as well.
 file_extension_groups = [
@@ -205,7 +210,9 @@ class LayerSource(object):
 
     def get_attachment_field_type(self, field_name: str) -> None:
         if self.layer.type() != QgsMapLayer.VectorLayer:
-            return None
+            raise ExpectedVectorLayerError(
+                f'Cannot get attachment field types for non-vector layer "{self.layer.name()}"!'
+            )
 
         field_idx = self.layer.fields().indexFromName(field_name)
         ews = self.layer.editorWidgetSetup(field_idx)
