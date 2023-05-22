@@ -3,7 +3,7 @@ import os
 import re
 import shutil
 from enum import Enum
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from qgis.core import (
     QgsAttributeEditorField,
@@ -114,7 +114,7 @@ class LayerSource(object):
         UNSUPPORTED_DATASOURCE = 2
         LOCALIZED_PATH = 3
 
-    PREVENTION_REASONS_TO_REMOVE_LAYER = (
+    REASONS_TO_REMOVE_LAYER = (
         PackagePreventionReason.INVALID,
         PackagePreventionReason.UNSUPPORTED_DATASOURCE,
     )
@@ -525,31 +525,20 @@ class LayerSource(object):
     @property
     def package_prevention_reasons(
         self,
-    ) -> Dict["LayerSource.PackagePreventionReason", str]:
-        reasons = {}
-
-        # remove invalid layers from the packaged project
-        if not self.layer.isValid():
-            reasons[
-                LayerSource.PackagePreventionReason.INVALID
-            ] = QCoreApplication.translate("LayerSource", "The layer is invalid!")
+    ) -> List["LayerSource.PackagePreventionReason"]:
+        reasons = []
 
         # remove unsupported layers from the packaged project
         if not self.is_supported:
-            reasons[
-                LayerSource.PackagePreventionReason.UNSUPPORTED_DATASOURCE
-            ] = QCoreApplication.translate(
-                "LayerSource", "The layer datasource is not supported on QField!"
-            )
+            reasons.append(LayerSource.PackagePreventionReason.UNSUPPORTED_DATASOURCE)
 
         # do not package the layers within localized paths (stored outside project dir and shared among multiple projects)
         if self.is_localized_path:
-            reasons[
-                LayerSource.PackagePreventionReason.LOCALIZED_PATH
-            ] = QCoreApplication.translate(
-                "LayerSource",
-                "The layer is using localized path and cannot be converted into QField layer!",
-            )
+            reasons.append(LayerSource.PackagePreventionReason.LOCALIZED_PATH)
+        # remove invalid layers from the packaged project
+        # NOTE localized layers will be always invalid on QFieldCloud
+        elif not self.layer.isValid():
+            reasons.append(LayerSource.PackagePreventionReason.INVALID)
 
         return reasons
 

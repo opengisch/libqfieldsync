@@ -357,20 +357,31 @@ class ProjectChecker:
     def check_layer_package_prevention(
         self, layer_source: LayerSource
     ) -> Optional[FeedbackResult]:
-        if layer_source.package_prevention_reasons:
-            if any(
-                r in layer_source.package_prevention_reasons
-                for r in LayerSource.PREVENTION_REASONS_TO_REMOVE_LAYER
-            ):
-                reasons = self.tr(
-                    "The layer will be removed from the packaged project."
-                )
-            else:
-                reasons = self.tr("The layer will not be packaged!")
+        package_prevention_reasons = layer_source.package_prevention_reasons
+        if package_prevention_reasons:
+            # remove the layer if it is invalid or not supported datasource on QField
+            main_msg = ""
+            reason_msgs = []
+            for reason in package_prevention_reasons:
+                if reason in LayerSource.REASONS_TO_REMOVE_LAYER:
+                    main_msg = self.tr(
+                        "The layer will be removed from the packaged project."
+                    )
+                else:
+                    main_msg = self.tr("The layer will not be packaged!")
 
-            reasons += "\n\n"
+                if reason == LayerSource.PackagePreventionReason.INVALID:
+                    reason_msgs.append(self.tr("The layer is invalid!"))
+                elif (
+                    reason == LayerSource.PackagePreventionReason.UNSUPPORTED_DATASOURCE
+                ):
+                    reason_msgs.append(
+                        self.tr("The layer data source is not supported on QField!")
+                    )
+                elif reason == LayerSource.PackagePreventionReason.LOCALIZED_PATH:
+                    reason_msgs.append(self.tr("The layer is localized data path!"))
 
-            for msg in layer_source.package_prevention_reasons.values():
-                reasons += f" - {msg}"
+            main_msg += "\n\n"
+            main_msg += "\n".join(f"- {r}" for r in reason_msgs)
 
-            return FeedbackResult(reasons)
+            return FeedbackResult(main_msg)

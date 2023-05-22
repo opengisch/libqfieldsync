@@ -49,6 +49,7 @@ from qgis.PyQt.QtCore import QCoreApplication, QObject, pyqtSignal
 from .layer import LayerSource, SyncAction
 from .project import ProjectConfiguration, ProjectProperties
 from .utils.file_utils import copy_attachments
+from .utils.logger import logger
 from .utils.qgis import make_temp_qgis_file, open_project
 from .utils.xml import get_themapcanvas
 
@@ -190,14 +191,22 @@ class OfflineConverter(QObject):
         for layer_idx, layer in enumerate(self.__layers):
             layer_source = LayerSource(layer)
 
-            # remove the layer if it is prevented to be packaged, e.g. it is invalid or no supported on QField
-            if any(
-                r in layer_source.package_prevention_reasons
-                for r in LayerSource.PREVENTION_REASONS_TO_REMOVE_LAYER
-            ):
-                project.removeMapLayer(layer)
+            # cache the value, since we might remove the layer and the reasons cannot be recalculated
+            package_prevention_reasons = layer_source.package_prevention_reasons
+            if package_prevention_reasons:
+                # remove the layer if it is invalid or not supported datasource on QField
+                for reason in package_prevention_reasons:
+                    logger.warning(
+                        f'Layer "{layer.name()}" cannot be packaged due to "{reason}", skipping…'
+                    )
+                    if reason in LayerSource.REASONS_TO_REMOVE_LAYER:
+                        logger.warning(
+                            f'Layer "{layer.name()}" cannot be packaged and will be removed because "{reason}".'
+                        )
+                        project.removeMapLayer(layer)
+                        break
 
-            if layer_source.package_prevention_reasons:
+                # do not attempt to package the layer
                 continue
 
             layer_data: LayerData = {
