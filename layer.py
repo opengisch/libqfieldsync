@@ -20,6 +20,7 @@ from qgis.core import (
 from qgis.PyQt.QtCore import QCoreApplication
 from qgis.PyQt.QtXml import QDomDocument
 
+from .utils.bad_layer_handler import bad_layer_handler
 from .utils.file_utils import slugify
 from .utils.logger import logger
 
@@ -511,6 +512,11 @@ class LayerSource(object):
 
     @property
     def is_localized_path(self) -> bool:
+        # on QFieldCloud localized layers will be invalid and therefore we get the layer source from `bad_layer_handler`
+        source = bad_layer_handler.invalid_layer_sources_by_id.get(self.layer.id())
+        if source:
+            return source.startswith("localized:")
+
         path_resolver = self.project.pathResolver()
         path = path_resolver.writePath(self.filename)
 
