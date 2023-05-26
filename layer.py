@@ -577,20 +577,22 @@ class LayerSource(object):
                 logger.info(
                     f'Layer "{self.layer.name()}" does not have a primary key so it uses the `fid` attribute as a fallback primary key. '
                     "This is an unstable feature! "
-                    "Consult the documentation to convert to GeoPackages instead. "
+                    "Consider [converting to GeoPackages instead](https://docs.qfield.org/get-started/tutorials/get-started-qfc/#configure-your-project-layers-for-qfield). "
                 )
                 pk_attr_name = fid_name
 
         if not pk_attr_name:
             raise UnsupportedPrimaryKeyError(
-                f'Layer "{self.layer.name()}" neither has a primary key, nor a unique attribute `fid`! '
+                f'Layer "{self.layer.name()}" neither has a primary key, nor an attribute `fid`! '
             )
 
         if "," in pk_attr_name:
-            raise UnsupportedPrimaryKeyError("Comma in field names not allowed!")
+            raise UnsupportedPrimaryKeyError(
+                'Comma in field name "{pk_attribute_name}" is not allowed!'
+            )
 
         logger.info(
-            f'Layer "{self.layer.name()}" has attribute {pk_attr_name} as a primary key.'
+            f'Layer "{self.layer.name()}" has attribute "{pk_attr_name}" as a primary key.'
         )
 
         return pk_attr_name

@@ -191,7 +191,8 @@ class OfflineConverter(QObject):
         for layer_idx, layer in enumerate(self.__layers):
             layer_source = LayerSource(layer)
 
-            # cache the value, since we might remove the layer and the reasons cannot be recalculated
+            # NOTE if the layer is prevented from packaging it does NOT mean we have to remove it, but we cannot collect any layer metadata (e.g. if the layer is localized path).
+            # NOTE cache the value, since we might remove the layer and the reasons cannot be recalculated
             package_prevention_reasons = layer_source.package_prevention_reasons
             if package_prevention_reasons:
                 # remove the layer if it is invalid or not supported datasource on QField
@@ -230,13 +231,11 @@ class OfflineConverter(QObject):
                         "QFieldSync/sourceDataPrimaryKeys", layer_source.pk_attr_name
                     )
                 else:
-                    # The layer has no PK, so we mark it as readonly and just copy it when packaging in the cloud
+                    # The layer has no supported PK, so we mark it as readonly and just copy it when packaging in the cloud
                     if self.export_type == ExportType.Cloud:
                         layer_action = SyncAction.NO_ACTION
                         layer.setReadOnly(True)
-                        layer.setCustomProperty(
-                            "QFieldSync/missingSourcePrimaryKey", "1"
-                        )
+                        layer.setCustomProperty("QFieldSync/unsupported_source_pk", "1")
 
             self.__layer_data_by_id[layer.id()] = layer_data
 

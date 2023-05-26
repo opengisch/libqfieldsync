@@ -131,11 +131,11 @@ class ProjectChecker:
             },
         ]
 
-    def check(self, scope: ExportType = None) -> ProjectCheckerFeedback:
+    def check(self, scope: ExportType) -> ProjectCheckerFeedback:
         checked_feedback = ProjectCheckerFeedback()
 
         for check in self.project_checks:
-            if scope and check["scope"] and check["scope"] != scope:
+            if check["scope"] and check["scope"] != scope:
                 continue
 
             feedback_result = check["fn"]()
@@ -161,7 +161,7 @@ class ProjectChecker:
                 ):
                     break
 
-                if scope and check["scope"] and check["scope"] != scope:
+                if check["scope"] and check["scope"] != scope:
                     continue
 
                 feedback_result = check["fn"](layer_source)
@@ -368,7 +368,7 @@ class ProjectChecker:
                         "The layer will be removed from the packaged project."
                     )
                 else:
-                    main_msg = self.tr("The layer will not be packaged!")
+                    main_msg = self.tr("The layer's data will not be packaged!")
 
                 if reason == LayerSource.PackagePreventionReason.INVALID:
                     reason_msgs.append(self.tr("The layer is invalid!"))
