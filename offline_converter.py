@@ -23,7 +23,7 @@ import os
 import sys
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 from qgis.core import (
     QgsApplication,
@@ -85,7 +85,7 @@ class OfflineConverter(QObject):
         project: QgsProject,
         export_folder: str,
         area_of_interest_wkt: str,
-        area_of_interest_epsg: str,
+        area_of_interest_crs: Union[str, QgsCoordinateReferenceSystem],
         attachment_dirs: List[str],
         offline_editing: QgsOfflineEditing,
         export_type: ExportType = ExportType.Cable,
@@ -110,12 +110,14 @@ class OfflineConverter(QObject):
         self.create_basemap = create_basemap
         self.area_of_interest = QgsPolygon()
         self.area_of_interest.fromWkt(area_of_interest_wkt)
-        self.area_of_interest_crs = QgsCoordinateReferenceSystem(area_of_interest_epsg)
+        self.area_of_interest_crs = QgsCoordinateReferenceSystem(area_of_interest_crs)
         self.attachment_dirs = attachment_dirs
         self.dirs_to_copy = dirs_to_copy
 
         assert self.area_of_interest.isValid()[0]
-        assert self.area_of_interest_crs.isValid()
+        assert (
+            self.area_of_interest_crs.isValid()
+        ), f"Invalid CRS specified for area of interest {area_of_interest_crs}"
 
         self.offline_editing = offline_editing
         self.project_configuration = ProjectConfiguration(project)

@@ -36,12 +36,23 @@ start_app()
 class OfflineConverterTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        # Because of https://github.com/qgis/QGIS/commit/f2878a43e1425c1bfc961939ee5c6425eedecdbd#diff-dbb55b6871a9157f22dc7a979009676cb03f2fadefc557ad0e66a47c92a93503R69-R71
+        cls.report = ""
         cls.iface = get_iface()
 
     def setUp(self):
         QgsProject.instance().clear()
 
     def test_copy(self):
+        # Make sure we can use a CRS
+        self.do_copy(lambda project: project.crs())
+        # Make sure we can use an autid
+        self.do_copy(lambda project: project.crs().authid())
+        # Make sure we raise on an invalid CRS
+        with self.assertRaises(AssertionError):
+            self.do_copy(lambda project: "ThisIs Definitely Not a Valid CRS")
+
+    def do_copy(self, get_crs_from_project):
         source_folder = tempfile.mkdtemp()
         export_folder = tempfile.mkdtemp()
         shutil.copytree(
@@ -57,7 +68,7 @@ class OfflineConverterTest(unittest.TestCase):
             project,
             export_folder,
             "POLYGON((1 1, 5 0, 5 5, 0 5, 1 1))",
-            QgsProject.instance().crs().authid(),
+            get_crs_from_project(QgsProject.instance()),
             ["DCIM"],
             offline_editing,
         )
