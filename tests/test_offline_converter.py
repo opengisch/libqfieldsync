@@ -24,11 +24,13 @@ import shutil
 import tempfile
 
 from qgis.core import Qgis, QgsOfflineEditing, QgsProject
-from qgis.testing import start_app, unittest
+from qgis.testing import start_app
 from qgis.testing.mocked import get_iface
 
 from ..offline_converter import OfflineConverter
 from ..tests.utilities import test_data_folder
+
+import unittest
 
 start_app()
 
@@ -36,8 +38,6 @@ start_app()
 class OfflineConverterTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # Because of https://github.com/qgis/QGIS/commit/f2878a43e1425c1bfc961939ee5c6425eedecdbd#diff-dbb55b6871a9157f22dc7a979009676cb03f2fadefc557ad0e66a47c92a93503R69-R71
-        cls.report = ""
         cls.iface = get_iface()
 
     def setUp(self):
