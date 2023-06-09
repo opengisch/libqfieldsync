@@ -151,7 +151,7 @@ class ProjectChecker:
             },
         ]
 
-    def check(self, scope: ExportType = None) -> ProjectCheckerFeedback:
+    def check(self, scope: Optional[ExportType] = None) -> ProjectCheckerFeedback:
         checked_feedback = ProjectCheckerFeedback()
 
         for check in self.project_checks:

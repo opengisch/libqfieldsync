@@ -22,7 +22,7 @@
 import os
 import tempfile
 from pathlib import Path
-from typing import List, Union
+from typing import List, Optional, Union
 
 from qgis.core import QgsMapLayer, QgsProject
 
@@ -35,7 +35,7 @@ def get_project_title(project: QgsProject) -> str:
         return Path(project.fileName()).stem
 
 
-def open_project(filename: str, filename_to_read: str = None) -> bool:
+def open_project(filename: str, filename_to_read: Optional[str] = None) -> bool:
     project = QgsProject.instance()
     project.clear()
 
