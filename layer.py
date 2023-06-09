@@ -203,7 +203,7 @@ class LayerSource(object):
     def cloud_action(self, action):
         self._cloud_action = action
 
-    def get_attachment_field_type(self, field_name: str) -> None:
+    def get_attachment_field_type(self, field_name: str) -> AttachmentType | None:
         if self.layer.type() != QgsMapLayer.VectorLayer:
             return None
 
@@ -211,7 +211,7 @@ class LayerSource(object):
         ews = self.layer.editorWidgetSetup(field_idx)
 
         if ews.type() != "ExternalResource":
-            return
+            return None
 
         resource_type = (
             ews.config()["DocumentViewer"] if "DocumentViewer" in ews.config() else 0
@@ -241,6 +241,7 @@ class LayerSource(object):
 
     def attachment_naming(self, field_name) -> str:
         attachment_type = self.get_attachment_field_type(field_name)
+        assert attachment_type is not None
         default_name_setting_value = self.ATTACHMENT_EXPRESSIONS[
             attachment_type
         ].format(layername=slugify(self.layer.name()))
