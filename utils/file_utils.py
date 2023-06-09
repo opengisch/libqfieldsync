@@ -126,7 +126,7 @@ def slugify(text: str) -> str:
     return slug
 
 
-def copy_attachments(source: Path, dest: Path, dirname: str) -> None:
+def copy_attachments(source: Path, dest: Path, dirname: Path) -> None:
     source = source.joinpath(dirname)
     dest = dest.joinpath(dirname)
 

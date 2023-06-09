@@ -330,7 +330,7 @@ class OfflineConverter(QObject):
             copy_attachments(
                 self.original_filename.parent,
                 export_project_filename.parent,
-                source_dir,
+                Path(source_dir),
             )
         try:
             # Run the offline plugin for gpkg
