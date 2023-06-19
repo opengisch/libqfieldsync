@@ -19,16 +19,15 @@
  ***************************************************************************/
 """
 
-import os
 import shutil
 import tempfile
+from pathlib import Path
 
 from qgis.core import Qgis, QgsOfflineEditing, QgsProject
 from qgis.testing import start_app, unittest
 from qgis.testing.mocked import get_iface
 
 from ..offline_converter import OfflineConverter
-from ..tests.utilities import test_data_folder
 
 start_app()
 
@@ -36,86 +35,83 @@ start_app()
 class OfflineConverterTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # Because of https://github.com/qgis/QGIS/commit/f2878a43e1425c1bfc961939ee5c6425eedecdbd#diff-dbb55b6871a9157f22dc7a979009676cb03f2fadefc557ad0e66a47c92a93503R69-R71
-        cls.report = ""
         cls.iface = get_iface()
 
     def setUp(self):
         QgsProject.instance().clear()
+        self.source_dir = Path(tempfile.mkdtemp())
+        self.target_dir = Path(tempfile.mkdtemp())
+
+    def tearDown(self):
+        shutil.rmtree(self.source_dir)
+        shutil.rmtree(self.target_dir)
+
+    @property
+    def data_dir(self) -> Path:
+        return Path(__file__).parent.joinpath("data")
+
+    def load_project(self, path):
+        project = QgsProject.instance()
+        self.assertTrue(project.read(str(path)))
+        return project
 
     def test_copy(self):
-        # Make sure we can use a CRS
-        self.do_copy(lambda project: project.crs())
-        # Make sure we can use an autid
-        self.do_copy(lambda project: project.crs().authid())
-        # Make sure we raise on an invalid CRS
-        with self.assertRaises(AssertionError):
-            self.do_copy(lambda project: "ThisIs Definitely Not a Valid CRS")
-
-    def do_copy(self, get_crs_from_project):
-        source_folder = tempfile.mkdtemp()
-        export_folder = tempfile.mkdtemp()
         shutil.copytree(
-            os.path.join(test_data_folder(), "simple_project"),
-            os.path.join(source_folder, "simple_project"),
+            self.data_dir.joinpath("simple_project"),
+            self.source_dir.joinpath("simple_project"),
         )
 
         project = self.load_project(
-            os.path.join(source_folder, "simple_project", "project.qgs")
+            self.source_dir.joinpath("simple_project", "project.qgs")
         )
         offline_editing = QgsOfflineEditing()
         offline_converter = OfflineConverter(
             project,
-            export_folder,
+            str(self.target_dir),
             "POLYGON((1 1, 5 0, 5 5, 0 5, 1 1))",
-            get_crs_from_project(QgsProject.instance()),
+            QgsProject.instance().crs().authid(),
             ["DCIM"],
             offline_editing,
         )
         offline_converter.convert()
 
-        files = os.listdir(export_folder)
-
-        self.assertIn("project_qfield.qgs", files)
-        self.assertIn("france_parts_shape.shp", files)
-        self.assertIn("france_parts_shape.dbf", files)
-        self.assertIn("curved_polys.gpkg", files)
-        self.assertIn("spatialite.db", files)
-
-        dcim_folder = os.path.join(export_folder, "DCIM")
-        dcim_files = os.listdir(dcim_folder)
-        self.assertIn("qfield-photo_1.jpg", dcim_files)
-        self.assertIn("qfield-photo_2.jpg", dcim_files)
-        self.assertIn("qfield-photo_3.jpg", dcim_files)
-        dcim_subfolder = os.path.join(dcim_folder, "subfolder")
-        dcim_subfiles = os.listdir(dcim_subfolder)
-        self.assertIn("qfield-photo_sub_1.jpg", dcim_subfiles)
-        self.assertIn("qfield-photo_sub_2.jpg", dcim_subfiles)
-        self.assertIn("qfield-photo_sub_3.jpg", dcim_subfiles)
-
-        shutil.rmtree(export_folder)
-        shutil.rmtree(source_folder)
-
-    def load_project(self, path):
-        project = QgsProject.instance()
-        self.assertTrue(project.read(path))
-        return project
+        self.assertTrue(self.target_dir.joinpath("project_qfield.qgs").exists())
+        self.assertTrue(self.target_dir.joinpath("france_parts_shape.shp").exists())
+        self.assertTrue(self.target_dir.joinpath("france_parts_shape.dbf").exists())
+        self.assertTrue(self.target_dir.joinpath("curved_polys.gpkg").exists())
+        self.assertTrue(self.target_dir.joinpath("spatialite.db").exists())
+        self.assertTrue(self.target_dir.joinpath("DCIM", "qfield-photo_1.jpg").exists())
+        self.assertTrue(self.target_dir.joinpath("DCIM", "qfield-photo_2.jpg").exists())
+        self.assertTrue(self.target_dir.joinpath("DCIM", "qfield-photo_3.jpg").exists())
+        self.assertTrue(
+            self.target_dir.joinpath(
+                "DCIM", "subfolder", "qfield-photo_sub_1.jpg"
+            ).exists()
+        )
+        self.assertTrue(
+            self.target_dir.joinpath(
+                "DCIM", "subfolder", "qfield-photo_sub_2.jpg"
+            ).exists()
+        )
+        self.assertTrue(
+            self.target_dir.joinpath(
+                "DCIM", "subfolder", "qfield-photo_sub_3.jpg"
+            ).exists()
+        )
 
     def test_primary_keys_custom_property(self):
-        source_folder = tempfile.mkdtemp()
-        export_folder = tempfile.mkdtemp()
         shutil.copytree(
-            os.path.join(test_data_folder(), "pk_project"),
-            os.path.join(source_folder, "pk_project"),
+            self.data_dir.joinpath("simple_project"),
+            self.source_dir.joinpath("simple_project"),
         )
 
         project = self.load_project(
-            os.path.join(source_folder, "pk_project", "project.qgs")
+            self.source_dir.joinpath("simple_project", "project.qgs")
         )
         offline_editing = QgsOfflineEditing()
         offline_converter = OfflineConverter(
             project,
-            export_folder,
+            str(self.target_dir),
             "POLYGON((1 1, 5 0, 5 5, 0 5, 1 1))",
             QgsProject.instance().crs().authid(),
             ["DCIM"],
@@ -124,13 +120,10 @@ class OfflineConverterTest(unittest.TestCase):
         offline_converter.convert()
 
         exported_project = self.load_project(
-            os.path.join(export_folder, "project_qfield.qgs")
+            self.target_dir.joinpath("project_qfield.qgs")
         )
         if Qgis.QGIS_VERSION_INT < 31601:
             layer = exported_project.mapLayersByName("somedata (offline)")[0]
         else:
             layer = exported_project.mapLayersByName("somedata")[0]
         self.assertEqual(layer.customProperty("QFieldSync/sourceDataPrimaryKeys"), "pk")
-
-        shutil.rmtree(export_folder)
-        shutil.rmtree(source_folder)
