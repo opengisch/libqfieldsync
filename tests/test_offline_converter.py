@@ -23,7 +23,7 @@ import shutil
 import tempfile
 from pathlib import Path
 
-from qgis.core import Qgis, QgsOfflineEditing, QgsProject
+from qgis.core import QgsOfflineEditing, QgsProject
 from qgis.testing import start_app, unittest
 from qgis.testing.mocked import get_iface
 
@@ -122,8 +122,5 @@ class OfflineConverterTest(unittest.TestCase):
         exported_project = self.load_project(
             self.target_dir.joinpath("project_qfield.qgs")
         )
-        if Qgis.QGIS_VERSION_INT < 31601:
-            layer = exported_project.mapLayersByName("somedata (offline)")[0]
-        else:
-            layer = exported_project.mapLayersByName("somedata")[0]
+        layer = exported_project.mapLayersByName("somedata")[0]
         self.assertEqual(layer.customProperty("QFieldSync/sourceDataPrimaryKeys"), "pk")
