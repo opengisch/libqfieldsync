@@ -27,7 +27,7 @@ from qgis.core import QgsOfflineEditing, QgsProject
 from qgis.testing import start_app, unittest
 from qgis.testing.mocked import get_iface
 
-from ..offline_converter import OfflineConverter
+from ..offline_converter import ExportType, OfflineConverter
 
 start_app()
 
@@ -124,3 +124,54 @@ class OfflineConverterTest(unittest.TestCase):
         )
         layer = exported_project.mapLayersByName("somedata")[0]
         self.assertEqual(layer.customProperty("QFieldSync/sourceDataPrimaryKeys"), "pk")
+
+    def test_cloud_packaging_pk(self):
+        shutil.copytree(
+            self.data_dir.joinpath("simple_project"),
+            self.source_dir.joinpath("simple_project"),
+        )
+
+        project = self.load_project(
+            self.source_dir.joinpath("simple_project", "project.qgs")
+        )
+        offline_editing = QgsOfflineEditing()
+        offline_converter = OfflineConverter(
+            project,
+            str(self.target_dir),
+            "POLYGON((1 1, 5 0, 5 5, 0 5, 1 1))",
+            QgsProject.instance().crs().authid(),
+            ["DCIM"],
+            offline_editing,
+            ExportType.Cloud,
+        )
+        offline_converter.convert()
+
+        exported_project = self.load_project(
+            self.target_dir.joinpath("project_qfield.qgs")
+        )
+
+        # spatialite layer
+        layer = exported_project.mapLayersByName("somedata")[0]
+        self.assertEqual(layer.customProperty("QFieldSync/sourceDataPrimaryKeys"), "pk")
+        self.assertIsNone(layer.customProperty("QFieldSync/unsupported_source_pk"))
+        self.assertFalse(layer.readOnly())
+
+        # spatialite layer
+        layer = exported_project.mapLayersByName("somepolydata")[0]
+        self.assertEqual(layer.customProperty("QFieldSync/sourceDataPrimaryKeys"), "pk")
+        self.assertIsNone(layer.customProperty("QFieldSync/unsupported_source_pk"))
+        self.assertFalse(layer.readOnly())
+
+        # gpkg layer
+        layer = exported_project.mapLayersByName("curved_polys polys CurvePolygon")[0]
+        self.assertEqual(
+            layer.customProperty("QFieldSync/sourceDataPrimaryKeys"), "fid"
+        )
+        self.assertIsNone(layer.customProperty("QFieldSync/unsupported_source_pk"))
+        self.assertFalse(layer.readOnly())
+
+        # shp layer
+        layer = exported_project.mapLayersByName("france_parts_shape")[0]
+        self.assertIsNone(layer.customProperty("QFieldSync/sourceDataPrimaryKeys"))
+        self.assertEqual(layer.customProperty("QFieldSync/unsupported_source_pk"), "1")
+        self.assertTrue(layer.readOnly())
