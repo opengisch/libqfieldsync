@@ -234,7 +234,7 @@ class LayerSource(object):
         ews = self.layer.editorWidgetSetup(field_idx)
 
         if ews.type() != "ExternalResource":
-            return
+            return None
 
         resource_type = (
             ews.config()["DocumentViewer"] if "DocumentViewer" in ews.config() else 0
@@ -264,6 +264,7 @@ class LayerSource(object):
 
     def attachment_naming(self, field_name) -> str:
         attachment_type = self.get_attachment_field_type(field_name)
+        assert attachment_type is not None
         default_name_setting_value = self.ATTACHMENT_EXPRESSIONS[
             attachment_type
         ].format(layername=slugify(self.layer.name()))
@@ -696,7 +697,7 @@ class LayerSource(object):
 
         layer_subset_string = self.layer.subsetString()
         if new_source == "":
-            pattern = re.compile("[\W_]+")  # NOQA
+            pattern = re.compile(r"[\W_]+")  # NOQA
             cleaned_name = pattern.sub("", self.layer.name())
             dest_file = os.path.join(target_path, "{}.gpkg".format(cleaned_name))
             suffix = 0

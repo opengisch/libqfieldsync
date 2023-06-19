@@ -187,6 +187,8 @@ class ProjectChecker:
                     'Please change this configuration in "File -> Project settings" first.'
                 )
             )
+        else:
+            return None
 
     def check_no_homepath(self) -> Optional[FeedbackResult]:
         if self.project.presetHomePath():
@@ -196,12 +198,14 @@ class ProjectChecker:
                     'Please change this configuration in "File -> Project settings" first.'
                 )
             )
+        else:
+            return None
 
     def check_basemap_configuration(self) -> Optional[FeedbackResult]:
         project_configuration = ProjectConfiguration(self.project)
 
         if not project_configuration.create_base_map:
-            return
+            return None
 
         base_map_type = project_configuration.base_map_type
 
@@ -215,8 +219,7 @@ class ProjectChecker:
                         'Please change this configuration in "File -> Project settings -> QField" first.'
                     )
                 )
-
-            if not basemap_layer:
+            elif not basemap_layer:
                 return FeedbackResult(
                     self.tr(
                         'Cannot find the configured base layer with id "{}". '
@@ -234,6 +237,7 @@ class ProjectChecker:
                         'Please change this configuration in "File -> Project settings -> QField" first.'
                     ).format(project_configuration.base_map_theme),
                 )
+        return None
 
     def check_files_have_unsupported_characters(self) -> Optional[FeedbackResult]:
         problematic_paths = []
@@ -260,6 +264,8 @@ class ProjectChecker:
                     'Please make sure there are no files and directories with "<", ">", ":", "/", "\\", "|", "?", "*" or double quotes (") characters in their path.'
                 ).format(", ".join([f'"{path}"' for path in problematic_paths]))
             )
+        else:
+            return None
 
     def check_project_is_dirty(self) -> Optional[FeedbackResult]:
         if self.project.isDirty():
@@ -269,6 +275,8 @@ class ProjectChecker:
                     "Unsaved changes will not be uploaded to QFieldCloud."
                 )
             )
+        else:
+            return None
 
     def check_layer_has_utf8_datasources(
         self, layer_source: LayerSource
@@ -289,6 +297,8 @@ class ProjectChecker:
                     "It is highly recommended to convert them to UTF-8 encoded layers. "
                 ).format(layer.dataProvider().encoding()),
             )
+        else:
+            return None
 
     def check_layer_has_ascii_filename(
         self, layer_source: LayerSource
@@ -301,18 +311,20 @@ class ProjectChecker:
                     "It is highly recommended to rename them to ASCII encoded paths. "
                 ).format(layer_source.filename),
             )
+        else:
+            return None
 
     def check_layer_primary_key(
         self, layer_source: LayerSource
     ) -> Optional[FeedbackResult]:
         # Do not show primary key feedback if the layer cannot be packaged
         if layer_source.package_prevention_reasons:
-            return
+            return None
 
         layer = layer_source.layer
 
         if layer.type() != QgsMapLayer.VectorLayer:
-            return
+            return None
 
         # when the layer is configured as "no_action" and it is an "online" layer, then QFieldCloud is not responsible for the PKs,
         # therefore we should accept them
@@ -320,7 +332,7 @@ class ProjectChecker:
             layer_source.cloud_action == SyncAction.NO_ACTION
             and not layer_source.is_file
         ):
-            return
+            return None
 
         try:
             layer_source.get_pk_attr_name()
@@ -330,6 +342,8 @@ class ProjectChecker:
                 "Geopackages are [the recommended data format for QFieldCloud](https://docs.qfield.org/get-started/tutorials/get-started-qfc/#configure-your-project-layers-for-qfield). "
             )
             return FeedbackResult(f"{str(err)} {suffix}")
+
+        return None
 
     def check_layer_memory(self, layer_source: LayerSource) -> Optional[FeedbackResult]:
         layer = layer_source.layer
@@ -342,6 +356,8 @@ class ProjectChecker:
                 ),
             )
 
+        return None
+
     def check_layer_configured(
         self, layer_source: LayerSource
     ) -> Optional[FeedbackResult]:
@@ -353,6 +369,8 @@ class ProjectChecker:
                     'Please select and save appropriate layer action in "Layer Properties -> QField". '
                 ),
             )
+
+        return None
 
     def check_layer_package_prevention(
         self, layer_source: LayerSource
@@ -385,3 +403,5 @@ class ProjectChecker:
             main_msg += "\n".join(f"- {r}" for r in reason_msgs)
 
             return FeedbackResult(main_msg)
+
+        return None
