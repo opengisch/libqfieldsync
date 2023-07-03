@@ -199,15 +199,16 @@ class OfflineConverter(QObject):
             if package_prevention_reasons:
                 # remove the layer if it is invalid or not supported datasource on QField
                 for reason in package_prevention_reasons:
-                    logger.warning(
-                        f'Layer "{layer.name()}" cannot be packaged due to "{reason}", skipping…'
-                    )
                     if reason in LayerSource.REASONS_TO_REMOVE_LAYER:
                         logger.warning(
                             f'Layer "{layer.name()}" cannot be packaged and will be removed because "{reason}".'
                         )
                         project.removeMapLayer(layer)
                         break
+                    else:
+                        logger.warning(
+                            f'Layer "{layer.name()}" cannot be packaged due to "{reason}", skipping…'
+                        )
 
                 # do not attempt to package the layer
                 continue
