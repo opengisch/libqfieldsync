@@ -241,7 +241,7 @@ class OfflineConverter(QObject):
 
             self.__layer_data_by_id[layer.id()] = layer_data
 
-            # TODO replace `QFieldSync/remoteLayerId` with `remoteLayerId`, which is already set by `QgsOfflineEditing`
+            # `QFieldSync/remoteLayerId` should be equal to `remoteLayerId`, which is already set by `QgsOfflineEditing`. We add this as a copy to have control over this attribute that might suddenly change on QGIS.
             layer.setCustomProperty("QFieldSync/remoteLayerId", layer.id())
 
             self.total_progress_updated.emit(
