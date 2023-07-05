@@ -1,0 +1,14 @@
+[project]
+name = "libqfieldsync"
+description = "the qfieldsync library"
+version = "1.0"
+authors = [
+    { name = "OPENGIS.ch", email = "info@opengis.ch" }
+]
+dependencies = [
+]
+
+[project.optional-dependencies]
+dev = [
+    "pre-commit"
+]
