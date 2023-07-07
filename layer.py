@@ -3,7 +3,7 @@ import os
 import re
 import shutil
 from enum import Enum
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from qgis.core import (
     QgsAttributeEditorField,
@@ -20,7 +20,18 @@ from qgis.core import (
 from qgis.PyQt.QtCore import QCoreApplication
 from qgis.PyQt.QtXml import QDomDocument
 
+from .utils.bad_layer_handler import bad_layer_handler
 from .utils.file_utils import slugify
+from .utils.logger import logger
+
+
+class ExpectedVectorLayerError(Exception):
+    ...
+
+
+class UnsupportedPrimaryKeyError(Exception):
+    ...
+
 
 # When copying files, if any of the extension in any of the groups is found,
 # other files with the same extension in the same folder will be copied as well.
@@ -97,6 +108,16 @@ class LayerSource(object):
         WEB = 2  # QgsExternalResourceWidget.Web
         AUDIO = 3  # QgsExternalResourceWidget.Audio
         VIDEO = 4  # QgsExternalResourceWidget.Video
+
+    class PackagePreventionReason(Enum):
+        INVALID = 1
+        UNSUPPORTED_DATASOURCE = 2
+        LOCALIZED_PATH = 3
+
+    REASONS_TO_REMOVE_LAYER = (
+        PackagePreventionReason.INVALID,
+        PackagePreventionReason.UNSUPPORTED_DATASOURCE,
+    )
 
     ATTACHMENT_EXPRESSIONS = {
         AttachmentType.FILE: "'files/{layername}_' || format_date(now(),'yyyyMMddhhmmsszzz') || '_{{filename}}'",
@@ -203,15 +224,17 @@ class LayerSource(object):
     def cloud_action(self, action):
         self._cloud_action = action
 
-    def get_attachment_field_type(self, field_name: str) -> None:
+    def get_attachment_field_type(self, field_name: str) -> Optional[AttachmentType]:
         if self.layer.type() != QgsMapLayer.VectorLayer:
-            return None
+            raise ExpectedVectorLayerError(
+                f'Cannot get attachment field types for non-vector layer "{self.layer.name()}"!'
+            )
 
         field_idx = self.layer.fields().indexFromName(field_name)
         ews = self.layer.editorWidgetSetup(field_idx)
 
         if ews.type() != "ExternalResource":
-            return
+            return None
 
         resource_type = (
             ews.config()["DocumentViewer"] if "DocumentViewer" in ews.config() else 0
@@ -241,6 +264,7 @@ class LayerSource(object):
 
     def attachment_naming(self, field_name) -> str:
         attachment_type = self.get_attachment_field_type(field_name)
+        assert attachment_type is not None
         default_name_setting_value = self.ATTACHMENT_EXPRESSIONS[
             attachment_type
         ].format(layername=slugify(self.layer.name()))
@@ -489,10 +513,90 @@ class LayerSource(object):
 
     @property
     def is_localized_path(self) -> bool:
+        # on QFieldCloud localized layers will be invalid and therefore we get the layer source from `bad_layer_handler`
+        source = bad_layer_handler.invalid_layer_sources_by_id.get(self.layer.id())
+        if source:
+            return source.startswith("localized:")
+
         path_resolver = self.project.pathResolver()
         path = path_resolver.writePath(self.filename)
 
         return path.startswith("localized:")
+
+    @property
+    def package_prevention_reasons(
+        self,
+    ) -> List["LayerSource.PackagePreventionReason"]:
+        reasons = []
+
+        # remove unsupported layers from the packaged project
+        if not self.is_supported:
+            reasons.append(LayerSource.PackagePreventionReason.UNSUPPORTED_DATASOURCE)
+
+        # do not package the layers within localized paths (stored outside project dir and shared among multiple projects)
+        if self.is_localized_path:
+            reasons.append(LayerSource.PackagePreventionReason.LOCALIZED_PATH)
+        # remove invalid layers from the packaged project
+        # NOTE localized layers will be always invalid on QFieldCloud
+        elif not self.layer.isValid():
+            reasons.append(LayerSource.PackagePreventionReason.INVALID)
+
+        return reasons
+
+    @property
+    def pk_attr_name(self) -> str:
+        try:
+            return self.get_pk_attr_name()
+        except (ExpectedVectorLayerError, UnsupportedPrimaryKeyError):
+            return ""
+
+    def get_pk_attr_name(self) -> str:
+        pk_attr_name: str = ""
+
+        if self.layer.type() != QgsMapLayer.VectorLayer:
+            raise ExpectedVectorLayerError()
+
+        pk_indexes = self.layer.primaryKeyAttributes()
+        fields = self.layer.fields()
+
+        if len(pk_indexes) == 1:
+            pk_attr_name = fields[pk_indexes[0]].name()
+        elif len(pk_indexes) > 1:
+            raise UnsupportedPrimaryKeyError(
+                "Composite (multi-column) primary keys are not supported!"
+            )
+        else:
+            logger.info(
+                f'Layer "{self.layer.name()}" does not have a primary key. Trying to fallback to `fid`…'
+            )
+
+            # NOTE `QgsFields.lookupField(str)` is case insensitive (so we support "fid", "FID", "Fid" etc),
+            # but also looks for the field alias, that's why we check the `field.name().lower() == "fid"`
+            fid_idx = fields.lookupField("fid")
+            if fid_idx >= 0 and fields.at(fid_idx).name().lower() == "fid":
+                fid_name = fields.at(fid_idx).name()
+                logger.info(
+                    f'Layer "{self.layer.name()}" does not have a primary key so it uses the `fid` attribute as a fallback primary key. '
+                    "This is an unstable feature! "
+                    "Consider [converting to GeoPackages instead](https://docs.qfield.org/get-started/tutorials/get-started-qfc/#configure-your-project-layers-for-qfield). "
+                )
+                pk_attr_name = fid_name
+
+        if not pk_attr_name:
+            raise UnsupportedPrimaryKeyError(
+                f'Layer "{self.layer.name()}" neither has a primary key, nor an attribute `fid`! '
+            )
+
+        if "," in pk_attr_name:
+            raise UnsupportedPrimaryKeyError(
+                'Comma in field name "{pk_attribute_name}" is not allowed!'
+            )
+
+        logger.info(
+            f'Layer "{self.layer.name()}" has attribute "{pk_attr_name}" as a primary key.'
+        )
+
+        return pk_attr_name
 
     def copy(self, target_path, copied_files, keep_existent=False):
         """
@@ -593,7 +697,7 @@ class LayerSource(object):
 
         layer_subset_string = self.layer.subsetString()
         if new_source == "":
-            pattern = re.compile("[\W_]+")  # NOQA
+            pattern = re.compile(r"[\W_]+")  # NOQA
             cleaned_name = pattern.sub("", self.layer.name())
             dest_file = os.path.join(target_path, "{}.gpkg".format(cleaned_name))
             suffix = 0

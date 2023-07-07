@@ -4,8 +4,8 @@
 /***************************************************************************
  QFieldSync
                               -------------------
-        begin                : 2016
-        copyright            : (C) 2016 by OPENGIS.ch
+        begin                : 2323
+        copyright            : (C) 2323 by OPENGIS.ch
         email                : info@opengis.ch
  ***************************************************************************/
 
@@ -19,11 +19,26 @@
  ***************************************************************************/
 """
 
-import inspect
-import os
+from typing import List
+
+from qgis.core import QgsProjectBadLayerHandler
+from qgis.PyQt.QtXml import QDomNode
 
 
-def test_data_folder():
-    this_filename = inspect.stack()[0][1]
-    basepath, _ = os.path.split(this_filename)
-    return os.path.join(basepath, "data")
+class BadLayerHandler(QgsProjectBadLayerHandler):
+    invalid_layer_sources_by_id = {}
+
+    def handleBadLayers(self, layer_nodes: List[QDomNode]):
+        super().handleBadLayers(layer_nodes)
+
+        for layer_node in layer_nodes:
+            layer_id = layer_node.namedItem("id").toElement().text()
+            self.invalid_layer_sources_by_id[layer_id] = self.dataSource(layer_node)
+
+    def clear(self):
+        """Clears the invalid layers dictionary"""
+        self.invalid_layer_sources_by_id.clear()
+
+
+# poor man singleton. Metaclass does not work because `QgsProjectBadLayerHandler` does not have the same metaclass. Other singleton options are not "good" enough.
+bad_layer_handler = BadLayerHandler()

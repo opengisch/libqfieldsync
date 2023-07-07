@@ -48,7 +48,8 @@ from qgis.PyQt.QtCore import QCoreApplication, QObject, pyqtSignal
 
 from .layer import LayerSource, SyncAction
 from .project import ProjectConfiguration, ProjectProperties
-from .utils.file_utils import copy_attachments, isascii
+from .utils.file_utils import copy_attachments
+from .utils.logger import logger
 from .utils.qgis import make_temp_qgis_file, open_project
 from .utils.xml import get_themapcanvas
 
@@ -63,7 +64,6 @@ if sys.version_info >= (3, 8):
         source: str
         type: int
         fields: Optional[QgsFields]
-        pk_names: Optional[List[str]]
 
 else:
     LayerData = Dict
@@ -99,7 +99,6 @@ class OfflineConverter(QObject):
         self.__convertor_progress = None  # for processing feedback
         self.__layers = list()
         self.__layer_data_by_id: Dict[str, LayerData] = {}
-        self.__layer_data_by_name: Dict[str, LayerData] = {}
         self.__offline_layer_names: List[str] = []
 
         # elipsis workaround
@@ -185,21 +184,34 @@ class OfflineConverter(QObject):
         self.total_progress_updated.emit(0, 100, self.trUtf8("Converting project…"))
         self.__layers = list(project.mapLayers().values())
 
-        # We store the pks of the original vector layers
-        for layer in self.__layers:
-            pk_names = None
-            if layer.type() == QgsMapLayer.VectorLayer:
-                pk_names = []
-                for idx in layer.primaryKeyAttributes():
-                    pk_name = layer.fields()[idx].name()
-                    # and we check that the primary key fields names don't have a comma in the name
-                    if "," in pk_name:
-                        raise ValueError("Comma in field names not allowed")
-                    pk_names.append(pk_name)
+        if self.create_basemap and self.project_configuration.create_base_map:
+            self._export_basemap()
 
-                layer.setCustomProperty(
-                    "QFieldSync/sourceDataPrimaryKeys", ",".join(pk_names)
-                )
+        copied_files = list()
+
+        # We store the pks of the original vector layers
+        for layer_idx, layer in enumerate(self.__layers):
+            layer_source = LayerSource(layer)
+
+            # NOTE if the layer is prevented from packaging it does NOT mean we have to remove it, but we cannot collect any layer metadata (e.g. if the layer is localized path).
+            # NOTE cache the value, since we might remove the layer and the reasons cannot be recalculated
+            package_prevention_reasons = layer_source.package_prevention_reasons
+            if package_prevention_reasons:
+                # remove the layer if it is invalid or not supported datasource on QField
+                for reason in package_prevention_reasons:
+                    if reason in LayerSource.REASONS_TO_REMOVE_LAYER:
+                        logger.warning(
+                            f'Layer "{layer.name()}" cannot be packaged and will be removed because "{reason}".'
+                        )
+                        project.removeMapLayer(layer)
+                        break
+                    else:
+                        logger.warning(
+                            f'Layer "{layer.name()}" cannot be packaged due to "{reason}", skipping…'
+                        )
+
+                # do not attempt to package the layer
+                continue
 
             layer_data: LayerData = {
                 "id": layer.id(),
@@ -207,57 +219,37 @@ class OfflineConverter(QObject):
                 "type": layer.type(),
                 "source": layer.source(),
                 "fields": layer.fields() if hasattr(layer, "fields") else None,
-                "pk_names": pk_names,
             }
 
-            self.__layer_data_by_id[layer.id()] = layer_data
-            self.__layer_data_by_name[layer.name()] = layer_data
-
-            layer.setCustomProperty("QFieldSync/remoteLayerId", layer.id())
-
-        if self.create_basemap and self.project_configuration.create_base_map:
-            self._export_basemap()
-
-        # Loop through all layers and copy/remove/offline them
-        copied_files = list()
-        non_ascii_filename_layers: Dict[str, str] = {}
-        non_utf8_encoding_layers: Dict[str, str] = {}
-        for layer_idx, layer in enumerate(self.__layers):
-            self.total_progress_updated.emit(
-                layer_idx - len(self.__offline_layers),
-                len(self.__layers),
-                self.trUtf8("Copying layers…"),
-            )
-
-            layer_source = LayerSource(layer)
             layer_action = (
                 layer_source.action
                 if self.export_type == ExportType.Cable
                 else layer_source.cloud_action
             )
 
-            if not layer.isValid():
-                project.removeMapLayer(layer)
-                continue
+            if layer.type() == QgsMapLayer.VectorLayer:
+                if layer_source.pk_attr_name:
+                    # NOTE even though `QFieldSync/sourceDataPrimaryKeys` is in plural, we never supported composite (multi-column) PKs and always stored a single value
+                    layer.setCustomProperty(
+                        "QFieldSync/sourceDataPrimaryKeys", layer_source.pk_attr_name
+                    )
+                else:
+                    # The layer has no supported PK, so we mark it as readonly and just copy it when packaging in the cloud
+                    if self.export_type == ExportType.Cloud:
+                        layer_action = SyncAction.NO_ACTION
+                        layer.setReadOnly(True)
+                        layer.setCustomProperty("QFieldSync/unsupported_source_pk", "1")
 
-            if not layer_source.is_supported:
-                project.removeMapLayer(layer)
-                continue
+            self.__layer_data_by_id[layer.id()] = layer_data
 
-            if layer_source.is_file and not isascii(layer_source.filename):
-                non_ascii_filename_layers[layer.name()] = layer_source.filename
+            # `QFieldSync/remoteLayerId` should be equal to `remoteLayerId`, which is already set by `QgsOfflineEditing`. We add this as a copy to have control over this attribute that might suddenly change on QGIS.
+            layer.setCustomProperty("QFieldSync/remoteLayerId", layer.id())
 
-            if layer_source.is_localized_path:
-                continue
-
-            if (
-                layer.type() == QgsMapLayer.VectorLayer
-                and layer.dataProvider()
-                and layer.dataProvider().encoding() != "UTF-8"
-                # some providers return empty string as encoding, just ignore them
-                and layer.dataProvider().encoding() != ""
-            ):
-                non_utf8_encoding_layers[layer.name()] = layer.dataProvider().encoding()
+            self.total_progress_updated.emit(
+                layer_idx - len(self.__offline_layers),
+                len(self.__layers),
+                self.trUtf8("Copying layers…"),
+            )
 
             if layer_action == SyncAction.OFFLINE:
                 if self.project_configuration.offline_copy_only_aoi:
@@ -281,30 +273,6 @@ class OfflineConverter(QObject):
                 layer_source.copy(self.export_folder, copied_files, True)
             elif layer_action == SyncAction.REMOVE:
                 project.removeMapLayer(layer)
-
-        if non_ascii_filename_layers:
-            layers = ", ".join(
-                [
-                    f'"{name}" at "{path}"'
-                    for name, path in non_ascii_filename_layers.items()
-                ]
-            )
-            message = self.tr(
-                "Some layers are stored at file paths that are not ASCII encoded: {}. Working with paths that are not in ASCII might cause problems. It is highly recommended to rename them to ASCII encoded paths."
-            ).format(layers)
-            self.warning.emit(self.tr("QFieldSync"), message)
-
-        if non_utf8_encoding_layers:
-            layers = ", ".join(
-                [
-                    f"{name} ({encoding})"
-                    for name, encoding in non_utf8_encoding_layers.items()
-                ]
-            )
-            message = self.tr(
-                "Some layers do not use UTF-8 encoding: {}. Working with layers that do not use UTF-8 encoding might cause problems. It is highly recommended to convert them to UTF-8 encoded layers."
-            ).format(layers)
-            self.warning.emit(self.tr("QFieldSync"), message)
 
         export_project_filename = self.export_folder.joinpath(
             f"{self.original_filename.stem}_qfield.qgs"
@@ -330,7 +298,7 @@ class OfflineConverter(QObject):
             copy_attachments(
                 self.original_filename.parent,
                 export_project_filename.parent,
-                source_dir,
+                Path(source_dir),
             )
         try:
             # Run the offline plugin for gpkg
