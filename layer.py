@@ -589,7 +589,7 @@ class LayerSource(object):
 
         if "," in pk_attr_name:
             raise UnsupportedPrimaryKeyError(
-                'Comma in field name "{pk_attribute_name}" is not allowed!'
+                f'Comma in field name "{pk_attr_name}" is not allowed!'
             )
 
         logger.info(
