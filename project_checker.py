@@ -1,3 +1,4 @@
+import os
 import re
 import sys
 from enum import Enum
@@ -128,6 +129,11 @@ class ProjectChecker:
                 "type": Feedback.Level.WARNING,
                 "fn": self.check_layer_package_prevention,
                 "scope": None,
+            },
+            {
+                "type": Feedback.Level.WARNING,
+                "fn": self.check_layer_outside_uploaded_dir,
+                "scope": ExportType.Cloud,
             },
         ]
 
@@ -405,3 +411,18 @@ class ProjectChecker:
             return FeedbackResult(main_msg)
 
         return None
+
+    def check_layer_outside_uploaded_dir(self, layer_source: LayerSource):
+        project_filename = QgsProject.instance().fileName()
+        if layer_source.filename and project_filename:
+            project_path = Path(project_filename).parent.absolute()
+
+            if os.path.commonpath([project_path]) != os.path.commonpath(
+                [project_path, layer_source.filename]
+            ):
+                return FeedbackResult(
+                    self.tr(
+                        "The layer is not in the same directory as the project. "
+                        "Please move the layer data in the same project directory, otherwise the layer will be unavailable on QFieldCloud and QField."
+                    ),
+                )
