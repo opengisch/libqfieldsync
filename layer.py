@@ -589,11 +589,11 @@ class LayerSource(object):
 
         if "," in pk_attr_name:
             raise UnsupportedPrimaryKeyError(
-                'Comma in field name "{pk_attribute_name}" is not allowed!'
+                f'Comma in field name "{pk_attr_name}" is not allowed!'
             )
 
         logger.info(
-            f'Layer "{self.layer.name()}" has attribute "{pk_attr_name}" as a primary key.'
+            f'Layer "{self.layer.name()}" will use attribute "{pk_attr_name}" as a primary key.'
         )
 
         return pk_attr_name
