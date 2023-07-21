@@ -593,7 +593,7 @@ class LayerSource(object):
             )
 
         logger.info(
-            f'Layer "{self.layer.name()}" has attribute "{pk_attr_name}" as a primary key.'
+            f'Layer "{self.layer.name()}" will use attribute "{pk_attr_name}" as a primary key.'
         )
 
         return pk_attr_name
