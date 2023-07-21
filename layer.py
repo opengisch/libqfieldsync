@@ -300,7 +300,9 @@ class LayerSource(object):
 
     @property
     def default_action(self):
-        if self.is_file:
+        if self.is_virtual:
+            return SyncAction.NO_ACTION
+        elif self.is_file:
             return SyncAction.COPY
         elif not self.is_supported:
             return SyncAction.REMOVE
@@ -326,8 +328,25 @@ class LayerSource(object):
         return os.path.isfile(self.filename)
 
     @property
+    def is_virtual(self):
+        return (
+            self.layer.dataProvider() and self.layer.dataProvider().name() == "virtual"
+        )
+
+    @property
     def available_actions(self):
         actions = list()
+
+        if self.is_virtual:
+            actions.append(
+                (
+                    SyncAction.NO_ACTION,
+                    QCoreApplication.translate(
+                        "LayerAction", "Directly access data source"
+                    ),
+                )
+            )
+            return actions
 
         if self.is_file and not self.is_localized_path:
             actions.append(
@@ -371,6 +390,17 @@ class LayerSource(object):
     @property
     def available_cloud_actions(self):
         actions = []
+
+        if self.is_virtual:
+            actions.append(
+                (
+                    SyncAction.NO_ACTION,
+                    QCoreApplication.translate(
+                        "LayerAction", "Directly access data source"
+                    ),
+                )
+            )
+            return actions
 
         if self.layer.type() == QgsMapLayer.VectorLayer:
             # all vector layers can be converted for offline editting
