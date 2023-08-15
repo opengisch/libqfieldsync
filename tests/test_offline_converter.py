@@ -21,13 +21,14 @@
 
 import shutil
 import tempfile
+import unittest
 from pathlib import Path
 
 from qgis.core import QgsOfflineEditing, QgsProject
-from qgis.testing import start_app, unittest
+from qgis.testing import start_app
 from qgis.testing.mocked import get_iface
 
-from ..offline_converter import ExportType, OfflineConverter
+from libqfieldsync.offline_converter import ExportType, OfflineConverter
 
 start_app()
 
