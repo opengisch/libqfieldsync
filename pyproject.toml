@@ -22,7 +22,7 @@ requires-python = ">=3.8"
 
 [project.urls]
 homepage = "https://github.com/opengisch/libqfieldsync"
-documentation = "https://github.com/opengisch/libqfieldsync"
+documentation = "https://docs.qfield.org/get-started/"
 repository = "https://github.com/opengisch/libqfieldsync"
 tracker = "https://github.com/opengisch/libqfieldsync/issues"
 
