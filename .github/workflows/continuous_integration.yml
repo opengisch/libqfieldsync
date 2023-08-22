@@ -50,6 +50,3 @@ jobs:
           run:  python -m build
         - name: Install with pip
           run: pip install .
-      
-
-    
