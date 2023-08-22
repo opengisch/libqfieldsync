@@ -1,3 +1,16 @@
+[build-system]
+requires = [
+    "setuptools>=68.0",
+    "wheel",
+]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["libqfieldsync"]
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["requirements.txt"] }
+
 [project]
 name = "libqfieldsync"
 description = "the qfieldsync library"
@@ -5,10 +18,13 @@ version = "1.0"
 authors = [
     { name = "OPENGIS.ch", email = "info@opengis.ch" }
 ]
-dependencies = [
-]
+requires-python = ">=3.8"
+
+[project.urls]
+homepage = "https://github.com/opengisch/libqfieldsync"
+documentation = "https://docs.qfield.org/get-started/"
+repository = "https://github.com/opengisch/libqfieldsync"
+tracker = "https://github.com/opengisch/libqfieldsync/issues"
 
 [project.optional-dependencies]
-dev = [
-    "pre-commit"
-]
+dev = ["pre-commit"]
