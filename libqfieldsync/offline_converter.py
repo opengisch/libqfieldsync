@@ -48,6 +48,7 @@ from qgis.core import (
 from qgis.PyQt.QtCore import QCoreApplication, QObject, pyqtSignal
 
 from .layer import LayerSource, SyncAction
+from .offline_editing_mini import convert_to_offline_project
 from .project import ProjectConfiguration, ProjectProperties
 from .utils.file_utils import copy_attachments
 from .utils.logger import logger
@@ -252,7 +253,11 @@ class OfflineConverter(QObject):
                 self.trUtf8("Copying layers…"),
             )
 
-            if layer_action == SyncAction.OFFLINE:
+            if (
+                layer_action == SyncAction.OFFLINE
+                and self.export_type == ExportType.Cable
+            ):
+                # Select features in case of QGIS offline editing (cable export)
                 if self.project_configuration.offline_copy_only_aoi:
                     if Qgis.QGIS_VERSION_INT >= 33000:
                         no_geometry_types = [
@@ -324,44 +329,56 @@ class OfflineConverter(QObject):
                 export_project_filename.parent,
                 Path(source_dir),
             )
-        try:
-            # Run the offline plugin for gpkg
+
+        if self.export_type == ExportType.Cloud:
             gpkg_filename = "data.gpkg"
             if self.__offline_layers:
-                offline_layer_ids = [o_l.id() for o_l in self.__offline_layers]
+                bbox = QgsCoordinateTransform(
+                    QgsCoordinateReferenceSystem(self.area_of_interest_crs),
+                    QgsProject.instance().crs(),
+                    QgsProject.instance(),
+                ).transformBoundingBox(self.area_of_interest.boundingBox())
+                convert_to_offline_project(gpkg_filename, self.__offline_layers, bbox)
 
-                if not self.offline_editing.convertToOfflineProject(
-                    str(self.export_folder),
-                    gpkg_filename,
-                    offline_layer_ids,
-                    self.project_configuration.offline_copy_only_aoi,
-                    self.offline_editing.GPKG,
-                    None,
-                ):
-                    raise Exception(
-                        self.tr(
-                            "QGIS Offline editing error: failed to convert layers to offline layers"
-                        )
-                    )
-        except AttributeError:
-            # Run the offline plugin for spatialite
-            spatialite_filename = "data.sqlite"
-            if self.__offline_layers:
-                offline_layer_ids = [o_l.id() for o_l in self.__offline_layers]
+        else:
+            try:
+                # Run the offline plugin for gpkg
+                gpkg_filename = "data.gpkg"
+                if self.__offline_layers:
+                    offline_layer_ids = [o_l.id() for o_l in self.__offline_layers]
 
-                if not self.offline_editing.convertToOfflineProject(
-                    str(self.export_folder),
-                    spatialite_filename,
-                    offline_layer_ids,
-                    self.project_configuration.offline_copy_only_aoi,
-                    self.offline_editing.SpatiaLite,
-                    None,
-                ):
-                    raise Exception(
-                        self.tr(
-                            "QGIS Offline editing error: failed to convert layers to offline layers"
+                    if not self.offline_editing.convertToOfflineProject(
+                        str(self.export_folder),
+                        gpkg_filename,
+                        offline_layer_ids,
+                        self.project_configuration.offline_copy_only_aoi,
+                        self.offline_editing.GPKG,
+                        None,
+                    ):
+                        raise Exception(
+                            self.tr(
+                                "QGIS Offline editing error: failed to convert layers to offline layers"
+                            )
                         )
-                    )
+            except AttributeError:
+                # Run the offline plugin for spatialite
+                spatialite_filename = "data.sqlite"
+                if self.__offline_layers:
+                    offline_layer_ids = [o_l.id() for o_l in self.__offline_layers]
+
+                    if not self.offline_editing.convertToOfflineProject(
+                        str(self.export_folder),
+                        spatialite_filename,
+                        offline_layer_ids,
+                        self.project_configuration.offline_copy_only_aoi,
+                        self.offline_editing.SpatiaLite,
+                        None,
+                    ):
+                        raise Exception(
+                            self.tr(
+                                "QGIS Offline editing error: failed to convert layers to offline layers"
+                            )
+                        )
 
         # Disable project options that could create problems on a portable
         # project with offline layers

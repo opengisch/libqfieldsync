@@ -1,5 +1,4 @@
 import hashlib
-import logging
 from collections import defaultdict
 from typing import List, Optional
 
@@ -19,10 +18,7 @@ from qgis.core import (
     edit,
 )
 
-# from .utils import logger
-
-
-logger = logging.getLogger("x")
+from .utils.logger import logger
 
 CUSTOM_PROPERTY_IS_OFFLINE_EDITABLE = "isOfflineEditable"
 CUSTOM_PROPERTY_REMOTE_SOURCE = "remoteSource"
@@ -159,9 +155,6 @@ def convert_to_offline_layer(
     with edit(new_layer):
         feature_request = QgsFeatureRequest()
 
-        print(layer.name())
-        print(repr([field.name() for field in new_layer.fields()]))
-
         new_fields = new_layer.fields()
 
         for feature in layer.dataProvider().getFeatures(feature_request):
@@ -295,6 +288,3 @@ def convert_to_offline_project(
         PROJECT_ENTRY_KEY_OFFLINE_DB_PATH,
         project.writePath(offline_gpkg_path),
     )
-
-
-convert_to_offline_project("/tmp/out.gpkg", QgsProject.instance().mapLayers().keys())
