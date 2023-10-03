@@ -6,7 +6,7 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["libqfieldsync"]
+packages = ["libqfieldsync", "libqfieldsync.utils"]
 
 [tool.setuptools.dynamic]
 dependencies = { file = ["requirements.txt"] }
