@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Union
 
 from qgis.core import (
+    Qgis,
     QgsApplication,
     QgsBilinearRasterResampler,
     QgsCoordinateReferenceSystem,
@@ -253,15 +254,22 @@ class OfflineConverter(QObject):
 
             if layer_action == SyncAction.OFFLINE:
                 if self.project_configuration.offline_copy_only_aoi:
-                    extent = QgsCoordinateTransform(
-                        QgsCoordinateReferenceSystem(self.area_of_interest_crs),
-                        layer.crs(),
-                        QgsProject.instance(),
-                    ).transformBoundingBox(self.area_of_interest.boundingBox())
-                    layer.selectByRect(extent)
+                    if (
+                        layer.geometryType() is not Qgis.GeometryType.Null
+                        and layer.geometryType() is not Qgis.GeometryType.Unknown
+                    ):
+                        extent = QgsCoordinateTransform(
+                            QgsCoordinateReferenceSystem(self.area_of_interest_crs),
+                            layer.crs(),
+                            QgsProject.instance(),
+                        ).transformBoundingBox(self.area_of_interest.boundingBox())
+                        layer.selectByRect(extent)
 
-                if not layer.selectedFeatureCount():
-                    layer.selectByIds([FID_NULL])
+                        if not layer.selectedFeatureCount():
+                            layer.selectByIds([FID_NULL])
+                    else:
+                        # insure that geometry-less layers do not have selected features that would interfere with the process
+                        layer.removeSelection()
 
                 self.__offline_layers.append(layer)
                 self.__offline_layer_names.append(layer.name())
