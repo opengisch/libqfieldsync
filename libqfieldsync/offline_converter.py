@@ -253,10 +253,7 @@ class OfflineConverter(QObject):
                 self.trUtf8("Copying layers…"),
             )
 
-            if (
-                layer_action == SyncAction.OFFLINE
-                and self.export_type == ExportType.Cable
-            ):
+            if layer_action == SyncAction.OFFLINE:
                 # Select features in case of QGIS offline editing (cable export)
                 if self.project_configuration.offline_copy_only_aoi:
                     if Qgis.QGIS_VERSION_INT >= 33000:
