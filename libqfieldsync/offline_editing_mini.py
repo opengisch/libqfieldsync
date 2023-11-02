@@ -213,7 +213,7 @@ def update_data_provider(layer: QgsVectorLayer, source: str) -> None:
 
 def convert_to_offline_project(
     offline_gpkg_path: str,
-    layer_ids: Optional[List[str]],
+    offline_layers: Optional[List[QgsMapLayer]],
     bbox: QgsRectangle = QgsRectangle(),
 ) -> None:
     """Converts the currently loaded QgsProject to an offline project.
@@ -236,7 +236,7 @@ def convert_to_offline_project(
 
     # A dict that maps data sources (tables) to a list of layers connecting them
     datasource_mapping = defaultdict(list)
-    for layer_id, layer in project.mapLayers().items():
+    for layer in project.mapLayers().values():
         if layer.type() != QgsMapLayer.VectorLayer:
             logger.info(f"Skipping layer {layer.name()} :: not a vector layer")
             continue
@@ -248,7 +248,7 @@ def convert_to_offline_project(
             logger.info(f"Skipping layer {layer.name()} :: invalid ({reason})")
             continue
 
-        if layer_ids is not None and layer_id not in layer_ids:
+        if offline_layers is not None and layer not in offline_layers:
             logger.info(
                 f"Skipping layer {layer.name()} :: not configured as offline layer"
             )
@@ -257,25 +257,25 @@ def convert_to_offline_project(
         subset_string = layer.subsetString()
         layer.setSubsetString("")
 
-        provider_hash = hashlib.sha256(
+        datasource_hash = hashlib.sha256(
             layer.dataProvider().dataSourceUri().encode()
         ).hexdigest()
 
-        datasource_mapping[provider_hash].append(LayerInfo(layer, subset_string))
+        datasource_mapping[datasource_hash].append(LayerInfo(layer, subset_string))
 
-    for provider_hash, layers in datasource_mapping.items():
+    for datasource_hash, layer_infos in datasource_mapping.items():
         request = QgsFeatureRequest()
-        tr = QgsCoordinateTransform(project.crs(), layers[0].layer.crs(), project)
+        tr = QgsCoordinateTransform(project.crs(), layer_infos[0].layer.crs(), project)
         if not bbox.isNull():
             layer_bbox = tr.transform(bbox)
             request.setFilterRect(layer_bbox)
         source = convert_to_offline_layer(
-            layers[0].layer, data_source, offline_gpkg_path, request
+            layer_infos[0].layer, data_source, offline_gpkg_path, request
         )  # TODO: take care of request (bbox)
 
-        for layer in layers:
-            update_data_provider(layer.layer, source)
-            layer.layer.setSubsetString(layer.subset_string)
+        for layer_info in layer_infos:
+            update_data_provider(layer_info.layer, source)
+            layer_info.layer.setSubsetString(layer_info.subset_string)
 
     project_title = project.title()
     if not project_title:
