@@ -26,6 +26,8 @@ from typing import List, Optional, Union
 
 from qgis.core import QgsMapLayer, QgsProject
 
+from .bad_layer_handler import bad_layer_handler
+
 
 def get_project_title(project: QgsProject) -> str:
     """Gets project title, or if non available, the basename of the filename"""
@@ -66,3 +68,8 @@ def get_memory_layers(project: QgsProject) -> List[QgsMapLayer]:
 def get_qgis_files_within_dir(dirname: Union[str, Path]) -> List[Path]:
     dirname = Path(dirname)
     return list(dirname.glob("*.qgs")) + list(dirname.glob("*.qgz"))
+
+
+def set_bad_layer_handler(project: QgsProject):
+    bad_layer_handler.clear()
+    project.setBadLayerHandler(bad_layer_handler)
