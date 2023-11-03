@@ -327,8 +327,8 @@ class OfflineConverter(QObject):
                 Path(source_dir),
             )
 
+        gpkg_filename = str(self.export_folder.joinpath("data.gpkg"))
         if self.export_type == ExportType.Cloud:
-            gpkg_filename = "data.gpkg"
             if self.__offline_layers:
                 bbox = QgsCoordinateTransform(
                     QgsCoordinateReferenceSystem(self.area_of_interest_crs),
@@ -340,7 +340,6 @@ class OfflineConverter(QObject):
         else:
             try:
                 # Run the offline plugin for gpkg
-                gpkg_filename = "data.gpkg"
                 if self.__offline_layers:
                     offline_layer_ids = [o_l.id() for o_l in self.__offline_layers]
 
