@@ -549,7 +549,7 @@ class LayerSource(object):
             return source.startswith("localized:")
 
         path_resolver = self.project.pathResolver()
-        path = path_resolver.writePath(self.filename)
+        path = path_resolver.writePath(self.metadata.get("path", ""))
 
         return path.startswith("localized:")
 
