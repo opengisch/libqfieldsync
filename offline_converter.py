@@ -228,7 +228,7 @@ class OfflineConverter(QObject):
                 else layer_source.cloud_action
             )
 
-            if layer.type() == QgsMapLayer.VectorLayer:
+            if layer.isValid() and layer.type() == QgsMapLayer.VectorLayer:
                 if layer_source.pk_attr_name:
                     # NOTE even though `QFieldSync/sourceDataPrimaryKeys` is in plural, we never supported composite (multi-column) PKs and always stored a single value
                     layer.setCustomProperty(
