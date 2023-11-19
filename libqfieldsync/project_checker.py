@@ -4,15 +4,12 @@ from enum import Enum
 from pathlib import Path
 from typing import Callable, Dict, List, Optional
 
-from qfieldsync.libqfieldsync.layer import (
-    LayerSource,
-    SyncAction,
-    UnsupportedPrimaryKeyError,
-)
-from qfieldsync.libqfieldsync.project import ProjectConfiguration, ProjectProperties
-from qfieldsync.libqfieldsync.utils.file_utils import isascii
 from qgis.core import Qgis, QgsMapLayer, QgsProject, QgsSettings
 from qgis.PyQt.QtCore import QObject
+
+from libqfieldsync.layer import LayerSource, SyncAction, UnsupportedPrimaryKeyError
+from libqfieldsync.project import ProjectConfiguration, ProjectProperties
+from libqfieldsync.utils.file_utils import isascii
 
 from .offline_converter import ExportType
 
