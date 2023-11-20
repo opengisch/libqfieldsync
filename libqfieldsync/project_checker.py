@@ -331,14 +331,15 @@ class ProjectChecker:
         ):
             return None
 
-        try:
-            layer_source.get_pk_attr_name()
-        except UnsupportedPrimaryKeyError as err:
-            suffix = self.tr(
-                "The layer will be packaged **as a read-only layer on QFieldCloud**. "
-                "Geopackages are [the recommended data format for QFieldCloud](https://docs.qfield.org/get-started/tutorials/get-started-qfc/#configure-your-project-layers-for-qfield). "
-            )
-            return FeedbackResult(f"{str(err)} {suffix}")
+        if not layer.readOnly():
+            try:
+                layer_source.get_pk_attr_name()
+            except UnsupportedPrimaryKeyError as err:
+                suffix = self.tr(
+                    "The layer will be packaged **as a read-only layer on QFieldCloud**. "
+                    "Geopackages are [the recommended data format for QFieldCloud](https://docs.qfield.org/get-started/tutorials/get-started-qfc/#configure-your-project-layers-for-qfield). "
+                )
+                return FeedbackResult(f"{str(err)} {suffix}")
 
         return None
 
