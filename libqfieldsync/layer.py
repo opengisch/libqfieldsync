@@ -136,6 +136,8 @@ class LayerSource(object):
         self._photo_naming = {}
         self._relationship_maximum_visible = {}
         self._is_geometry_locked = None
+        self._is_geometry_locked_expression_active = False
+        self._geometry_locked_expression = ""
         self.read_layer()
         self.project = QgsProject.instance()
 
@@ -154,6 +156,12 @@ class LayerSource(object):
         )
         self._is_geometry_locked = self.layer.customProperty(
             "QFieldSync/is_geometry_locked", False
+        )
+        self._is_geometry_locked_expression_active = self.layer.customProperty(
+            "QFieldSync/is_geometry_locked_expression_active", False
+        )
+        self._geometry_locked_expression = self.layer.customProperty(
+            "QFieldSync/geometry_locked_expression", ""
         )
 
     def apply(self):
@@ -182,6 +190,18 @@ class LayerSource(object):
             bool(self.layer.customProperty("QFieldSync/is_geometry_locked"))
             != self.is_geometry_locked
         )
+        has_changed |= (
+            bool(
+                self.layer.customProperty(
+                    "QFieldSync/is_geometry_locked_expression_active"
+                )
+            )
+            != self.is_geometry_locked_expression_active
+        )
+        has_changed |= (
+            bool(self.layer.customProperty("QFieldSync/geometry_locked_expression"))
+            != self.geometry_locked_expression
+        )
 
         self.layer.setCustomProperty("QFieldSync/action", self.action)
         self.layer.setCustomProperty("QFieldSync/cloud_action", self.cloud_action)
@@ -199,6 +219,20 @@ class LayerSource(object):
             self.layer.setCustomProperty("QFieldSync/is_geometry_locked", True)
         else:
             self.layer.removeCustomProperty("QFieldSync/is_geometry_locked")
+
+        if self.is_geometry_locked_expression_active:
+            self.layer.setCustomProperty(
+                "QFieldSync/is_geometry_locked_expression_active", True
+            )
+        else:
+            self.layer.removeCustomProperty(
+                "QFieldSync/is_geometry_locked_expression_active"
+            )
+
+        self.layer.setCustomProperty(
+            "QFieldSync/geometry_locked_expression",
+            self.geometry_locked_expression,
+        )
 
         return has_changed
 
@@ -487,6 +521,26 @@ class LayerSource(object):
     @is_geometry_locked.setter
     def is_geometry_locked(self, is_geometry_locked):
         self._is_geometry_locked = is_geometry_locked
+
+    @property
+    def is_geometry_locked_expression_active(self):
+        return bool(self._is_geometry_locked_expression_active)
+
+    @is_geometry_locked_expression_active.setter
+    def is_geometry_locked_expression_active(
+        self, is_geometry_locked_expression_active
+    ):
+        self._is_geometry_locked_expression_active = (
+            is_geometry_locked_expression_active
+        )
+
+    @property
+    def geometry_locked_expression(self):
+        return self._geometry_locked_expression
+
+    @geometry_locked_expression.setter
+    def geometry_locked_expression(self, geometry_locked_expression):
+        self._geometry_locked_expression = geometry_locked_expression
 
     @property
     def warning(self):
