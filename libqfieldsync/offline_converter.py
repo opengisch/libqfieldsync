@@ -258,14 +258,20 @@ class OfflineConverter(QObject):
                         layer.geometryType() is not Qgis.GeometryType.Null
                         and layer.geometryType() is not Qgis.GeometryType.Unknown
                     ):
-                        extent = QgsCoordinateTransform(
-                            QgsCoordinateReferenceSystem(self.area_of_interest_crs),
-                            layer.crs(),
-                            QgsProject.instance(),
-                        ).transformBoundingBox(self.area_of_interest.boundingBox())
-                        layer.selectByRect(extent)
-
-                        if not layer.selectedFeatureCount():
+                        try:
+                            extent = QgsCoordinateTransform(
+                                QgsCoordinateReferenceSystem(self.area_of_interest_crs),
+                                layer.crs(),
+                                QgsProject.instance(),
+                            ).transformBoundingBox(self.area_of_interest.boundingBox())
+                            layer.selectByRect(extent)
+                            if not layer.selectedFeatureCount():
+                                layer.selectByIds([FID_NULL])
+                        except Exception:
+                            message = self.tr(
+                                "The area of interest extent could not be applied to layer '{}'"
+                            ).format(layer.name())
+                            self.warning.emit(self.tr("QFieldSync"), message)
                             layer.selectByIds([FID_NULL])
                     else:
                         # insure that geometry-less layers do not have selected features that would interfere with the process
