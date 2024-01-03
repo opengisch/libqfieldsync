@@ -1,10 +1,12 @@
 import hashlib
 from collections import defaultdict
+from pathlib import Path
 from typing import List, Optional
 
 from osgeo import ogr, osr
 from PyQt5.QtCore import QFileInfo, QVariant
 from qgis.core import (
+    Qgis,
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
     QgsFeatureRequest,
@@ -12,13 +14,17 @@ from qgis.core import (
     QgsFieldConstraints,
     QgsJsonUtils,
     QgsMapLayer,
+    QgsOfflineEditing,
     QgsProject,
     QgsRectangle,
     QgsVectorLayer,
     edit,
 )
+from qgis.PyQt.QtCore import QObject, pyqtSignal
 
 from .utils.logger import logger
+
+FID_NULL = -4294967296
 
 CUSTOM_PROPERTY_IS_OFFLINE_EDITABLE = "isOfflineEditable"
 CUSTOM_PROPERTY_REMOTE_SOURCE = "remoteSource"
@@ -28,6 +34,93 @@ CUSTOM_PROPERTY_ORIGINAL_LAYERID = "remoteLayerId"
 CUSTOM_PROPERTY_LAYERNAME_SUFFIX = "layerNameSuffix"
 PROJECT_ENTRY_SCOPE_OFFLINE = "OfflineEditingPlugin"
 PROJECT_ENTRY_KEY_OFFLINE_DB_PATH = "/OfflineDbPath"
+
+
+class BaseOffliner(QObject):
+    warning = pyqtSignal(str, str)
+    layerProgressUpdated = pyqtSignal(int, int)
+    progressModeSet = pyqtSignal(QgsOfflineEditing.ProgressMode, int)
+    progressUpdated = pyqtSignal(int)
+
+    def convert_to_offline(
+        self,
+        offline_db_filename: str,
+        layers: List[QgsMapLayer],
+        bbox: Optional[QgsRectangle],
+    ) -> bool:
+        raise NotImplementedError(
+            "Expected `BaseOffliner` to be extended by a class that implements `convert_to_offline`."
+        )
+
+
+class QgisCoreOffliner(BaseOffliner):
+    def __init__(self, *args, **kwargs) -> None:
+        offline_editing = kwargs.pop("offline_editing") or QgsOfflineEditing()
+        super().__init__(*args, **kwargs)
+        self.offliner = offline_editing
+
+        # Check https://api.qgis.org/api/3.14/classQgsOfflineEditing.html#a59d2ebed32704f655868951eba6ef52e for more documentation of these signals
+        # NOTE directly connecting the slot like `self.offliner.progressModeSet.connect(self.progressModeSet)` raises typing error
+        self.offliner.layerProgressUpdated.connect(
+            lambda progress, layer_idx: self.layerProgressUpdated.emit(
+                progress, layer_idx
+            )
+        )
+        self.offliner.progressModeSet.connect(
+            lambda mode, maximum: self.progressModeSet.emit(mode, maximum)
+        )
+        self.offliner.progressUpdated.connect(
+            lambda progress: self.progressUpdated.emit(progress)
+        )
+
+    def convert_to_offline(
+        self,
+        offline_db_filename: str,
+        layers: List[QgsMapLayer],
+        bbox: Optional[QgsRectangle],
+    ) -> bool:
+        offline_db_path = Path(offline_db_filename).parent
+        layer_ids = [layer.id() for layer in layers]
+
+        only_selected = False
+        if bbox and bbox.isFinite():
+            only_selected = True
+            for layer in layers:
+                if (
+                    layer.geometryType() is Qgis.GeometryType.Null
+                    or layer.geometryType() is Qgis.GeometryType.Unknown
+                ):
+                    # ensure that geometry-less layers do not have selected features that would interfere with the process
+                    layer.removeSelection()
+                else:
+                    layer.selectByRect(bbox)
+
+                if layer.selectedFeatureCount() == 0:
+                    layer.selectByIds([FID_NULL])
+
+        is_success = self.offliner.convertToOfflineProject(
+            str(offline_db_path),
+            str(offline_db_filename),
+            layer_ids,
+            only_selected,
+            # containerType - GPKG or SpatiaLite
+            containerType=QgsOfflineEditing.GPKG,
+            # layerNameSuffix - by default " (offlined)" is added as suffix
+            layerNameSuffix=None,
+        )
+
+        return is_success
+
+
+class PythonMiniOffliner(BaseOffliner):
+    def convert(
+        self,
+        offline_db_filename: str,
+        layers: List[QgsMapLayer],
+        bbox: Optional[QgsRectangle],
+    ) -> bool:
+        convert_to_offline_project(str(offline_db_filename), layers, bbox)
+        return True
 
 
 def ogr_field_type(field: QgsField) -> ogr.FieldDefn:
