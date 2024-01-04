@@ -1,5 +1,6 @@
 import hashlib
 from collections import defaultdict
+from enum import Enum
 from pathlib import Path
 from typing import List, Optional
 
@@ -34,6 +35,11 @@ CUSTOM_PROPERTY_ORIGINAL_LAYERID = "remoteLayerId"
 CUSTOM_PROPERTY_LAYERNAME_SUFFIX = "layerNameSuffix"
 PROJECT_ENTRY_SCOPE_OFFLINE = "OfflineEditingPlugin"
 PROJECT_ENTRY_KEY_OFFLINE_DB_PATH = "/OfflineDbPath"
+
+
+class OfflinerType(str, Enum):
+    QGISCORE = "qgiscore"
+    PYTHONMINI = "pythonmini"
 
 
 class BaseOffliner(QObject):
