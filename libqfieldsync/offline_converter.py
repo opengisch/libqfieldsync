@@ -254,10 +254,20 @@ class OfflineConverter(QObject):
 
             if layer_action == SyncAction.OFFLINE:
                 if self.project_configuration.offline_copy_only_aoi:
-                    if (
-                        layer.geometryType() is not Qgis.GeometryType.Null
-                        and layer.geometryType() is not Qgis.GeometryType.Unknown
-                    ):
+                    if Qgis.QGIS_VERSION_INT >= 33000:
+                        no_geometry_types = [
+                            Qgis.GeometryType.Null,
+                            Qgis.GeometryType.Unknown,
+                        ]
+                    else:
+                        from qgis.core import QgsWkbTypes
+
+                        no_geometry_types = [
+                            QgsWkbTypes.GeometryType.Null,
+                            QgsWkbTypes.GeometryType.Unknown,
+                        ]
+
+                    if layer.geometryType() not in no_geometry_types:
                         try:
                             extent = QgsCoordinateTransform(
                                 QgsCoordinateReferenceSystem(self.area_of_interest_crs),
