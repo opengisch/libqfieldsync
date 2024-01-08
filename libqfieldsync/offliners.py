@@ -92,10 +92,20 @@ class QgisCoreOffliner(BaseOffliner):
         if bbox and bbox.isFinite():
             only_selected = True
             for layer in layers:
-                if (
-                    layer.geometryType() is Qgis.GeometryType.Null
-                    or layer.geometryType() is Qgis.GeometryType.Unknown
-                ):
+                if Qgis.QGIS_VERSION_INT >= 33000:
+                    no_geometry_types = [
+                        Qgis.GeometryType.Null,
+                        Qgis.GeometryType.Unknown,
+                    ]
+                else:
+                    from qgis.core import QgsWkbTypes
+
+                    no_geometry_types = [
+                        QgsWkbTypes.GeometryType.Null,
+                        QgsWkbTypes.GeometryType.Unknown,
+                    ]
+
+                if layer.geometryType() not in no_geometry_types:
                     # ensure that geometry-less layers do not have selected features that would interfere with the process
                     layer.removeSelection()
                 else:
