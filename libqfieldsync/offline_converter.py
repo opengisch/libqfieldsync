@@ -263,8 +263,8 @@ class OfflineConverter(QObject):
                         from qgis.core import QgsWkbTypes
 
                         no_geometry_types = [
-                            QgsWkbTypes.GeometryType.Null,
-                            QgsWkbTypes.GeometryType.Unknown,
+                            QgsWkbTypes.GeometryType.NullGeometry,
+                            QgsWkbTypes.GeometryType.UnknownGeometry,
                         ]
 
                     if layer.geometryType() not in no_geometry_types:
