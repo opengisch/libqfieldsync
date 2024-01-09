@@ -131,7 +131,7 @@ class QgisCoreOffliner(BaseOffliner):
 
 
 class PythonMiniOffliner(BaseOffliner):
-    def convert(
+    def convert_to_offline(
         self,
         offline_db_filename: str,
         layers: List[QgsMapLayer],
