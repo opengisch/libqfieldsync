@@ -61,7 +61,9 @@ class BaseOffliner(QObject):
 
 class QgisCoreOffliner(BaseOffliner):
     def __init__(self, *args, **kwargs) -> None:
-        offline_editing = kwargs.pop("offline_editing") or QgsOfflineEditing()
+        # We don't pass `QgsOfflineEditing` as a second argument to `dict.pop()`,
+        # because it will create a useless instance, therefore we pass it as a second operand to `or`.
+        offline_editing = kwargs.pop("offline_editing", None) or QgsOfflineEditing()
         super().__init__(*args, **kwargs)
         self.offliner = offline_editing
 
