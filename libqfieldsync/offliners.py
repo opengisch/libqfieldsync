@@ -331,14 +331,17 @@ def convert_to_offline_project(
     Offline layers are written to ``offline_gpkg_path``. Only valid vector layers are written.
     If ``layer_ids`` is specified, only layers present in this list are written.
     If ``bbox`` is specified, only features within this ``bbox`` are written.
+
+    NOTE `QgsOfflineEditing` sets `PRAGMA FOREIGN_KEY`, but this implementation does not,
+    as dealing with FK on the field is pain for the user, manager and developers.
+    We leave any FK mismatches during sync. See GH comment about this: https://github.com/opengisch/libqfieldsync/pull/54/files#r1450173731
+    NOTE `QgsOfflineEditing` calls `Initialize Spatial Metadata`, but this
+    implementation does not, as it is considered a spatialite leftover.
     """
     project = QgsProject.instance()
 
     driver = ogr.GetDriverByName("GPKG")
     data_source = driver.CreateDataSource(offline_gpkg_path)
-
-    # QgsOfflineEditing sets PRAGMA FOREIGN_KEY -- is this required?
-    # QgsOfflineEditing calls Initialize Spatial Metadata -- is this required? Probably a spatialite leftover
 
     class LayerInfo:
         def __init__(self, layer, subset_string) -> None:
