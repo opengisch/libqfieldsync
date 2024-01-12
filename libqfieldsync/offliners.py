@@ -382,7 +382,7 @@ def convert_to_offline_project(
             request.setFilterRect(layer_bbox)
         source = convert_to_offline_layer(
             layer_infos[0].layer, data_source, offline_gpkg_path, request
-        )  # TODO: take care of request (bbox)
+        )
 
         for layer_info in layer_infos:
             update_data_provider(layer_info.layer, source)
