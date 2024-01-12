@@ -196,7 +196,8 @@ def qgis_crs_to_ogr_srs(crs: QgsCoordinateReferenceSystem) -> osr.SpatialReferen
 
 
 def ogr_escape(data: str):
-    # TODO work out how escaping actually works
+    # There is no such thing as escaping for gdal options
+    # CSLFetchNameValue compares the name of an option followed by a `=` or `:` and treats everything after as value.
     return data
 
 
