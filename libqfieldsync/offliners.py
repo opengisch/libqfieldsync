@@ -2,7 +2,7 @@ import hashlib
 from collections import defaultdict
 from enum import Enum
 from pathlib import Path
-from typing import List, Optional
+from typing import List, NamedTuple, Optional
 
 from osgeo import ogr, osr
 from PyQt5.QtCore import QFileInfo, QVariant
@@ -330,7 +330,7 @@ class PythonMiniOffliner(BaseOffliner):
         self,
         offline_gpkg_path: str,
         offline_layers: Optional[List[QgsMapLayer]],
-        bbox: QgsRectangle = QgsRectangle(),
+        bbox: Optional[QgsRectangle],
     ) -> None:
         """Converts the currently loaded QgsProject to an offline project.
         Offline layers are written to ``offline_gpkg_path``. Only valid vector layers are written.
@@ -348,10 +348,9 @@ class PythonMiniOffliner(BaseOffliner):
         driver = ogr.GetDriverByName("GPKG")
         data_source = driver.CreateDataSource(offline_gpkg_path)
 
-        class LayerInfo:
-            def __init__(self, layer, subset_string) -> None:
-                self.layer = layer
-                self.subset_string = subset_string
+        class LayerInfo(NamedTuple):
+            layer: QgsVectorLayer
+            subset_string: str
 
         # A dict that maps data sources (tables) to a list of layers connecting them
         datasource_mapping = defaultdict(list)
@@ -384,14 +383,37 @@ class PythonMiniOffliner(BaseOffliner):
 
         for datasource_hash, layer_infos in datasource_mapping.items():
             request = QgsFeatureRequest()
-            tr = QgsCoordinateTransform(
-                project.crs(), layer_infos[0].layer.crs(), project
-            )
-            if not bbox.isNull():
+            # All layers for given `datasource_hash` are pointing to the very same file/datasource.
+            # Here we get the first layer for convenience, but it doesn't really matter.
+            layer_to_offline = layer_infos[0].layer
+
+            if Qgis.QGIS_VERSION_INT >= 33000:
+                no_geometry_types = [
+                    Qgis.GeometryType.Null,
+                    Qgis.GeometryType.Unknown,
+                ]
+            else:
+                from qgis.core import QgsWkbTypes
+
+                no_geometry_types = [
+                    QgsWkbTypes.GeometryType.NullGeometry,
+                    QgsWkbTypes.GeometryType.UnknownGeometry,
+                ]
+
+            # If `bbox` is valid and not empty and the layer is not geometry-less
+            if (
+                bbox
+                and bbox.isFinite()
+                and layer_to_offline.geometryType() not in no_geometry_types
+            ):
+                tr = QgsCoordinateTransform(
+                    project.crs(), layer_to_offline.crs(), project
+                )
                 layer_bbox = tr.transform(bbox)
                 request.setFilterRect(layer_bbox)
+
             source = self.convert_to_offline_layer(
-                layer_infos[0].layer, data_source, offline_gpkg_path, request
+                layer_to_offline, data_source, offline_gpkg_path, request
             )
 
             for layer_info in layer_infos:
