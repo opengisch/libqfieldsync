@@ -108,7 +108,7 @@ class QgisCoreOffliner(BaseOffliner):
                         QgsWkbTypes.GeometryType.UnknownGeometry,
                     ]
 
-                if layer.geometryType() not in no_geometry_types:
+                if layer.geometryType() in no_geometry_types:
                     # ensure that geometry-less layers do not have selected features that would interfere with the process
                     layer.removeSelection()
                 else:
