@@ -91,6 +91,7 @@ class QgisCoreOffliner(BaseOffliner):
         layer_ids = [layer.id() for layer in layers]
 
         only_selected = False
+        # If `bbox` is valid and not empty
         if bbox and bbox.isFinite():
             only_selected = True
             for layer in layers:
