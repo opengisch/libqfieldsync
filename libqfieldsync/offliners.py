@@ -200,16 +200,11 @@ class PythonMiniOffliner(BaseOffliner):
         # CSLFetchNameValue compares the name of an option followed by a `=` or `:` and treats everything after as value.
         return data
 
-    def convert_to_offline_layer(
-        self,
-        layer: QgsVectorLayer,
-        data_source: ogr.DataSource,
-        offline_gpkg_path: str,
-        feature_request: QgsFeatureRequest = QgsFeatureRequest(),
-    ) -> str:
+    def create_layer(
+        self, layer: QgsVectorLayer, data_source: ogr.DataSource, offline_gpkg_path: str
+    ) -> None:
         """
-        Will create a copy of ``layer`` in the GeoPackage specified as ``data_source`` which is stored at ``offline_gpkg_path``.
-        It will replace the dataProvider of the original layer.
+        Will create a new layer for ``layer`` in the GeoPackage specified as ``data_source`` which is stored at ``offline_gpkg_path``.
         """
 
         identifier = hashlib.sha256(
@@ -253,7 +248,24 @@ class PythonMiniOffliner(BaseOffliner):
                 )
 
         ogr_layer.SyncToDisk()
-        qgis_uri = f"{offline_gpkg_path}|layername={identifier}"  # |option:QGIS_FORCE_WAL=ON' TODO: check why forcewal is enabled
+
+    def convert_to_offline_layer(
+        self,
+        layer: QgsVectorLayer,
+        data_source: ogr.DataSource,
+        offline_gpkg_path: str,
+        feature_request: QgsFeatureRequest = QgsFeatureRequest(),
+    ) -> str:
+        """
+        Will fill a copy of ``layer`` in the GeoPackage specified as ``data_source`` which is stored at ``offline_gpkg_path``.
+        It will replace the dataProvider of the original layer.
+        """
+
+        identifier = hashlib.sha256(
+            layer.dataProvider().dataSourceUri().encode()
+        ).hexdigest()
+
+        qgis_uri = f"{offline_gpkg_path}|layername={identifier}"
 
         qgis_layer_options = QgsVectorLayer.LayerOptions(
             QgsProject.instance().transformContext()
@@ -381,6 +393,10 @@ class PythonMiniOffliner(BaseOffliner):
             ).hexdigest()
 
             datasource_mapping[datasource_hash].append(LayerInfo(layer, subset_string))
+
+        for datasource_hash, layer_infos in datasource_mapping.items():
+            layer_to_offline = layer_infos[0].layer
+            self.create_layer(layer_to_offline, data_source, offline_gpkg_path)
 
         for datasource_hash, layer_infos in datasource_mapping.items():
             request = QgsFeatureRequest()
