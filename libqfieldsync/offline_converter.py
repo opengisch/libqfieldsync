@@ -26,7 +26,6 @@ from pathlib import Path
 from typing import Dict, List, Optional, Union
 
 from qgis.core import (
-    Qgis,
     QgsApplication,
     QgsBilinearRasterResampler,
     QgsCoordinateReferenceSystem,
@@ -36,7 +35,6 @@ from qgis.core import (
     QgsField,
     QgsFields,
     QgsMapLayer,
-    QgsOfflineEditing,
     QgsPolygon,
     QgsProcessingContext,
     QgsProcessingFeedback,
@@ -48,6 +46,7 @@ from qgis.core import (
 from qgis.PyQt.QtCore import QCoreApplication, QObject, pyqtSignal
 
 from .layer import LayerSource, SyncAction
+from .offliners import BaseOffliner
 from .project import ProjectConfiguration, ProjectProperties
 from .utils.file_utils import copy_attachments
 from .utils.logger import logger
@@ -88,7 +87,7 @@ class OfflineConverter(QObject):
         area_of_interest_wkt: str,
         area_of_interest_crs: Union[str, QgsCoordinateReferenceSystem],
         attachment_dirs: List[str],
-        offline_editing: QgsOfflineEditing,
+        offliner: BaseOffliner,
         export_type: ExportType = ExportType.Cable,
         create_basemap: bool = True,
         dirs_to_copy: Optional[Dict[str, bool]] = None,
@@ -96,9 +95,7 @@ class OfflineConverter(QObject):
 
         super(OfflineConverter, self).__init__(parent=None)
         self.__max_task_progress = 0
-        self.__offline_layers = []
         self.__convertor_progress = None  # for processing feedback
-        self.__layers = list()
         self.__layer_data_by_id: Dict[str, LayerData] = {}
         self.__offline_layer_names: List[str] = []
 
@@ -119,7 +116,12 @@ class OfflineConverter(QObject):
             self.area_of_interest_crs.isValid()
         ), f"Invalid CRS specified for area of interest {area_of_interest_crs}"
 
-        self.offline_editing = offline_editing
+        self.offliner = offliner
+
+        self.offliner.layerProgressUpdated.connect(self._on_offline_editing_next_layer)
+        self.offliner.progressModeSet.connect(self._on_offline_editing_max_changed)
+        self.offliner.progressUpdated.connect(self._on_offline_editing_task_progress)
+
         self.project_configuration = ProjectConfiguration(project)
 
     # flake8: noqa: max-complexity: 33
@@ -131,14 +133,6 @@ class OfflineConverter(QObject):
         self.original_filename = Path(project.fileName())
         self.backup_filename = make_temp_qgis_file(project)
 
-        self.offline_editing.layerProgressUpdated.connect(
-            self._on_offline_editing_next_layer
-        )
-        self.offline_editing.progressModeSet.connect(
-            self._on_offline_editing_max_changed
-        )
-        self.offline_editing.progressUpdated.connect(self.offline_editing_task_progress)
-
         try:
             self._convert(project)
         finally:
@@ -148,19 +142,9 @@ class OfflineConverter(QObject):
 
             open_project(str(self.original_filename), self.backup_filename)
 
-            self.offline_editing.layerProgressUpdated.disconnect(
-                self._on_offline_editing_next_layer
-            )
-            self.offline_editing.progressModeSet.disconnect(
-                self._on_offline_editing_max_changed
-            )
-            self.offline_editing.progressUpdated.disconnect(
-                self.offline_editing_task_progress
-            )
             self.total_progress_updated.emit(100, 100, self.tr("Finished"))
 
     def _convert(self, project: QgsProject) -> None:
-        project.baseName()
         xml_elements_to_preserve = {}
         on_original_project_read = self._on_original_project_read_wrapper(
             xml_elements_to_preserve
@@ -183,15 +167,16 @@ class OfflineConverter(QObject):
 
         self.export_folder.mkdir(parents=True, exist_ok=True)
         self.total_progress_updated.emit(0, 100, self.trUtf8("Converting project…"))
-        self.__layers = list(project.mapLayers().values())
+
+        project_layers: List[QgsMapLayer] = list(project.mapLayers().values())
+        offline_layers: List[QgsMapLayer] = []
+        copied_files = list()
 
         if self.create_basemap and self.project_configuration.create_base_map:
             self._export_basemap()
 
-        copied_files = list()
-
         # We store the pks of the original vector layers
-        for layer_idx, layer in enumerate(self.__layers):
+        for layer_idx, layer in enumerate(project_layers):
             layer_source = LayerSource(layer)
 
             # NOTE if the layer is prevented from packaging it does NOT mean we have to remove it, but we cannot collect any layer metadata (e.g. if the layer is localized path).
@@ -247,47 +232,13 @@ class OfflineConverter(QObject):
             layer.setCustomProperty("QFieldSync/remoteLayerId", layer.id())
 
             self.total_progress_updated.emit(
-                layer_idx - len(self.__offline_layers),
-                len(self.__layers),
+                layer_idx,
+                len(project_layers),
                 self.trUtf8("Copying layers…"),
             )
 
             if layer_action == SyncAction.OFFLINE:
-                if self.project_configuration.offline_copy_only_aoi:
-                    if Qgis.QGIS_VERSION_INT >= 33000:
-                        no_geometry_types = [
-                            Qgis.GeometryType.Null,
-                            Qgis.GeometryType.Unknown,
-                        ]
-                    else:
-                        from qgis.core import QgsWkbTypes
-
-                        no_geometry_types = [
-                            QgsWkbTypes.GeometryType.NullGeometry,
-                            QgsWkbTypes.GeometryType.UnknownGeometry,
-                        ]
-
-                    if layer.geometryType() not in no_geometry_types:
-                        try:
-                            extent = QgsCoordinateTransform(
-                                QgsCoordinateReferenceSystem(self.area_of_interest_crs),
-                                layer.crs(),
-                                QgsProject.instance(),
-                            ).transformBoundingBox(self.area_of_interest.boundingBox())
-                            layer.selectByRect(extent)
-                            if not layer.selectedFeatureCount():
-                                layer.selectByIds([FID_NULL])
-                        except Exception:
-                            message = self.tr(
-                                "The area of interest extent could not be applied to layer '{}'"
-                            ).format(layer.name())
-                            self.warning.emit(self.tr("QFieldSync"), message)
-                            layer.selectByIds([FID_NULL])
-                    else:
-                        # insure that geometry-less layers do not have selected features that would interfere with the process
-                        layer.removeSelection()
-
-                self.__offline_layers.append(layer)
+                offline_layers.append(layer)
                 self.__offline_layer_names.append(layer.name())
             elif (
                 layer_action == SyncAction.COPY or layer_action == SyncAction.NO_ACTION
@@ -324,48 +275,31 @@ class OfflineConverter(QObject):
                 export_project_filename.parent,
                 Path(source_dir),
             )
-        try:
-            # Run the offline plugin for gpkg
-            gpkg_filename = "data.gpkg"
-            if self.__offline_layers:
-                offline_layer_ids = [o_l.id() for o_l in self.__offline_layers]
 
-                if not self.offline_editing.convertToOfflineProject(
-                    str(self.export_folder),
-                    gpkg_filename,
-                    offline_layer_ids,
-                    self.project_configuration.offline_copy_only_aoi,
-                    self.offline_editing.GPKG,
-                    None,
-                ):
-                    raise Exception(
-                        self.tr(
-                            "QGIS Offline editing error: failed to convert layers to offline layers"
-                        )
+        gpkg_filename = str(self.export_folder.joinpath("data.gpkg"))
+        if offline_layers:
+            bbox = QgsCoordinateTransform(
+                QgsCoordinateReferenceSystem(self.area_of_interest_crs),
+                QgsProject.instance().crs(),
+                QgsProject.instance(),
+            ).transformBoundingBox(self.area_of_interest.boundingBox())
+
+            is_success = self.offliner.convert_to_offline(
+                gpkg_filename,
+                offline_layers,
+                bbox,
+            )
+
+            if not is_success:
+                raise Exception(
+                    self.tr(
+                        "QGIS Offline editing error: failed to convert layers to offline layers"
                     )
-        except AttributeError:
-            # Run the offline plugin for spatialite
-            spatialite_filename = "data.sqlite"
-            if self.__offline_layers:
-                offline_layer_ids = [o_l.id() for o_l in self.__offline_layers]
+                )
 
-                if not self.offline_editing.convertToOfflineProject(
-                    str(self.export_folder),
-                    spatialite_filename,
-                    offline_layer_ids,
-                    self.project_configuration.offline_copy_only_aoi,
-                    self.offline_editing.SpatiaLite,
-                    None,
-                ):
-                    raise Exception(
-                        self.tr(
-                            "QGIS Offline editing error: failed to convert layers to offline layers"
-                        )
-                    )
-
-        # Disable project options that could create problems on a portable
-        # project with offline layers
-        self.post_process_layers()
+            # Disable project options that could create problems on a portable
+            # project with offline layers
+            self.post_process_offline_layers()
 
         # Now we have a project state which can be saved as offline project
         on_original_project_write = self._on_original_project_write_wrapper(
@@ -375,10 +309,7 @@ class OfflineConverter(QObject):
         QgsProject.instance().write(str(export_project_filename))
         project.writeProject.disconnect(on_original_project_write)
 
-    def post_process_layers(self):
-        if not self.__offline_layers:
-            return
-
+    def post_process_offline_layers(self):
         project = QgsProject.instance()
         project.setEvaluateDefaultValues(False)
         project.setAutoTransaction(False)
@@ -636,7 +567,7 @@ class OfflineConverter(QObject):
 
         return on_original_project_write
 
-    def offline_editing_task_progress(self, progress):
+    def _on_offline_editing_task_progress(self, progress):
         self.task_progress_updated.emit(progress, self.__max_task_progress)
 
     def convertorProcessingProgress(self):

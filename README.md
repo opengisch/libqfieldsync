@@ -22,3 +22,9 @@ pip install pre-commit
 # install pre-commit hook
 pre-commit install
 ```
+
+## Testing
+
+```console
+GITHUB_WORKSPACE=$PWD QGIS_TEST_VERSION=final-3_34_2 docker compose -f .docker/docker-compose.yml run qgis /usr/src/.docker/run-docker-tests.sh
+```

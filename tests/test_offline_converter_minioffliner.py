@@ -24,11 +24,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from qgis.core import QgsOfflineEditing, QgsProject
+from qgis.core import QgsProject
 from qgis.testing import start_app
 from qgis.testing.mocked import get_iface
 
 from libqfieldsync.offline_converter import ExportType, OfflineConverter
+from libqfieldsync.offliners import PythonMiniOffliner
 
 start_app()
 
@@ -65,14 +66,13 @@ class OfflineConverterTest(unittest.TestCase):
         project = self.load_project(
             self.source_dir.joinpath("simple_project", "project.qgs")
         )
-        offline_editing = QgsOfflineEditing()
         offline_converter = OfflineConverter(
             project,
             str(self.target_dir),
             "POLYGON((1 1, 5 0, 5 5, 0 5, 1 1))",
             QgsProject.instance().crs().authid(),
             ["DCIM"],
-            offline_editing,
+            PythonMiniOffliner(),
         )
         offline_converter.convert()
 
@@ -109,14 +109,13 @@ class OfflineConverterTest(unittest.TestCase):
         project = self.load_project(
             self.source_dir.joinpath("simple_project", "project.qgs")
         )
-        offline_editing = QgsOfflineEditing()
         offline_converter = OfflineConverter(
             project,
             str(self.target_dir),
             "POLYGON((1 1, 5 0, 5 5, 0 5, 1 1))",
             QgsProject.instance().crs().authid(),
             ["DCIM"],
-            offline_editing,
+            PythonMiniOffliner(),
         )
         offline_converter.convert()
 
@@ -135,14 +134,13 @@ class OfflineConverterTest(unittest.TestCase):
         project = self.load_project(
             self.source_dir.joinpath("simple_project", "project.qgs")
         )
-        offline_editing = QgsOfflineEditing()
         offline_converter = OfflineConverter(
             project,
             str(self.target_dir),
             "POLYGON((1 1, 5 0, 5 5, 0 5, 1 1))",
             QgsProject.instance().crs().authid(),
             ["DCIM"],
-            offline_editing,
+            PythonMiniOffliner(),
             ExportType.Cloud,
         )
         offline_converter.convert()
