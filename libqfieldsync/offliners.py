@@ -114,8 +114,12 @@ class QgisCoreOffliner(BaseOffliner):
                 else:
                     layer.selectByRect(bbox)
 
-                if layer.selectedFeatureCount() == 0:
-                    layer.selectByIds([FID_NULL])
+                    # If the selection by BBOX did not select anything, make sure we fool `QgsOfflineEditing` something is selected.
+                    # Otherwise when `layer.selectedFeatureIds().isEmpty()`, `QgsOfflineEditing` dumps all features.
+                    # NOTE that `layer.selectedFeatureIds()` should be renamed to `layer.requestedFeaturesIds()`, as it does
+                    # not indicate actual features ids being already selected.
+                    if layer.selectedFeatureCount() == 0:
+                        layer.selectByIds([FID_NULL])
 
         is_success = self.offliner.convertToOfflineProject(
             str(offline_db_path),
