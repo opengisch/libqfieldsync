@@ -125,6 +125,35 @@ class OfflineConverterTest(unittest.TestCase):
         layer = exported_project.mapLayersByName("somedata")[0]
         self.assertEqual(layer.customProperty("QFieldSync/sourceDataPrimaryKeys"), "pk")
 
+    def test_geometryless_layers(self):
+        shutil.copytree(
+            self.data_dir.joinpath("geometryless_project"),
+            self.source_dir.joinpath("geometryless_project"),
+        )
+
+        project = self.load_project(
+            self.source_dir.joinpath("geometryless_project", "project.qgs")
+        )
+        offline_converter = OfflineConverter(
+            project,
+            str(self.target_dir),
+            "POLYGON((1 1, 5 0, 5 5, 0 5, 1 1))",
+            QgsProject.instance().crs().authid(),
+            ["DCIM"],
+            QgisCoreOffliner(),
+        )
+        offline_converter.convert()
+
+        exported_project = self.load_project(
+            self.target_dir.joinpath("project_qfield.qgs")
+        )
+        layer = exported_project.mapLayersByName("csv")[0]
+        self.assertEqual(layer.featureCount(), 2)
+        layer = exported_project.mapLayersByName("ods")[0]
+        self.assertEqual(layer.featureCount(), 2)
+        layer = exported_project.mapLayersByName("xlsx")[0]
+        self.assertEqual(layer.featureCount(), 2)
+
     def test_cloud_packaging_pk(self):
         shutil.copytree(
             self.data_dir.joinpath("simple_project"),
