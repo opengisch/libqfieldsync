@@ -600,7 +600,11 @@ class LayerSource(object):
         # on QFieldCloud localized layers will be invalid and therefore we get the layer source from `bad_layer_handler`
         source = bad_layer_handler.invalid_layer_sources_by_id.get(self.layer.id())
         if source:
-            return source.startswith("localized:")
+            return (
+                source.startswith("localized:")
+                or source.startswith("file:localized:")
+                or "url=file:localized:" in source
+            )
 
         path_resolver = self.project.pathResolver()
         path = path_resolver.writePath(self.metadata.get("path", ""))
