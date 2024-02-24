@@ -153,30 +153,27 @@ class OfflineConverter(QObject):
         )
 
         temporary_project = QgsProject()
-        temporary_project.readProject.connect(on_original_project_read)
-
+        temporary_project_filename = ""
         if self.export_type == ExportType.Cable:
             # the `backup_filename` is copied right after packaging is requested. It has all the unsaved
             # project settings, which means they will be available in the packaged project too.
-            temporary_project.read(
-                self.backup_filename,
-                Qgis.ProjectReadFlag.FlagDontResolveLayers
-                | Qgis.ProjectReadFlag.FlagDontLoadLayouts
-                | Qgis.ProjectReadFlag.FlagDontLoad3DViews,
-            )
+            temporary_project_filename = self.backup_filename
         elif self.export_type == ExportType.Cloud:
             # if you save the project without QGIS GUI, the project no longer has `theMapCanvas` canvas
             # so we should use the original project file that already has `theMapCanvas`. There is no
             # gain using the `backup_filename`, since there is no user to modify the project.
-            temporary_project.read(
-                project.fileName(),
-                Qgis.ProjectReadFlag.FlagDontResolveLayers
-                | Qgis.ProjectReadFlag.FlagDontLoadLayouts
-                | Qgis.ProjectReadFlag.FlagDontLoad3DViews,
-            )
+            temporary_project_filename = project.fileName()
         else:
             raise NotImplementedError(f"Unknown package type: {self.export_type}")
 
+        read_flags = QgsProject.ReadFlags()
+        read_flags |= QgsProject.FlagDontResolveLayers
+        read_flags |= QgsProject.FlagDontLoadLayouts
+        if Qgis.versionInt() >= 32600:
+            read_flags |= QgsProject.FlagDontLoad3DViews
+
+        temporary_project.readProject.connect(on_original_project_read)
+        temporary_project.read(temporary_project_filename, read_flags)
         temporary_project.readProject.disconnect(on_original_project_read)
 
         self.export_folder.mkdir(parents=True, exist_ok=True)
