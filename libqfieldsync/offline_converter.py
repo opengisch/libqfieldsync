@@ -148,33 +148,39 @@ class OfflineConverter(QObject):
 
     def _convert(self, project: QgsProject) -> None:
         xml_elements_to_preserve = {}
-        on_original_project_read = self._on_original_project_read_wrapper(
-            xml_elements_to_preserve
-        )
+        tmp_project_filename = ""
 
-        temporary_project = QgsProject()
-        temporary_project_filename = ""
         if self.export_type == ExportType.Cable:
             # the `backup_filename` is copied right after packaging is requested. It has all the unsaved
             # project settings, which means they will be available in the packaged project too.
-            temporary_project_filename = self.backup_filename
+            tmp_project_filename = self.backup_filename
         elif self.export_type == ExportType.Cloud:
             # if you save the project without QGIS GUI, the project no longer has `theMapCanvas` canvas
             # so we should use the original project file that already has `theMapCanvas`. There is no
             # gain using the `backup_filename`, since there is no user to modify the project.
-            temporary_project_filename = project.fileName()
+            tmp_project_filename = project.fileName()
         else:
             raise NotImplementedError(f"Unknown package type: {self.export_type}")
 
+        # Set flags that usually significantly speed-up project file read
         read_flags = QgsProject.ReadFlags()
         read_flags |= QgsProject.FlagDontResolveLayers
         read_flags |= QgsProject.FlagDontLoadLayouts
         if Qgis.versionInt() >= 32600:
             read_flags |= QgsProject.FlagDontLoad3DViews
 
-        temporary_project.readProject.connect(on_original_project_read)
-        temporary_project.read(temporary_project_filename, read_flags)
-        temporary_project.readProject.disconnect(on_original_project_read)
+        # Make a new function object that we can connect and disconnect easily
+        on_original_project_read = self._on_original_project_read_wrapper(
+            xml_elements_to_preserve
+        )
+
+        # Create a new temporary `QgsProject` instance just to make sure that `theMapCanvas`
+        # XML object is properly set within the XML document. Using a new `QgsProject`
+        # instead of the singleton `QgsProject.instance()` allows using the read flags.
+        tmp_project = QgsProject()
+        tmp_project.readProject.connect(on_original_project_read)
+        tmp_project.read(tmp_project_filename, read_flags)
+        tmp_project.readProject.disconnect(on_original_project_read)
 
         self.export_folder.mkdir(parents=True, exist_ok=True)
         self.total_progress_updated.emit(0, 100, self.trUtf8("Converting project…"))
