@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Union
 
 from qgis.core import (
+    Qgis,
     QgsApplication,
     QgsBilinearRasterResampler,
     QgsCoordinateReferenceSystem,
@@ -149,21 +150,33 @@ class OfflineConverter(QObject):
         on_original_project_read = self._on_original_project_read_wrapper(
             xml_elements_to_preserve
         )
-        project.readProject.connect(on_original_project_read)
+
+        temporary_project = QgsProject()
+        temporary_project.readProject.connect(on_original_project_read)
 
         if self.export_type == ExportType.Cable:
             # the `backup_filename` is copied right after packaging is requested. It has all the unsaved
             # project settings, which means they will be available in the packaged project too.
-            project.read(self.backup_filename)
+            temporary_project.read(
+                self.backup_filename,
+                Qgis.ProjectReadFlag.FlagDontResolveLayers
+                | Qgis.ProjectReadFlag.FlagDontLoadLayouts
+                | Qgis.ProjectReadFlag.FlagDontLoad3DViews,
+            )
         elif self.export_type == ExportType.Cloud:
             # if you save the project without QGIS GUI, the project no longer has `theMapCanvas` canvas
             # so we should use the original project file that already has `theMapCanvas`. There is no
             # gain using the `backup_filename`, since there is no user to modify the project.
-            project.read(project.fileName())
+            temporary_project.read(
+                project.fileName(),
+                Qgis.ProjectReadFlag.FlagDontResolveLayers
+                | Qgis.ProjectReadFlag.FlagDontLoadLayouts
+                | Qgis.ProjectReadFlag.FlagDontLoad3DViews,
+            )
         else:
             raise NotImplementedError(f"Unknown package type: {self.export_type}")
 
-        project.readProject.disconnect(on_original_project_read)
+        temporary_project.readProject.disconnect(on_original_project_read)
 
         self.export_folder.mkdir(parents=True, exist_ok=True)
         self.total_progress_updated.emit(0, 100, self.trUtf8("Converting project…"))
