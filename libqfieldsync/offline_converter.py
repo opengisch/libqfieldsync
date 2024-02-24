@@ -126,7 +126,7 @@ class OfflineConverter(QObject):
         self.project_configuration = ProjectConfiguration(project)
 
     # flake8: noqa: max-complexity: 33
-    def convert(self) -> None:
+    def convert(self, reload_original_project: bool = True) -> None:
         """
         Convert the project to a portable project.
         """
@@ -137,11 +137,12 @@ class OfflineConverter(QObject):
         try:
             self._convert(project)
         finally:
-            QCoreApplication.processEvents()
-            QgsProject.instance().clear()
-            QCoreApplication.processEvents()
+            if reload_original_project:
+                QCoreApplication.processEvents()
+                QgsProject.instance().clear()
+                QCoreApplication.processEvents()
 
-            open_project(str(self.original_filename), self.backup_filename)
+                open_project(str(self.original_filename), self.backup_filename)
 
             self.total_progress_updated.emit(100, 100, self.tr("Finished"))
 
