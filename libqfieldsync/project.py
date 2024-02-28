@@ -16,6 +16,8 @@ class ProjectProperties(object):
     AREA_OF_INTEREST_CRS = "/areaOfInterestCrs"
     DIGITIZING_LOGS_LAYER = "/digitizingLogsLayer"
     MAXIMUM_IMAGE_WIDTH_HEIGHT = "/maximumImageWidthHeight"
+    FORCE_AUTO_PUSH = "/forceAutoPush"
+    FORCE_AUTO_PUSH_INTERVAL_MINS = "/forceAutoPushIntervalMins"
 
     class BaseMapType(object):
         def __init__(self):
@@ -114,6 +116,30 @@ class ProjectConfiguration(object):
     def maximum_image_width_height(self, value):
         self.project.writeEntry(
             "qfieldsync", ProjectProperties.MAXIMUM_IMAGE_WIDTH_HEIGHT, value
+        )
+
+    @property
+    def force_auto_push(self):
+        force_auto_push, _ = self.project.readBoolEntry(
+            "qfieldsync", ProjectProperties.FORCE_AUTO_PUSH, False
+        )
+        return force_auto_push
+
+    @force_auto_push.setter
+    def force_auto_push(self, value):
+        self.project.writeEntry("qfieldsync", ProjectProperties.FORCE_AUTO_PUSH, value)
+
+    @property
+    def force_auto_push_interval_mins(self):
+        force_auto_push_interval_mins, _ = self.project.readNumEntry(
+            "qfieldsync", ProjectProperties.FORCE_AUTO_PUSH_INTERVAL_MINS, 30
+        )
+        return force_auto_push_interval_mins
+
+    @force_auto_push_interval_mins.setter
+    def force_auto_push_interval_mins(self, value):
+        self.project.writeEntry(
+            "qfieldsync", ProjectProperties.FORCE_AUTO_PUSH_INTERVAL_MINS, value
         )
 
     @property
