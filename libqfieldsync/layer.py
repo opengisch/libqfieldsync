@@ -146,6 +146,7 @@ class LayerSource(object):
         self._tracking_sensor_data_requirement_active = False
         self._tracking_all_requirements_active = False
         self._tracking_erroneous_distance_safeguard_active = False
+        self._tracking_erroneous_distance_safeguard_maximum_meters = 100
         self._tracking_measurement_type = 0
 
         self.read_layer()
@@ -197,6 +198,11 @@ class LayerSource(object):
         )
         self._tracking_erroneous_distance_safeguard_active = self.layer.customProperty(
             "QFieldSync/tracking_erroneous_distance_safeguard_active", False
+        )
+        self._tracking_erroneous_distance_safeguard_maximum_meters = (
+            self.layer.customProperty(
+                "QFieldSync/tracking_erroneous_distance_safeguard_maximum_meters", False
+            )
         )
         self._tracking_measurement_type = self.layer.customProperty(
             "QFieldSync/tracking_measurement_type", 0
@@ -294,6 +300,12 @@ class LayerSource(object):
             != self.tracking_erroneous_distance_safeguard_active
         )
         has_changed |= (
+            self.layer.customProperty(
+                "QFieldSync/tracking_erroneous_distance_safeguard_maximum_meters"
+            )
+            != self.tracking_erroneous_distance_safeguard_maximum_meters
+        )
+        has_changed |= (
             self.layer.customProperty("QFieldSync/tracking_measurement_type")
             != self.tracking_measurement_type
         )
@@ -381,6 +393,10 @@ class LayerSource(object):
             self.layer.removeCustomProperty(
                 "QFieldSync/tracking_erroneous_distance_safeguard_active"
             )
+        self.layer.setCustomProperty(
+            "QFieldSync/tracking_erroneous_distance_safeguard_maximum_meters",
+            self.tracking_erroneous_distance_safeguard_maximum_meters,
+        )
         self.layer.setCustomProperty(
             "QFieldSync/tracking_measurement_type", self.tracking_measurement_type
         )
@@ -775,6 +791,18 @@ class LayerSource(object):
     ):
         self._tracking_erroneous_distance_safeguard_active = (
             tracking_erroneous_distance_safeguard_active
+        )
+
+    @property
+    def tracking_erroneous_distance_safeguard_maximum_meters(self):
+        return self._tracking_erroneous_distance_safeguard_maximum_meters
+
+    @tracking_erroneous_distance_safeguard_maximum_meters.setter
+    def tracking_erroneous_distance_safeguard_maximum_meters(
+        self, tracking_erroneous_distance_safeguard_maximum_meters
+    ):
+        self._tracking_erroneous_distance_safeguard_maximum_meters = (
+            tracking_erroneous_distance_safeguard_maximum_meters
         )
 
     @property
