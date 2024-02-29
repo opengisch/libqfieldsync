@@ -138,6 +138,16 @@ class LayerSource(object):
         self._is_geometry_locked = None
         self._is_geometry_locked_expression_active = False
         self._geometry_locked_expression = ""
+        self._tracking_session_active = False
+        self._tracking_time_requirement_active = False
+        self._tracking_time_requirement_interval_seconds = 30
+        self._tracking_distance_requirement_active = False
+        self._tracking_distance_requirement_minimum_meters = 30
+        self._tracking_sensor_data_requirement_active = False
+        self._tracking_all_requirements_active = False
+        self._tracking_erroneous_distance_safeguard_active = False
+        self._tracking_measurement_type = 0
+
         self.read_layer()
         self.project = QgsProject.instance()
 
@@ -162,6 +172,34 @@ class LayerSource(object):
         )
         self._geometry_locked_expression = self.layer.customProperty(
             "QFieldSync/geometry_locked_expression", ""
+        )
+
+        self._tracking_session_active = self.layer.customProperty(
+            "QFieldSync/tracking_session_active", False
+        )
+        self._tracking_time_requirement_active = self.layer.customProperty(
+            "QFieldSync/tracking_time_requirement_active", False
+        )
+        self._tracking_time_requirement_interval_seconds = self.layer.customProperty(
+            "QFieldSync/tracking_time_requirement_interval_seconds", 30
+        )
+        self._tracking_distance_requirement_active = self.layer.customProperty(
+            "QFieldSync/tracking_distance_requirement_active", False
+        )
+        self._tracking_distance_requirement_minimum_meters = self.layer.customProperty(
+            "QFieldSync/tracking_distance_requirement_minimum_meters", 30
+        )
+        self._tracking_sensor_data_requirement_active = self.layer.customProperty(
+            "QFieldSync/tracking_sensor_data_requirement_active", False
+        )
+        self._tracking_all_requirements_active = self.layer.customProperty(
+            "QFieldSync/tracking_all_requirements_active", False
+        )
+        self._tracking_erroneous_distance_safeguard_active = self.layer.customProperty(
+            "QFieldSync/tracking_erroneous_distance_safeguard_active", False
+        )
+        self._tracking_measurement_type = self.layer.customProperty(
+            "QFieldSync/tracking_measurement_type", 0
         )
 
     def apply(self):
@@ -203,6 +241,63 @@ class LayerSource(object):
             != self.geometry_locked_expression
         )
 
+        has_changed |= (
+            bool(self.layer.customProperty("QFieldSync/tracking_session_active"))
+            != self.tracking_session_active
+        )
+        has_changed |= (
+            bool(
+                self.layer.customProperty("QFieldSync/tracking_time_requirement_active")
+            )
+            != self.tracking_time_requirement_active
+        )
+        has_changed |= (
+            self.layer.customProperty(
+                "QFieldSync/tracking_time_requirement_interval_seconds"
+            )
+            != self.tracking_time_requirement_interval_seconds
+        )
+        has_changed |= (
+            bool(
+                self.layer.customProperty(
+                    "QFieldSync/tracking_distance_requirement_active"
+                )
+            )
+            != self.tracking_distance_requirement_active
+        )
+        has_changed |= (
+            self.layer.customProperty(
+                "QFieldSync/tracking_distance_requirement_minimum_meters"
+            )
+            != self.tracking_distance_requirement_minimum_meters
+        )
+        has_changed |= (
+            bool(
+                self.layer.customProperty(
+                    "QFieldSync/tracking_sensor_data_requirement_active"
+                )
+            )
+            != self.tracking_sensor_data_requirement_active
+        )
+        has_changed |= (
+            bool(
+                self.layer.customProperty("QFieldSync/tracking_all_requirements_active")
+            )
+            != self.tracking_all_requirements_active
+        )
+        has_changed |= (
+            bool(
+                self.layer.customProperty(
+                    "QFieldSync/tracking_erroneous_distance_safeguard_active"
+                )
+            )
+            != self.tracking_erroneous_distance_safeguard_active
+        )
+        has_changed |= (
+            self.layer.customProperty("QFieldSync/tracking_measurement_type")
+            != self.tracking_measurement_type
+        )
+
         self.layer.setCustomProperty("QFieldSync/action", self.action)
         self.layer.setCustomProperty("QFieldSync/cloud_action", self.cloud_action)
         self.layer.setCustomProperty(
@@ -232,6 +327,62 @@ class LayerSource(object):
         self.layer.setCustomProperty(
             "QFieldSync/geometry_locked_expression",
             self.geometry_locked_expression,
+        )
+
+        if self.tracking_session_active:
+            self.layer.setCustomProperty("QFieldSync/tracking_session_active", True)
+        else:
+            self.layer.removeCustomProperty("QFieldSync/tracking_session_active")
+        if self.tracking_time_requirement_active:
+            self.layer.setCustomProperty(
+                "QFieldSync/tracking_time_requirement_active", True
+            )
+        else:
+            self.layer.removeCustomProperty(
+                "QFieldSync/tracking_time_requirement_active"
+            )
+        self.layer.setCustomProperty(
+            "QFieldSync/tracking_time_requirement_interval_seconds",
+            self.tracking_time_requirement_interval_seconds,
+        )
+        if self.tracking_distance_requirement_active:
+            self.layer.setCustomProperty(
+                "QFieldSync/tracking_distance_requirement_active", True
+            )
+        else:
+            self.layer.removeCustomProperty(
+                "QFieldSync/tracking_distance_requirement_active"
+            )
+        self.layer.setCustomProperty(
+            "QFieldSync/tracking_distance_requirement_minimum_meters",
+            self.tracking_distance_requirement_minimum_meters,
+        )
+        if self.tracking_sensor_data_requirement_active:
+            self.layer.setCustomProperty(
+                "QFieldSync/tracking_sensor_data_requirement_active", True
+            )
+        else:
+            self.layer.removeCustomProperty(
+                "QFieldSync/tracking_sensor_data_requirement_active"
+            )
+        if self.tracking_all_requirements_active:
+            self.layer.setCustomProperty(
+                "QFieldSync/tracking_all_requirements_active", True
+            )
+        else:
+            self.layer.removeCustomProperty(
+                "QFieldSync/tracking_all_requirements_active"
+            )
+        if self.tracking_erroneous_distance_safeguard_active:
+            self.layer.setCustomProperty(
+                "QFieldSync/tracking_erroneous_distance_safeguard_active", True
+            )
+        else:
+            self.layer.removeCustomProperty(
+                "QFieldSync/tracking_erroneous_distance_safeguard_active"
+            )
+        self.layer.setCustomProperty(
+            "QFieldSync/tracking_measurement_type", self.tracking_measurement_type
         )
 
         return has_changed
@@ -541,6 +692,98 @@ class LayerSource(object):
     @geometry_locked_expression.setter
     def geometry_locked_expression(self, geometry_locked_expression):
         self._geometry_locked_expression = geometry_locked_expression
+
+    @property
+    def tracking_session_active(self):
+        return bool(self._tracking_session_active)
+
+    @tracking_session_active.setter
+    def tracking_session_active(self, tracking_session_active):
+        self._tracking_session_active = tracking_session_active
+
+    @property
+    def tracking_time_requirement_active(self):
+        return bool(self._tracking_time_requirement_active)
+
+    @tracking_time_requirement_active.setter
+    def tracking_time_requirement_active(self, tracking_time_requirement_active):
+        self._tracking_time_requirement_active = tracking_time_requirement_active
+
+    @property
+    def tracking_time_requirement_interval_seconds(self):
+        return self._tracking_time_requirement_interval_seconds
+
+    @tracking_time_requirement_interval_seconds.setter
+    def tracking_time_requirement_interval_seconds(
+        self, tracking_time_requirement_interval_seconds
+    ):
+        self._tracking_time_requirement_interval_seconds = (
+            tracking_time_requirement_interval_seconds
+        )
+
+    @property
+    def tracking_distance_requirement_active(self):
+        return bool(self._tracking_distance_requirement_active)
+
+    @tracking_distance_requirement_active.setter
+    def tracking_distance_requirement_active(
+        self, tracking_distance_requirement_active
+    ):
+        self._tracking_distance_requirement_active = (
+            tracking_distance_requirement_active
+        )
+
+    @property
+    def tracking_distance_requirement_minimum_meters(self):
+        return self._tracking_distance_requirement_minimum_meters
+
+    @tracking_distance_requirement_minimum_meters.setter
+    def tracking_distance_requirement_minimum_meters(
+        self, tracking_distance_requirement_minimum_meters
+    ):
+        self._tracking_distance_requirement_minimum_meters = (
+            tracking_distance_requirement_minimum_meters
+        )
+
+    @property
+    def tracking_sensor_data_requirement_active(self):
+        return bool(self._tracking_sensor_data_requirement_active)
+
+    @tracking_sensor_data_requirement_active.setter
+    def tracking_sensor_data_requirement_active(
+        self, tracking_sensor_data_requirement_active
+    ):
+        self._tracking_sensor_data_requirement_active = (
+            tracking_sensor_data_requirement_active
+        )
+
+    @property
+    def tracking_all_requirements_active(self):
+        return bool(self._tracking_all_requirements_active)
+
+    @tracking_all_requirements_active.setter
+    def tracking_all_requirements_active(self, tracking_all_requirements_active):
+        self._tracking_all_requirements_active = tracking_all_requirements_active
+
+    @property
+    def tracking_erroneous_distance_safeguard_active(self):
+        return bool(self._tracking_erroneous_distance_safeguard_active)
+
+    @tracking_erroneous_distance_safeguard_active.setter
+    def tracking_erroneous_distance_safeguard_active(
+        self, tracking_erroneous_distance_safeguard_active
+    ):
+        self._tracking_erroneous_distance_safeguard_active = (
+            tracking_erroneous_distance_safeguard_active
+        )
+
+    @property
+    def tracking_measurement_type(self):
+        return self._tracking_measurement_type
+
+    @tracking_measurement_type.setter
+    def tracking_measurement_type(self, tracking_measurement_type):
+        self._tracking_measurement_type = tracking_measurement_type
 
     @property
     def warning(self):
