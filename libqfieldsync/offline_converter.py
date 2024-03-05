@@ -112,7 +112,6 @@ class OfflineConverter(QObject):
         self.attachment_dirs = attachment_dirs
         self.dirs_to_copy = dirs_to_copy
 
-        assert self.area_of_interest.isValid()[0]
         assert (
             self.area_of_interest_crs.isValid()
         ), f"Invalid CRS specified for area of interest {area_of_interest_crs}"
@@ -295,11 +294,13 @@ class OfflineConverter(QObject):
 
         gpkg_filename = str(self.export_folder.joinpath("data.gpkg"))
         if offline_layers:
-            bbox = QgsCoordinateTransform(
-                QgsCoordinateReferenceSystem(self.area_of_interest_crs),
-                QgsProject.instance().crs(),
-                QgsProject.instance(),
-            ).transformBoundingBox(self.area_of_interest.boundingBox())
+            bbox = None
+            if self.area_of_interest.isValid():
+                bbox = QgsCoordinateTransform(
+                    QgsCoordinateReferenceSystem(self.area_of_interest_crs),
+                    QgsProject.instance().crs(),
+                    QgsProject.instance(),
+                ).transformBoundingBox(self.area_of_interest.boundingBox())
 
             is_success = self.offliner.convert_to_offline(
                 gpkg_filename,
