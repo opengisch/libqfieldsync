@@ -112,10 +112,6 @@ class OfflineConverter(QObject):
         self.attachment_dirs = attachment_dirs
         self.dirs_to_copy = dirs_to_copy
 
-        assert (
-            self.area_of_interest_crs.isValid()
-        ), f"Invalid CRS specified for area of interest {area_of_interest_crs}"
-
         self.offliner = offliner
 
         self.offliner.layerProgressUpdated.connect(self._on_offline_editing_next_layer)
@@ -123,6 +119,15 @@ class OfflineConverter(QObject):
         self.offliner.progressUpdated.connect(self._on_offline_editing_task_progress)
 
         self.project_configuration = ProjectConfiguration(project)
+
+        if (
+            self.project_configuration.offline_copy_only_aoi
+            or self.project_configuration.create_base_map
+        ):
+            assert self.area_of_interest.isValid()[0]
+            assert (
+                self.area_of_interest_crs.isValid()
+            ), f"Invalid CRS specified for area of interest {area_of_interest_crs}"
 
     # flake8: noqa: max-complexity: 33
     def convert(self, reload_original_project: bool = True) -> None:
@@ -295,7 +300,7 @@ class OfflineConverter(QObject):
         gpkg_filename = str(self.export_folder.joinpath("data.gpkg"))
         if offline_layers:
             bbox = None
-            if self.area_of_interest.isValid():
+            if self.project_configuration.offline_copy_only_aoi:
                 bbox = QgsCoordinateTransform(
                     QgsCoordinateReferenceSystem(self.area_of_interest_crs),
                     QgsProject.instance().crs(),
