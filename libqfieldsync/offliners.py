@@ -87,6 +87,7 @@ class QgisCoreOffliner(BaseOffliner):
         layers: List[QgsMapLayer],
         bbox: Optional[QgsRectangle],
     ) -> bool:
+        project = QgsProject.instance()
         offline_db_path = Path(offline_db_filename).parent
         layer_ids = [layer.id() for layer in layers]
 
@@ -112,7 +113,9 @@ class QgisCoreOffliner(BaseOffliner):
                     # ensure that geometry-less layers do not have selected features that would interfere with the process
                     layer.removeSelection()
                 else:
-                    layer.selectByRect(bbox)
+                    tr = QgsCoordinateTransform(project.crs(), layer.crs(), project)
+                    layer_bbox = tr.transform(bbox)
+                    layer.selectByRect(layer_bbox)
 
                     # If the selection by BBOX did not select anything, make sure we fool `QgsOfflineEditing` something is selected.
                     # Otherwise when `layer.selectedFeatureIds().isEmpty()`, `QgsOfflineEditing` dumps all features.
