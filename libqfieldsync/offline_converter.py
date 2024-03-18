@@ -186,6 +186,9 @@ class OfflineConverter(QObject):
         tmp_project.read(tmp_project_filename, read_flags)
         tmp_project.readProject.disconnect(on_original_project_read)
 
+        # NOTE force delete the `QgsProject`, otherwise the `QgsApplication` might be deleted by the time the project is garbage collected
+        del tmp_project
+
         self.export_folder.mkdir(parents=True, exist_ok=True)
         self.total_progress_updated.emit(0, 100, self.trUtf8("Converting project…"))
 
