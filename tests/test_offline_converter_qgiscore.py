@@ -30,6 +30,10 @@ from qgis.testing.mocked import get_iface
 
 from libqfieldsync.offline_converter import ExportType, OfflineConverter
 from libqfieldsync.offliners import QgisCoreOffliner
+from libqfieldsync.utils.bad_layer_handler import (
+    bad_layer_handler,
+    set_bad_layer_handler,
+)
 
 start_app()
 
@@ -153,6 +157,34 @@ class OfflineConverterTest(unittest.TestCase):
         self.assertEqual(layer.featureCount(), 2)
         layer = exported_project.mapLayersByName("xlsx")[0]
         self.assertEqual(layer.featureCount(), 2)
+
+    def test_localized_layers(self):
+        shutil.copytree(
+            self.data_dir.joinpath("localized_project"),
+            self.source_dir.joinpath("localized_project"),
+        )
+
+        project = QgsProject.instance()
+        # bad layer handler already set in the minioffliner tests
+        with set_bad_layer_handler(project):
+            project = self.load_project(
+                self.source_dir.joinpath("localized_project", "project.qgs")
+            )
+
+        offline_converter = OfflineConverter(
+            project,
+            str(self.target_dir),
+            "POLYGON((1 1, 5 0, 5 5, 0 5, 1 1))",
+            QgsProject.instance().crs().authid(),
+            ["DCIM"],
+            QgisCoreOffliner(),
+        )
+        offline_converter.convert()
+
+        exported_project = self.load_project(
+            self.target_dir.joinpath("project_qfield.qgs")
+        )
+        self.assertEqual(len(exported_project.mapLayers()), 2)
 
     def test_cloud_packaging_pk(self):
         shutil.copytree(
