@@ -30,10 +30,7 @@ from qgis.testing.mocked import get_iface
 
 from libqfieldsync.offline_converter import ExportType, OfflineConverter
 from libqfieldsync.offliners import QgisCoreOffliner
-from libqfieldsync.utils.bad_layer_handler import (
-    bad_layer_handler,
-    set_bad_layer_handler,
-)
+from libqfieldsync.utils.bad_layer_handler import set_bad_layer_handler
 
 start_app()
 
