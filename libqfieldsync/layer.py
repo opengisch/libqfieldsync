@@ -615,16 +615,7 @@ class LayerSource(object):
             )
 
             # only online layers support direct access, e.g. PostGIS or WFS
-            if not (self.is_file and not self.is_localized_path):
-                actions.append(
-                    (
-                        SyncAction.NO_ACTION,
-                        QCoreApplication.translate(
-                            "LayerAction", "Directly access data source"
-                        ),
-                    )
-                )
-            elif self.is_file and not self.is_localized_path:
+            if self.is_localized_path or not self.is_file:
                 actions.append(
                     (
                         SyncAction.NO_ACTION,
