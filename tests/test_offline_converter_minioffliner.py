@@ -28,6 +28,7 @@ from qgis.core import QgsProject
 from qgis.testing import start_app
 from qgis.testing.mocked import get_iface
 
+from libqfieldsync.layer import LayerSource
 from libqfieldsync.offline_converter import ExportType, OfflineConverter
 from libqfieldsync.offliners import PythonMiniOffliner
 from libqfieldsync.utils.bad_layer_handler import (
@@ -170,6 +171,27 @@ class OfflineConverterTest(unittest.TestCase):
             project = self.load_project(
                 self.source_dir.joinpath("localized_project", "project.qgs")
             )
+            localized_layer1 = project.mapLayers().get(
+                "Giveaways2021_838ae916_af46_4ca3_80d6_fd89c57c3e6f", None
+            )
+
+            self.assertIsNotNone(localized_layer1)
+            self.assertTrue(LayerSource(localized_layer1).is_localized_path)
+
+            localized_layer2 = project.mapLayers().get(
+                "2024_03_30_00_00_2024_03_30_23_59_Sentinel_2_L2A_True_color3_f174e0e3_a294_4ebb_81b8_ec4efd9ff5f9",
+                None,
+            )
+
+            self.assertIsNotNone(localized_layer2)
+            self.assertTrue(LayerSource(localized_layer2).is_localized_path)
+
+            non_localized_layer1 = project.mapLayers().get(
+                "geometryless_25cfdaaa_8a2c_4b98_94ed_4a760c8ead6c", None
+            )
+
+            self.assertIsNotNone(non_localized_layer1)
+            self.assertFalse(LayerSource(non_localized_layer1).is_localized_path)
 
         offline_converter = OfflineConverter(
             project,
@@ -184,7 +206,7 @@ class OfflineConverterTest(unittest.TestCase):
         exported_project = self.load_project(
             self.target_dir.joinpath("project_qfield.qgs")
         )
-        self.assertEqual(len(exported_project.mapLayers()), 2)
+        self.assertEqual(len(exported_project.mapLayers()), 3)
 
     def test_cloud_packaging_pk(self):
         shutil.copytree(
