@@ -60,13 +60,18 @@ class set_bad_layer_handler:
         # self.project.setBadLayerHandler(bad_layer_handler)
 
     def __exit__(self, exc_type, exc_value, traceback):
+        setattr(
+            self.project,
+            "__libqfieldsync_bad_layers_by_id",
+            {**bad_layer_handler.invalid_layer_sources_by_id},
+        )
+
         # NOTE we should set the bad layer handler only when we need it.
         # Unfortunately we cannot due to a crash when calling `QgsProject.read()` when we already used this context manager.
         # The code below is used as documentation for future generations of engineers willing to fix this.
 
         # global bad_layer_handler
         # self.project.setBadLayerHandler(None)
-        pass
 
     def __call__(self, func):
         def wrapper(*args, **kwargs):
