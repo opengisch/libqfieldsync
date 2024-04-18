@@ -51,6 +51,11 @@ class set_bad_layer_handler:
 
     def __init__(self, project: QgsProject):
         self.project = project
+        setattr(
+            self.project,
+            "__libqfieldsync_bad_layers_by_id",
+            bad_layer_handler.invalid_layer_sources_by_id,
+        )
 
     def __enter__(self):
         bad_layer_handler.clear()
