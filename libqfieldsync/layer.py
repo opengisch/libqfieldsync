@@ -127,7 +127,9 @@ class LayerSource(object):
         AttachmentType.VIDEO: "'video/{layername}_' || format_date(now(),'yyyyMMddhhmmsszzz') || '.{{extension}}'",
     }
 
-    def __init__(self, layer):
+    def __init__(
+        self, layer: QgsMapLayer, project: QgsProject = QgsProject.instance()
+    ) -> None:
         self.layer = layer
         self._action = None
         self._cloud_action = None
@@ -150,7 +152,7 @@ class LayerSource(object):
         self._tracking_measurement_type = 0
 
         self.read_layer()
-        self.project = QgsProject.instance()
+        self.project = project
 
     def read_layer(self):
         self._action = self.layer.customProperty("QFieldSync/action")
