@@ -49,7 +49,7 @@ from qgis.PyQt.QtCore import QCoreApplication, QObject, pyqtSignal
 from .layer import LayerSource, SyncAction
 from .offliners import BaseOffliner
 from .project import ProjectConfiguration, ProjectProperties
-from .utils.file_utils import copy_attachments
+from .utils.file_utils import copy_attachments, copy_multifile
 from .utils.logger import logger
 from .utils.qgis import make_temp_qgis_file, open_project
 from .utils.xml import get_themapcanvas
@@ -298,6 +298,13 @@ class OfflineConverter(QObject):
                 self.original_filename.parent,
                 export_project_filename.parent,
                 Path(source_dir),
+            )
+
+        # copy project plugin if present
+        plugin_file = Path("{}.qml".format(str(self.original_filename)[:-4]))
+        if plugin_file.exists():
+            copy_multifile(
+                plugin_file, export_project_filename.parent.joinpath(plugin_file.name)
             )
 
         gpkg_filename = str(self.export_folder.joinpath("data.gpkg"))
