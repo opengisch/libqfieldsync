@@ -389,6 +389,15 @@ class ProjectChecker:
                 if reason == LayerSource.PackagePreventionReason.INVALID:
                     reason_msgs.append(self.tr("The layer is invalid!"))
                 elif (
+                    reason
+                    == LayerSource.PackagePreventionReason.INVALID_REMOTE_RASTER_LAYER
+                ):
+                    reason_msgs.append(
+                        self.tr(
+                            "The raster layer data source is not accessible from the current network!"
+                        )
+                    )
+                elif (
                     reason == LayerSource.PackagePreventionReason.UNSUPPORTED_DATASOURCE
                 ):
                     reason_msgs.append(

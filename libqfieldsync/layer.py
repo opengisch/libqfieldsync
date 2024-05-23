@@ -113,6 +113,7 @@ class LayerSource(object):
         INVALID = 1
         UNSUPPORTED_DATASOURCE = 2
         LOCALIZED_PATH = 3
+        INVALID_REMOTE_RASTER_LAYER = 4
 
     REASONS_TO_REMOVE_LAYER = (
         PackagePreventionReason.INVALID,
@@ -885,6 +886,13 @@ class LayerSource(object):
         return path.startswith("localized:")
 
     @property
+    def is_remote_raster_layer(self) -> bool:
+        if self.layer.dataProvider() and self.layer.dataProvider().name() == "wms":
+            return True
+
+        return False
+
+    @property
     def package_prevention_reasons(
         self,
     ) -> List["LayerSource.PackagePreventionReason"]:
@@ -897,6 +905,11 @@ class LayerSource(object):
         # do not package the layers within localized paths (stored outside project dir and shared among multiple projects)
         if self.is_localized_path:
             reasons.append(LayerSource.PackagePreventionReason.LOCALIZED_PATH)
+        # sometimes the remote layers are inaccessible from the current network, but we should spare them from removal
+        elif not self.layer.isValid() and self.is_remote_raster_layer:
+            reasons.append(
+                LayerSource.PackagePreventionReason.INVALID_REMOTE_RASTER_LAYER
+            )
         # remove invalid layers from the packaged project
         # NOTE localized layers will be always invalid on QFieldCloud
         elif not self.layer.isValid():
@@ -1084,7 +1097,7 @@ class LayerSource(object):
             options = QgsVectorFileWriter.SaveVectorOptions()
             options.fileEncoding = "UTF-8"
             options.driverName = "GPKG"
-            (error, returned_dest_file) = QgsVectorFileWriter.writeAsVectorFormatV2(
+            (error, returned_dest_file) = QgsVectorFileWriter.writeAsVectorFormatV3(
                 source_layer, dest_file, QgsCoordinateTransformContext(), options
             )
             if error != QgsVectorFileWriter.NoError:
