@@ -138,6 +138,7 @@ class LayerSource(object):
         # compatibility with QFieldSync <4.3 and QField <2.7
         self._photo_naming = {}
         self._relationship_maximum_visible = {}
+        self._value_map_button_interface_threshold = 0
         self._is_geometry_locked = None
         self._is_geometry_locked_expression_active = False
         self._geometry_locked_expression = ""
@@ -167,6 +168,9 @@ class LayerSource(object):
         )
         self._relationship_maximum_visible = json.loads(
             self.layer.customProperty("QFieldSync/relationship_maximum_visible") or "{}"
+        )
+        self._value_map_button_interface_threshold = self.layer.customProperty(
+            "QFieldSync/value_map_button_interface_threshold", 0
         )
         self._is_geometry_locked = self.layer.customProperty(
             "QFieldSync/is_geometry_locked", False
@@ -232,6 +236,10 @@ class LayerSource(object):
         has_changed |= (
             self.layer.customProperty("QFieldSync/relationship_maximum_visible")
             != relationship_maximum_visible_json
+        )
+        has_changed |= (
+            self.layer.customProperty("QFieldSync/value_map_button_interface_threshold")
+            != self.value_map_button_interface_threshold
         )
         has_changed |= (
             bool(self.layer.customProperty("QFieldSync/is_geometry_locked"))
@@ -323,7 +331,10 @@ class LayerSource(object):
         self.layer.setCustomProperty(
             "QFieldSync/relationship_maximum_visible", relationship_maximum_visible_json
         )
-
+        self.layer.setCustomProperty(
+            "QFieldSync/value_map_button_interface_threshold",
+            self.value_map_button_interface_threshold,
+        )
         # custom properties does not store the data type, so it is safer to remove boolean custom properties, rather than setting them to the string 'false' (which is boolean `True`)
         if self.is_geometry_locked:
             self.layer.setCustomProperty("QFieldSync/is_geometry_locked", True)
@@ -683,6 +694,18 @@ class LayerSource(object):
     @property
     def can_lock_geometry(self):
         return self.layer.type() == QgsMapLayer.VectorLayer
+
+    @property
+    def value_map_button_interface_threshold(self):
+        return self._value_map_button_interface_threshold
+
+    @value_map_button_interface_threshold.setter
+    def value_map_button_interface_threshold(
+        self, value_map_button_interface_threshold
+    ):
+        self._value_map_button_interface_threshold = (
+            value_map_button_interface_threshold
+        )
 
     @property
     def is_geometry_locked(self):
