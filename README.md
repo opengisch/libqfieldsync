@@ -8,7 +8,6 @@ More information can be found in the [QField documentation](https://docs.qfield.
 
 The plugin can be download on the [QGIS plugin repository](https://plugins.qgis.org/plugins/qfieldsync/).
 
-
 ## Development
 
 Improvements are welcome, feel free to fork and open a PR.
