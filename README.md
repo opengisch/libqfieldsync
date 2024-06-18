@@ -2,11 +2,11 @@
 
 This library facilitates packaging and synchronizing QGIS projects for use with [QField](http://www.qfield.org).
 
-This library is the heart of QFieldSync QGIS plugin.
+This library is the heart of the QFieldSync QGIS plugin.
 
 More information can be found in the [QField documentation](https://docs.qfield.org/get-started/).
 
-The plugin can be download on the [QGIS plugin repository](https://plugins.qgis.org/plugins/qfieldsync/).
+The plugin can be downloaded on the [QGIS plugin repository](https://plugins.qgis.org/plugins/qfieldsync/).
 
 ## Development
 
@@ -14,7 +14,7 @@ Improvements are welcome, feel free to fork and open a PR.
 
 ### Code style
 
-Code style done with [pre-commit](https://pre-commit.com).
+Code style is done with [pre-commit](https://pre-commit.com).
 
 ```
 pip install pre-commit
