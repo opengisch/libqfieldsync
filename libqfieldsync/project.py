@@ -18,6 +18,9 @@ class ProjectProperties(object):
     MAXIMUM_IMAGE_WIDTH_HEIGHT = "/maximumImageWidthHeight"
     FORCE_AUTO_PUSH = "/forceAutoPush"
     FORCE_AUTO_PUSH_INTERVAL_MINS = "/forceAutoPushIntervalMins"
+    GEOFENCING_ACTIVE = "/geofencingActive"
+    GEOFENCING_LAYER = "/geofencingLayer"
+    GEOFENCING_INVERT_LOGIC = "/geofencingInvertLogic"
 
     class BaseMapType(object):
         def __init__(self):
@@ -103,6 +106,43 @@ class ProjectConfiguration(object):
     def digitizing_logs_layer(self, value):
         self.project.writeEntry(
             "qfieldsync", ProjectProperties.DIGITIZING_LOGS_LAYER, value
+        )
+
+    @property
+    def geofencing_layer(self):
+        geofencing_layer, _ = self.project.readEntry(
+            "qfieldsync", ProjectProperties.GEOFENCING_LAYER
+        )
+        return geofencing_layer
+
+    @geofencing_layer.setter
+    def geofencing_layer(self, value):
+        self.project.writeEntry("qfieldsync", ProjectProperties.GEOFENCING_LAYER, value)
+
+    @property
+    def geofencing_invert_logic(self):
+        geofencing_invert_logic, _ = self.project.readBoolEntry(
+            "qfieldsync", ProjectProperties.GEOFENCING_INVERT_LOGIC, False
+        )
+        return geofencing_invert_logic
+
+    @geofencing_invert_logic.setter
+    def geofencing_invert_logic(self, value):
+        self.project.writeEntry(
+            "qfieldsync", ProjectProperties.GEOFENCING_INVERT_LOGIC, value
+        )
+
+    @property
+    def geofencing_active(self):
+        geofencing_active, _ = self.project.readBoolEntry(
+            "qfieldsync", ProjectProperties.GEOFENCING_ACTIVE, False
+        )
+        return geofencing_active
+
+    @geofencing_active.setter
+    def geofencing_active(self, value):
+        self.project.writeEntry(
+            "qfieldsync", ProjectProperties.GEOFENCING_ACTIVE, value
         )
 
     @property
