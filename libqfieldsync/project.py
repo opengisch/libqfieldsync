@@ -20,7 +20,7 @@ class ProjectProperties(object):
     FORCE_AUTO_PUSH_INTERVAL_MINS = "/forceAutoPushIntervalMins"
     GEOFENCING_ACTIVE = "/geofencingActive"
     GEOFENCING_LAYER = "/geofencingLayer"
-    GEOFENCING_INVERT_LOGIC = "/geofencingInvertLogic"
+    GEOFENCING_BEHAVIOR = "/geofencingBehavior"
 
     class BaseMapType(object):
         def __init__(self):
@@ -30,6 +30,16 @@ class ProjectProperties(object):
 
         SINGLE_LAYER = "singleLayer"
         MAP_THEME = "mapTheme"
+
+    class GeofencingBehavior(object):
+        def __init__(self):
+            raise RuntimeError(
+                "This object holds only project property static variables"
+            )
+
+        ALERT_INSIDE_AREAS = 1
+        ALERT_OUTSIDE_AREAS = 2
+        INFORM_ENTER_LEAVE_AREAS = 3
 
 
 class ProjectConfiguration(object):
@@ -120,16 +130,18 @@ class ProjectConfiguration(object):
         self.project.writeEntry("qfieldsync", ProjectProperties.GEOFENCING_LAYER, value)
 
     @property
-    def geofencing_invert_logic(self):
-        geofencing_invert_logic, _ = self.project.readBoolEntry(
-            "qfieldsync", ProjectProperties.GEOFENCING_INVERT_LOGIC, False
+    def geofencing_behavior(self):
+        geofencing_behavior, _ = self.project.readNumEntry(
+            "qfieldsync",
+            ProjectProperties.GEOFENCING_BEHAVIOR,
+            ProjectProperties.GeofencingBehavior.ALERT_INSIDE_AREAS,
         )
-        return geofencing_invert_logic
+        return geofencing_behavior
 
-    @geofencing_invert_logic.setter
-    def geofencing_invert_logic(self, value):
+    @geofencing_behavior.setter
+    def geofencing_behavior(self, value):
         self.project.writeEntry(
-            "qfieldsync", ProjectProperties.GEOFENCING_INVERT_LOGIC, value
+            "qfieldsync", ProjectProperties.GEOFENCING_BEHAVIOR, value
         )
 
     @property
