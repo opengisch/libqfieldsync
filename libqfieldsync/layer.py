@@ -129,8 +129,11 @@ class LayerSource(object):
     }
 
     def __init__(
-        self, layer: QgsMapLayer, project: QgsProject = QgsProject.instance()
+        self, layer: QgsMapLayer, project: Optional[QgsProject] = None
     ) -> None:
+        if project is None:
+            project = QgsProject.instance()
+
         self.layer = layer
         self._action = None
         self._cloud_action = None
