@@ -93,7 +93,6 @@ class OfflineConverter(QObject):
         create_basemap: bool = True,
         dirs_to_copy: Optional[Dict[str, bool]] = None,
     ):
-
         super(OfflineConverter, self).__init__(parent=None)
         self.__max_task_progress = 0
         self.__convertor_progress = None  # for processing feedback

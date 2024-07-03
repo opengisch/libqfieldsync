@@ -39,7 +39,6 @@ class Feedback:
 
 
 class ProjectCheckerFeedback:
-
     tr = QObject().tr
 
     def __init__(self) -> None:
@@ -63,7 +62,6 @@ class ProjectCheckerFeedback:
 
 
 class ProjectChecker:
-
     tr = QObject().tr
 
     class CheckConfig(TypedDict):
