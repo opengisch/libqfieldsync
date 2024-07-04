@@ -21,6 +21,7 @@ class ProjectProperties(object):
     GEOFENCING_ACTIVE = "/geofencingActive"
     GEOFENCING_LAYER = "/geofencingLayer"
     GEOFENCING_BEHAVIOR = "/geofencingBehavior"
+    GEOFENCING_PREVENT_DIGITIZING = "/geofencingPreventDigitizing"
 
     class BaseMapType(object):
         def __init__(self):
@@ -142,6 +143,19 @@ class ProjectConfiguration(object):
     def geofencing_behavior(self, value):
         self.project.writeEntry(
             "qfieldsync", ProjectProperties.GEOFENCING_BEHAVIOR, value
+        )
+
+    @property
+    def geofencing_prevent_digitizing(self):
+        geofencing_prevent_digitizing, _ = self.project.readBoolEntry(
+            "qfieldsync", ProjectProperties.GEOFENCING_PREVENT_DIGITIZING, False
+        )
+        return geofencing_prevent_digitizing
+
+    @geofencing_prevent_digitizing.setter
+    def geofencing_prevent_digitizing(self, value):
+        self.project.writeEntry(
+            "qfieldsync", ProjectProperties.GEOFENCING_PREVENT_DIGITIZING, value
         )
 
     @property
