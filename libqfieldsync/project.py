@@ -18,6 +18,10 @@ class ProjectProperties(object):
     MAXIMUM_IMAGE_WIDTH_HEIGHT = "/maximumImageWidthHeight"
     FORCE_AUTO_PUSH = "/forceAutoPush"
     FORCE_AUTO_PUSH_INTERVAL_MINS = "/forceAutoPushIntervalMins"
+    GEOFENCING_IS_ACTIVE = "/geofencingIsActive"
+    GEOFENCING_LAYER = "/geofencingLayer"
+    GEOFENCING_BEHAVIOR = "/geofencingBehavior"
+    GEOFENCING_SHOULD_PREVENT_DIGITIZING = "/geofencingShouldPreventDigitizing"
 
     class BaseMapType(object):
         def __init__(self):
@@ -27,6 +31,16 @@ class ProjectProperties(object):
 
         SINGLE_LAYER = "singleLayer"
         MAP_THEME = "mapTheme"
+
+    class GeofencingBehavior(object):
+        def __init__(self):
+            raise RuntimeError(
+                "This object holds only project property static variables"
+            )
+
+        ALERT_INSIDE_AREAS = 1
+        ALERT_OUTSIDE_AREAS = 2
+        INFORM_ENTER_LEAVE_AREAS = 3
 
 
 class ProjectConfiguration(object):
@@ -103,6 +117,58 @@ class ProjectConfiguration(object):
     def digitizing_logs_layer(self, value):
         self.project.writeEntry(
             "qfieldsync", ProjectProperties.DIGITIZING_LOGS_LAYER, value
+        )
+
+    @property
+    def geofencing_layer(self):
+        geofencing_layer, _ = self.project.readEntry(
+            "qfieldsync", ProjectProperties.GEOFENCING_LAYER
+        )
+        return geofencing_layer
+
+    @geofencing_layer.setter
+    def geofencing_layer(self, value):
+        self.project.writeEntry("qfieldsync", ProjectProperties.GEOFENCING_LAYER, value)
+
+    @property
+    def geofencing_behavior(self):
+        geofencing_behavior, _ = self.project.readNumEntry(
+            "qfieldsync",
+            ProjectProperties.GEOFENCING_BEHAVIOR,
+            ProjectProperties.GeofencingBehavior.ALERT_INSIDE_AREAS,
+        )
+        return geofencing_behavior
+
+    @geofencing_behavior.setter
+    def geofencing_behavior(self, value):
+        self.project.writeEntry(
+            "qfieldsync", ProjectProperties.GEOFENCING_BEHAVIOR, value
+        )
+
+    @property
+    def geofencing_should_prevent_digitizing(self):
+        geofencing_should_prevent_digitizing, _ = self.project.readBoolEntry(
+            "qfieldsync", ProjectProperties.GEOFENCING_SHOULD_PREVENT_DIGITIZING, False
+        )
+        return geofencing_should_prevent_digitizing
+
+    @geofencing_should_prevent_digitizing.setter
+    def geofencing_should_prevent_digitizing(self, value):
+        self.project.writeEntry(
+            "qfieldsync", ProjectProperties.GEOFENCING_SHOULD_PREVENT_DIGITIZING, value
+        )
+
+    @property
+    def geofencing_is_active(self):
+        geofencing_is_active, _ = self.project.readBoolEntry(
+            "qfieldsync", ProjectProperties.GEOFENCING_IS_ACTIVE, False
+        )
+        return geofencing_is_active
+
+    @geofencing_is_active.setter
+    def geofencing_is_active(self, value):
+        self.project.writeEntry(
+            "qfieldsync", ProjectProperties.GEOFENCING_IS_ACTIVE, value
         )
 
     @property
