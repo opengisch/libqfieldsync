@@ -18,10 +18,10 @@ class ProjectProperties(object):
     MAXIMUM_IMAGE_WIDTH_HEIGHT = "/maximumImageWidthHeight"
     FORCE_AUTO_PUSH = "/forceAutoPush"
     FORCE_AUTO_PUSH_INTERVAL_MINS = "/forceAutoPushIntervalMins"
-    GEOFENCING_ACTIVE = "/geofencingActive"
+    GEOFENCING_IS_ACTIVE = "/geofencingIsActive"
     GEOFENCING_LAYER = "/geofencingLayer"
     GEOFENCING_BEHAVIOR = "/geofencingBehavior"
-    GEOFENCING_PREVENT_DIGITIZING = "/geofencingPreventDigitizing"
+    GEOFENCING_SHOULD_PREVENT_DIGITIZING = "/geofencingShouldPreventDigitizing"
 
     class BaseMapType(object):
         def __init__(self):
@@ -146,29 +146,29 @@ class ProjectConfiguration(object):
         )
 
     @property
-    def geofencing_prevent_digitizing(self):
-        geofencing_prevent_digitizing, _ = self.project.readBoolEntry(
-            "qfieldsync", ProjectProperties.GEOFENCING_PREVENT_DIGITIZING, False
+    def geofencing_should_prevent_digitizing(self):
+        geofencing_should_prevent_digitizing, _ = self.project.readBoolEntry(
+            "qfieldsync", ProjectProperties.GEOFENCING_SHOULD_PREVENT_DIGITIZING, False
         )
-        return geofencing_prevent_digitizing
+        return geofencing_should_prevent_digitizing
 
-    @geofencing_prevent_digitizing.setter
-    def geofencing_prevent_digitizing(self, value):
+    @geofencing_should_prevent_digitizing.setter
+    def geofencing_should_prevent_digitizing(self, value):
         self.project.writeEntry(
-            "qfieldsync", ProjectProperties.GEOFENCING_PREVENT_DIGITIZING, value
+            "qfieldsync", ProjectProperties.GEOFENCING_SHOULD_PREVENT_DIGITIZING, value
         )
 
     @property
-    def geofencing_active(self):
-        geofencing_active, _ = self.project.readBoolEntry(
-            "qfieldsync", ProjectProperties.GEOFENCING_ACTIVE, False
+    def geofencing_is_active(self):
+        geofencing_is_active, _ = self.project.readBoolEntry(
+            "qfieldsync", ProjectProperties.GEOFENCING_IS_ACTIVE, False
         )
-        return geofencing_active
+        return geofencing_is_active
 
-    @geofencing_active.setter
-    def geofencing_active(self, value):
+    @geofencing_is_active.setter
+    def geofencing_is_active(self, value):
         self.project.writeEntry(
-            "qfieldsync", ProjectProperties.GEOFENCING_ACTIVE, value
+            "qfieldsync", ProjectProperties.GEOFENCING_IS_ACTIVE, value
         )
 
     @property
