@@ -483,18 +483,18 @@ class OfflineConverter(QObject):
             )
             return False
 
-        if not self.project_configuration.base_map_layer.strip():
-            self.warning.emit(
-                self.tr("Failed to create basemap"),
-                self.tr(
-                    "No basemap layer selected. Please check the project configuration."
-                ).format(self.project_configuration.base_map_layer),
-            )
-            return False
-
         extent = basemap_extent
         base_map_type = self.project_configuration.base_map_type
         if base_map_type == ProjectProperties.BaseMapType.SINGLE_LAYER:
+            if not self.project_configuration.base_map_layer.strip():
+                self.warning.emit(
+                    self.tr("Failed to create basemap"),
+                    self.tr(
+                        "No basemap layer selected. Please check the project configuration."
+                    ),
+                )
+                return False
+
             basemap_layer = project.mapLayer(self.project_configuration.base_map_layer)
 
             if not basemap_layer:
