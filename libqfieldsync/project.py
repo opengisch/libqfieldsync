@@ -22,6 +22,7 @@ class ProjectProperties(object):
     GEOFENCING_LAYER = "/geofencingLayer"
     GEOFENCING_BEHAVIOR = "/geofencingBehavior"
     GEOFENCING_SHOULD_PREVENT_DIGITIZING = "/geofencingShouldPreventDigitizing"
+    MAP_THEMES_ACTIVE_LAYER = "/mapThemesActiveLayers"
 
     class BaseMapType(object):
         def __init__(self):
@@ -156,6 +157,29 @@ class ProjectConfiguration(object):
     def geofencing_should_prevent_digitizing(self, value):
         self.project.writeEntry(
             "qfieldsync", ProjectProperties.GEOFENCING_SHOULD_PREVENT_DIGITIZING, value
+        )
+
+    @property
+    def map_themes_active_layer(self):
+        entries, _ = self.project.readListEntry(
+            "qfieldsync", ProjectProperties.MAP_THEMES_ACTIVE_LAYER
+        )
+
+        map_themes_active_layer = {}
+        for entry in entries:
+            details = entry.split("}|~~|{")
+            if len(details) == 2:
+                map_themes_active_layer[details[0]] = details[1]
+
+        return map_themes_active_layer
+
+    @map_themes_active_layer.setter
+    def map_themes_active_layer(self, value):
+        entries = []
+        for key in value:
+            entries.append(f"{key}}}|~~|{{{value[key]}")
+        self.project.writeEntry(
+            "qfieldsync", ProjectProperties.MAP_THEMES_ACTIVE_LAYER, entries
         )
 
     @property
