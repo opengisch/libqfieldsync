@@ -1016,7 +1016,7 @@ class LayerSource(object):
             suffix = uri_parts[1]
 
         if self.is_file:
-            if hasattr(QgsFileUtils, "sidecarFilesForPath"):
+            if Qgis.QGIS_VERSION_INT > 32200:
                 # QGIS >= 3.22
                 files_to_copy = QgsFileUtils.sidecarFilesForPath(self.filename)
                 files_to_copy.add(self.filename)
