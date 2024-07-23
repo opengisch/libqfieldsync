@@ -1,3 +1,6 @@
+import json
+
+
 class ProjectProperties(object):
     def __init__(self):
         raise RuntimeError("This object holds only project property static variables")
@@ -161,25 +164,23 @@ class ProjectConfiguration(object):
 
     @property
     def map_themes_active_layer(self):
-        entries, _ = self.project.readListEntry(
+        entries_json, _ = self.project.readEntry(
             "qfieldsync", ProjectProperties.MAP_THEMES_ACTIVE_LAYER
         )
 
-        map_themes_active_layer = {}
-        for entry in entries:
-            details = entry.split("}|~~|{")
-            if len(details) == 2:
-                map_themes_active_layer[details[0]] = details[1]
+        try:
+            entries = json.loads(entries_json)
+        except Exception:
+            entries = {}
 
-        return map_themes_active_layer
+        return entries
 
     @map_themes_active_layer.setter
     def map_themes_active_layer(self, value):
-        entries = []
-        for key in value:
-            entries.append(f"{key}}}|~~|{{{value[key]}")
         self.project.writeEntry(
-            "qfieldsync", ProjectProperties.MAP_THEMES_ACTIVE_LAYER, entries
+            "qfieldsync",
+            ProjectProperties.MAP_THEMES_ACTIVE_LAYER,
+            json.dumps(value),
         )
 
     @property
