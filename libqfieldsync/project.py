@@ -1,3 +1,6 @@
+import json
+
+
 class ProjectProperties(object):
     def __init__(self):
         raise RuntimeError("This object holds only project property static variables")
@@ -22,6 +25,7 @@ class ProjectProperties(object):
     GEOFENCING_LAYER = "/geofencingLayer"
     GEOFENCING_BEHAVIOR = "/geofencingBehavior"
     GEOFENCING_SHOULD_PREVENT_DIGITIZING = "/geofencingShouldPreventDigitizing"
+    MAP_THEMES_ACTIVE_LAYER = "/mapThemesActiveLayers"
 
     class BaseMapType(object):
         def __init__(self):
@@ -156,6 +160,27 @@ class ProjectConfiguration(object):
     def geofencing_should_prevent_digitizing(self, value):
         self.project.writeEntry(
             "qfieldsync", ProjectProperties.GEOFENCING_SHOULD_PREVENT_DIGITIZING, value
+        )
+
+    @property
+    def map_themes_active_layer(self):
+        entries_json, _ = self.project.readEntry(
+            "qfieldsync", ProjectProperties.MAP_THEMES_ACTIVE_LAYER
+        )
+
+        try:
+            entries = json.loads(entries_json)
+        except Exception:
+            entries = {}
+
+        return entries
+
+    @map_themes_active_layer.setter
+    def map_themes_active_layer(self, value):
+        self.project.writeEntry(
+            "qfieldsync",
+            ProjectProperties.MAP_THEMES_ACTIVE_LAYER,
+            json.dumps(value),
         )
 
     @property
