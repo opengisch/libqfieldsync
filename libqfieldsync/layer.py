@@ -6,6 +6,7 @@ from enum import Enum
 from typing import Dict, List, Optional
 
 from qgis.core import (
+    Qgis,
     QgsAttributeEditorField,
     QgsCoordinateTransformContext,
     QgsDataSourceUri,
