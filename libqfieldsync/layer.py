@@ -1138,9 +1138,22 @@ class LayerSource(object):
             options = QgsVectorFileWriter.SaveVectorOptions()
             options.fileEncoding = "UTF-8"
             options.driverName = "GPKG"
-            (error, returned_dest_file) = QgsVectorFileWriter.writeAsVectorFormatV3(
-                source_layer, dest_file, QgsCoordinateTransformContext(), options
-            )
+            if Qgis.QGIS_VERSION_INT > 32000:
+                (
+                    error,
+                    error_msg,
+                    returned_dest_file,
+                    returned_dest_layer,
+                ) = QgsVectorFileWriter.writeAsVectorFormatV3(
+                    source_layer, dest_file, QgsCoordinateTransformContext(), options
+                )
+            else:
+                (
+                    error,
+                    returned_dest_file,
+                ) = QgsVectorFileWriter.writeAsVectorFormatV2(
+                    source_layer, dest_file, QgsCoordinateTransformContext(), options
+                )
             if error != QgsVectorFileWriter.NoError:
                 return
             if returned_dest_file:
