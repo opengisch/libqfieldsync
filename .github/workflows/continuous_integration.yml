@@ -29,9 +29,9 @@ jobs:
         uses: actions/checkout@v2
         with:
           submodules: recursive
-      - name: Test on QGIS LTR 3.
+      - name: Run tests
         run: |
-          docker-compose -f .docker/docker-compose.yml run qgis /usr/src/.docker/run-docker-tests.sh
+          docker compose -f .docker/docker-compose.yml run qgis /usr/src/.docker/run-docker-tests.sh
   test_packaging:
       runs-on: ubuntu-latest
       steps:
