@@ -52,7 +52,8 @@ def make_temp_qgis_file(project: QgsProject) -> str:
     project_backup_dir = tempfile.mkdtemp()
     original_filename = project.fileName()
     backup_filename = os.path.join(project_backup_dir, f"{project.baseName()}.qgs")
-    project.write(backup_filename)
+    # NOTE: This makes the conversion of the project mess with the datasource on Windows
+    # project.write(backup_filename)
     project.setFileName(original_filename)
 
     return backup_filename
