@@ -42,7 +42,7 @@ def open_project(filename: str, filename_to_read: Optional[str] = None) -> bool:
     project = QgsProject.instance()
     project.clear()
 
-    is_success = project.read(filename_to_read or filename)
+    is_success = project.read(filename or filename_to_read)
     project.setFileName(filename)
 
     return is_success
