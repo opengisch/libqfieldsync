@@ -145,6 +145,11 @@ class OfflineConverter(QObject):
                 QgsProject.instance().clear()
                 QCoreApplication.processEvents()
 
+                print(
+                    "offline_converter",
+                    str(self.original_filename),
+                    self.backup_filename,
+                )
                 open_project(str(self.original_filename), self.backup_filename)
 
             self.total_progress_updated.emit(100, 100, self.tr("Finished"))
