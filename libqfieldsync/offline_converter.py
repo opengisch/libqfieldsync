@@ -85,6 +85,8 @@ class OfflineConverter(QObject):
         self,
         project: QgsProject,
         export_folder: str,
+        export_filename: str,
+        export_title: str,
         area_of_interest_wkt: str,
         area_of_interest_crs: Union[str, QgsCoordinateReferenceSystem],
         attachment_dirs: List[str],
@@ -103,6 +105,8 @@ class OfflineConverter(QObject):
         self.trUtf8 = self.tr
 
         self.export_folder = Path(export_folder)
+        self._export_filename = Path(export_filename).stem
+        self._export_title = export_title
         self.export_type = export_type
         self.create_basemap = create_basemap
         self.area_of_interest = QgsPolygon()
@@ -135,7 +139,16 @@ class OfflineConverter(QObject):
         """
         project = QgsProject.instance()
         self.original_filename = Path(project.fileName())
-        self.backup_filename = make_temp_qgis_file(project)
+        if (
+            self.export_type == ExportType.Cable
+            and self._export_filename
+            and self._export_title
+        ):
+            self.backup_filename = make_temp_qgis_file(
+                project, self._export_filename, self._export_title
+            )
+        else:
+            self.backup_filename = make_temp_qgis_file(project)
 
         try:
             self._convert(project)
@@ -272,9 +285,14 @@ class OfflineConverter(QObject):
             elif layer_action == SyncAction.REMOVE:
                 project.removeMapLayer(layer)
 
-        export_project_filename = self.export_folder.joinpath(
-            f"{self.original_filename.stem}_qfield.qgs"
-        )
+        if self.export_type == ExportType.Cable and self._export_filename:
+            export_project_filename = self.export_folder.joinpath(
+                f"{Path(self.backup_filename).stem}_qfield.qgs"
+            )
+        else:
+            export_project_filename = self.export_folder.joinpath(
+                f"{self.original_filename.stem}_qfield.qgs"
+            )
 
         # save the original project path
         self.project_configuration.original_project_path = str(self.original_filename)
