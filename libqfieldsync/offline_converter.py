@@ -84,7 +84,7 @@ class OfflineConverter(QObject):
     def __init__(
         self,
         project: QgsProject,
-        export_folder: str,
+        export_filename: str,
         area_of_interest_wkt: str,
         area_of_interest_crs: Union[str, QgsCoordinateReferenceSystem],
         attachment_dirs: List[str],
@@ -92,6 +92,7 @@ class OfflineConverter(QObject):
         export_type: ExportType = ExportType.Cable,
         create_basemap: bool = True,
         dirs_to_copy: Optional[Dict[str, bool]] = None,
+        export_title: Optional[str] = None,
     ):
         super(OfflineConverter, self).__init__(parent=None)
         self.__max_task_progress = 0
@@ -102,7 +103,9 @@ class OfflineConverter(QObject):
         # elipsis workaround
         self.trUtf8 = self.tr
 
-        self.export_folder = Path(export_folder)
+        self.export_folder = Path(export_filename).parent
+        self._export_filename = Path(export_filename).stem
+        self._export_title = export_title
         self.export_type = export_type
         self.create_basemap = create_basemap
         self.area_of_interest = QgsPolygon()
@@ -135,7 +138,7 @@ class OfflineConverter(QObject):
         """
         project = QgsProject.instance()
         self.original_filename = Path(project.fileName())
-        self.backup_filename = make_temp_qgis_file(project)
+        self.backup_filename = make_temp_qgis_file(project, self._export_title)
 
         try:
             self._convert(project)
@@ -272,8 +275,8 @@ class OfflineConverter(QObject):
             elif layer_action == SyncAction.REMOVE:
                 project.removeMapLayer(layer)
 
-        export_project_filename = self.export_folder.joinpath(
-            f"{self.original_filename.stem}_qfield.qgs"
+        export_project_filename = Path(self.export_folder).joinpath(
+            f"{self._export_filename}.qgs"
         )
 
         # save the original project path
@@ -317,9 +320,7 @@ class OfflineConverter(QObject):
                 ).transformBoundingBox(self.area_of_interest.boundingBox())
 
             is_success = self.offliner.convert_to_offline(
-                gpkg_filename,
-                offline_layers,
-                bbox,
+                gpkg_filename, offline_layers, bbox, self._export_title
             )
 
             if not is_success:

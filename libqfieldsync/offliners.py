@@ -53,6 +53,7 @@ class BaseOffliner(QObject):
         offline_db_filename: str,
         layers: List[QgsMapLayer],
         bbox: Optional[QgsRectangle],
+        exported_project_title: Optional[str] = None,
     ) -> bool:
         raise NotImplementedError(
             "Expected `BaseOffliner` to be extended by a class that implements `convert_to_offline`."
@@ -86,6 +87,7 @@ class QgisCoreOffliner(BaseOffliner):
         offline_db_filename: str,
         layers: List[QgsMapLayer],
         bbox: Optional[QgsRectangle],
+        exported_project_title: Optional[str] = None,
     ) -> bool:
         project = QgsProject.instance()
         offline_db_path = Path(offline_db_filename).parent
@@ -144,8 +146,11 @@ class PythonMiniOffliner(BaseOffliner):
         offline_db_filename: str,
         layers: List[QgsMapLayer],
         bbox: Optional[QgsRectangle],
+        exported_project_title: Optional[str] = None,
     ) -> bool:
-        self._convert_to_offline_project(str(offline_db_filename), layers, bbox)
+        self._convert_to_offline_project(
+            str(offline_db_filename), layers, bbox, exported_project_title
+        )
         return True
 
     def ogr_field_type(self, field: QgsField) -> ogr.FieldDefn:
@@ -351,6 +356,7 @@ class PythonMiniOffliner(BaseOffliner):
         offline_gpkg_path: str,
         offline_layers: Optional[List[QgsMapLayer]],
         bbox: Optional[QgsRectangle],
+        exported_project_title: Optional[str] = None,
     ) -> None:
         """Converts the currently loaded QgsProject to an offline project.
         Offline layers are written to ``offline_gpkg_path``. Only valid vector layers are written.
@@ -444,7 +450,9 @@ class PythonMiniOffliner(BaseOffliner):
                 self.update_data_provider(layer_info.layer, source)
                 layer_info.layer.setSubsetString(layer_info.subset_string)
 
-        project_title = project.title()
+        project_title = (
+            exported_project_title if exported_project_title else project.title()
+        )
         if not project_title:
             project_title = QFileInfo(project.fileName()).baseName()
 
