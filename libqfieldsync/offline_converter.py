@@ -278,14 +278,7 @@ class OfflineConverter(QObject):
             elif layer_action == SyncAction.REMOVE:
                 project.removeMapLayer(layer)
 
-        if self.export_type == ExportType.Cable and self._export_filename:
-            export_project_filename = self.export_folder.joinpath(
-                f"{Path(self.backup_filename).stem}_qfield.qgs"
-            )
-        else:
-            export_project_filename = self.export_folder.joinpath(
-                f"{self.original_filename.stem}_qfield.qgs"
-            )
+        export_project_filename = self._export_filename
 
         # save the original project path
         self.project_configuration.original_project_path = str(self.original_filename)
