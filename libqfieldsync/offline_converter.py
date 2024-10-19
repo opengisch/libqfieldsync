@@ -85,6 +85,8 @@ class OfflineConverter(QObject):
         self,
         project: QgsProject,
         export_folder: str,
+        export_filename: str,
+        export_title: Optional[str] = None,
         area_of_interest_wkt: str,
         area_of_interest_crs: Union[str, QgsCoordinateReferenceSystem],
         attachment_dirs: List[str],
@@ -102,7 +104,9 @@ class OfflineConverter(QObject):
         # elipsis workaround
         self.trUtf8 = self.tr
 
-        self.export_folder = Path(export_folder)
+        self.export_folder = Path(export_filename).parent
+        self._export_filename = Path(export_filename).stem
+        self._export_title = export_title
         self.export_type = export_type
         self.create_basemap = create_basemap
         self.area_of_interest = QgsPolygon()
@@ -135,7 +139,9 @@ class OfflineConverter(QObject):
         """
         project = QgsProject.instance()
         self.original_filename = Path(project.fileName())
-        self.backup_filename = make_temp_qgis_file(project)
+        self.backup_filename = make_temp_qgis_file(
+            project, self._export_filename, self._export_title
+        )
 
         try:
             self._convert(project)
@@ -272,9 +278,7 @@ class OfflineConverter(QObject):
             elif layer_action == SyncAction.REMOVE:
                 project.removeMapLayer(layer)
 
-        export_project_filename = self.export_folder.joinpath(
-            f"{self.original_filename.stem}_qfield.qgs"
-        )
+        export_project_filename = self._export_filename
 
         # save the original project path
         self.project_configuration.original_project_path = str(self.original_filename)
