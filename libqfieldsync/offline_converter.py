@@ -104,7 +104,7 @@ class OfflineConverter(QObject):
         # elipsis workaround
         self.trUtf8 = self.tr
 
-        self.export_folder = Path(export_folder)
+        self.export_folder = Path(export_filename).parent
         self._export_filename = Path(export_filename).stem
         self._export_title = export_title
         self.export_type = export_type
