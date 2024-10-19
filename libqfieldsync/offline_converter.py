@@ -86,7 +86,7 @@ class OfflineConverter(QObject):
         project: QgsProject,
         export_folder: str,
         export_filename: str,
-        export_title: str,
+        export_title: Optional[str] = None,
         area_of_interest_wkt: str,
         area_of_interest_crs: Union[str, QgsCoordinateReferenceSystem],
         attachment_dirs: List[str],
