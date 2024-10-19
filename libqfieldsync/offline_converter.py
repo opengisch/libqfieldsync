@@ -139,16 +139,9 @@ class OfflineConverter(QObject):
         """
         project = QgsProject.instance()
         self.original_filename = Path(project.fileName())
-        if (
-            self.export_type == ExportType.Cable
-            and self._export_filename
-            and self._export_title
-        ):
-            self.backup_filename = make_temp_qgis_file(
-                project, self._export_filename, self._export_title
-            )
-        else:
-            self.backup_filename = make_temp_qgis_file(project)
+        self.backup_filename = make_temp_qgis_file(
+            project, self._export_filename, self._export_title
+        )
 
         try:
             self._convert(project)
