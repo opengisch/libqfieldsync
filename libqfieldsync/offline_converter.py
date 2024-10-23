@@ -103,8 +103,7 @@ class OfflineConverter(QObject):
         # elipsis workaround
         self.trUtf8 = self.tr
 
-        self.export_folder = Path(export_filename).parent
-        self._export_filename = Path(export_filename).stem
+        self._export_filename = Path(export_filename)
         self._export_title = export_title
         self.export_type = export_type
         self.create_basemap = create_basemap
@@ -138,7 +137,7 @@ class OfflineConverter(QObject):
         """
         project = QgsProject.instance()
         self.original_filename = Path(project.fileName())
-        self.backup_filename = make_temp_qgis_file(project, self._export_title)
+        self.backup_filename = make_temp_qgis_file(project)
 
         try:
             self._convert(project)
@@ -191,7 +190,7 @@ class OfflineConverter(QObject):
         # NOTE force delete the `QgsProject`, otherwise the `QgsApplication` might be deleted by the time the project is garbage collected
         del tmp_project
 
-        self.export_folder.mkdir(parents=True, exist_ok=True)
+        self._export_filename.parent.mkdir(parents=True, exist_ok=True)
         self.total_progress_updated.emit(0, 100, self.trUtf8("Converting project…"))
 
         project_layers: List[QgsMapLayer] = list(project.mapLayers().values())
@@ -269,14 +268,16 @@ class OfflineConverter(QObject):
             elif (
                 layer_action == SyncAction.COPY or layer_action == SyncAction.NO_ACTION
             ):
-                copied_files = layer_source.copy(self.export_folder, copied_files)
+                copied_files = layer_source.copy(
+                    self._export_filename.parent, copied_files
+                )
             elif layer_action == SyncAction.KEEP_EXISTENT:
-                layer_source.copy(self.export_folder, copied_files, True)
+                layer_source.copy(self._export_filename.parent, copied_files, True)
             elif layer_action == SyncAction.REMOVE:
                 project.removeMapLayer(layer)
 
-        export_project_filename = Path(self.export_folder).joinpath(
-            f"{self._export_filename}.qgs"
+        export_project_filename = self._export_filename.parent.joinpath(
+            f"{self._export_filename.stem}.qgs"
         )
 
         # save the original project path
@@ -309,7 +310,7 @@ class OfflineConverter(QObject):
                 plugin_file, export_project_filename.parent.joinpath(plugin_file.name)
             )
 
-        gpkg_filename = str(self.export_folder.joinpath("data.gpkg"))
+        gpkg_filename = str(self._export_filename.parent.joinpath("data.gpkg"))
         if offline_layers:
             bbox = None
             if self.project_configuration.offline_copy_only_aoi:
@@ -320,7 +321,10 @@ class OfflineConverter(QObject):
                 ).transformBoundingBox(self.area_of_interest.boundingBox())
 
             is_success = self.offliner.convert_to_offline(
-                gpkg_filename, offline_layers, bbox, self._export_title
+                gpkg_filename,
+                offline_layers,
+                bbox,
+                self._export_title,
             )
 
             if not is_success:
@@ -544,7 +548,7 @@ class OfflineConverter(QObject):
             "TILE_SIZE": self.project_configuration.base_map_tile_size,
             "MAP_UNITS_PER_PIXEL": self.project_configuration.base_map_mupp,
             "MAKE_BACKGROUND_TRANSPARENT": False,
-            "OUTPUT": os.path.join(self.export_folder, "basemap.gpkg"),
+            "OUTPUT": os.path.join(self._export_filename.parent, "basemap.gpkg"),
         }
 
         if base_map_type == ProjectProperties.BaseMapType.SINGLE_LAYER:
