@@ -460,12 +460,14 @@ class PythonMiniOffliner(BaseOffliner):
             project_title = exported_project_title
         else:
             project_title = project.title()
+
             if not project_title:
                 project_title = QFileInfo(project.fileName()).baseName()
+
             project_title += f"{project_title} (offline)"
-        project.setTitle(project_title)
 
         project.setTitle(project_title)
+
         project.writeEntry(
             PROJECT_ENTRY_SCOPE_OFFLINE,
             PROJECT_ENTRY_KEY_OFFLINE_DB_PATH,

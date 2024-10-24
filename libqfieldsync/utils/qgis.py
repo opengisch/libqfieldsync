@@ -48,9 +48,7 @@ def open_project(filename: str, filename_to_read: Optional[str] = None) -> bool:
     return is_success
 
 
-def make_temp_qgis_file(
-    project: QgsProject,
-) -> str:
+def make_temp_qgis_file(project: QgsProject) -> str:
     project_backup_dir = tempfile.mkdtemp()
     original_filename = project.fileName()
     backup_filename = os.path.join(project_backup_dir, f"{project.baseName()}.qgs")

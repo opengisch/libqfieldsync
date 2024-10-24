@@ -92,7 +92,7 @@ class OfflineConverter(QObject):
         export_type: ExportType = ExportType.Cable,
         create_basemap: bool = True,
         dirs_to_copy: Optional[Dict[str, bool]] = None,
-        export_title: Optional[str] = None,
+        export_title: str = "",
     ):
         super(OfflineConverter, self).__init__(parent=None)
         self.__max_task_progress = 0
@@ -276,9 +276,7 @@ class OfflineConverter(QObject):
             elif layer_action == SyncAction.REMOVE:
                 project.removeMapLayer(layer)
 
-        export_project_filename = self._export_filename.parent.joinpath(
-            f"{self._export_filename.stem}.qgs"
-        )
+        export_project_filename = self._export_filename
 
         # save the original project path
         self.project_configuration.original_project_path = str(self.original_filename)
