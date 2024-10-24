@@ -202,6 +202,7 @@ def is_valid_filename(filename: str) -> bool:
         r'[^\\\/:*"?<>|]{1,254}'
         r"(?<![\s\.])$"
     )
+
     return bool(pattern.match(filename))
 
 
@@ -213,4 +214,5 @@ def is_valid_filepath(path: str) -> bool:
     for part in path_obj.parts:
         if not is_valid_filename(part):
             return False
+
     return True
