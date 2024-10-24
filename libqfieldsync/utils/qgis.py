@@ -19,8 +19,8 @@
  ***************************************************************************/
 """
 
-import logging
 import os
+import logging
 import tempfile
 from pathlib import Path
 from typing import List, Optional, Union
