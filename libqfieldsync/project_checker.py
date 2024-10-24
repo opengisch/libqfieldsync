@@ -1,4 +1,3 @@
-import re
 import sys
 from enum import Enum
 from pathlib import Path
@@ -9,7 +8,7 @@ from qgis.PyQt.QtCore import QObject
 
 from libqfieldsync.layer import LayerSource, SyncAction, UnsupportedPrimaryKeyError
 from libqfieldsync.project import ProjectConfiguration, ProjectProperties
-from libqfieldsync.utils.file_utils import isascii
+from libqfieldsync.utils.file_utils import isascii, is_valid_filepath
 
 from .offline_converter import ExportType
 
@@ -236,7 +235,6 @@ class ProjectChecker:
 
     def check_files_have_unsupported_characters(self) -> Optional[FeedbackResult]:
         problematic_paths = []
-        regexp = re.compile(r'[<>:"\\|?*]')
         home_path = Path(self.project.fileName()).parent
         try:
             for path in home_path.rglob("*"):
@@ -245,8 +243,9 @@ class ProjectChecker:
                 if str(relative_path).startswith(".qfieldsync"):
                     continue
 
-                if regexp.search(str(relative_path.as_posix())) is not None:
+                if not is_valid_filepath(str(relative_path.as_posix())):
                     problematic_paths.append(relative_path)
+
         except FileNotFoundError:
             # long paths on windows will raise a FileNotFoundError in rglob, so we have to handle
             # that gracefully
@@ -257,6 +256,7 @@ class ProjectChecker:
                 self.tr(
                     'Forbidden characters in filesystem path(s) "{}". '
                     'Please make sure there are no files and directories with "<", ">", ":", "/", "\\", "|", "?", "*" or double quotes (") characters in their path.'
+                    "and must not be reserved names like CON, PRN, AUX, NUL, etc."
                 ).format(", ".join([f'"{path}"' for path in problematic_paths]))
             )
         else:
