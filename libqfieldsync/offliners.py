@@ -126,8 +126,6 @@ class QgisCoreOffliner(BaseOffliner):
                     if layer.selectedFeatureCount() == 0:
                         layer.selectByIds([FID_NULL])
 
-        old_project_title = project.title()
-
         if exported_project_title:
             project.setTitle(exported_project_title)
 
@@ -141,8 +139,6 @@ class QgisCoreOffliner(BaseOffliner):
             # layerNameSuffix - by default " (offlined)" is added as suffix
             layerNameSuffix=None,
         )
-
-        project.setTitle(old_project_title)
 
         return is_success
 
