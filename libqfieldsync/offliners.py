@@ -53,7 +53,7 @@ class BaseOffliner(QObject):
         offline_db_filename: str,
         layers: List[QgsMapLayer],
         bbox: Optional[QgsRectangle],
-        exported_project_title: Optional[str] = "",
+        exported_project_title: str = "",
     ) -> bool:
         raise NotImplementedError(
             "Expected `BaseOffliner` to be extended by a class that implements `convert_to_offline`."
@@ -87,7 +87,7 @@ class QgisCoreOffliner(BaseOffliner):
         offline_db_filename: str,
         layers: List[QgsMapLayer],
         bbox: Optional[QgsRectangle],
-        exported_project_title: Optional[str] = "",
+        exported_project_title: str = "",
     ) -> bool:
         project = QgsProject.instance()
         offline_db_path = Path(offline_db_filename).parent
@@ -149,7 +149,7 @@ class PythonMiniOffliner(BaseOffliner):
         offline_db_filename: str,
         layers: List[QgsMapLayer],
         bbox: Optional[QgsRectangle],
-        exported_project_title: Optional[str] = "",
+        exported_project_title: str = "",
     ) -> bool:
         self._convert_to_offline_project(
             str(offline_db_filename),
@@ -362,7 +362,7 @@ class PythonMiniOffliner(BaseOffliner):
         offline_gpkg_path: str,
         offline_layers: Optional[List[QgsMapLayer]],
         bbox: Optional[QgsRectangle],
-        exported_project_title: Optional[str] = "",
+        exported_project_title: str = "",
     ) -> None:
         """Converts the currently loaded QgsProject to an offline project.
         Offline layers are written to ``offline_gpkg_path``. Only valid vector layers are written.

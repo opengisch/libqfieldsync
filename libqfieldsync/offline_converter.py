@@ -103,6 +103,9 @@ class OfflineConverter(QObject):
         # elipsis workaround
         self.trUtf8 = self.tr
 
+        if not export_filename:
+            raise Exception("Empty export filename provided!")
+
         self._export_filename = Path(export_filename)
         self._export_title = export_title
         self.export_type = export_type
@@ -269,7 +272,8 @@ class OfflineConverter(QObject):
                 layer_action == SyncAction.COPY or layer_action == SyncAction.NO_ACTION
             ):
                 copied_files = layer_source.copy(
-                    self._export_filename.parent, copied_files
+                    self._export_filename.parent,
+                    copied_files,
                 )
             elif layer_action == SyncAction.KEEP_EXISTENT:
                 layer_source.copy(self._export_filename.parent, copied_files, True)
