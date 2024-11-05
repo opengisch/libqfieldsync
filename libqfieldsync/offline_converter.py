@@ -19,7 +19,6 @@
  ***************************************************************************/
 """
 
-import os
 import sys
 from enum import Enum
 from pathlib import Path
@@ -312,7 +311,6 @@ class OfflineConverter(QObject):
                 plugin_file, export_project_filename.parent.joinpath(plugin_file.name)
             )
 
-        gpkg_filename = str(self._export_filename.parent.joinpath("data.gpkg"))
         if offline_layers:
             bbox = None
             if self.project_configuration.offline_copy_only_aoi:
@@ -323,7 +321,7 @@ class OfflineConverter(QObject):
                 ).transformBoundingBox(self.area_of_interest.boundingBox())
 
             is_success = self.offliner.convert_to_offline(
-                gpkg_filename,
+                str(self._export_filename.with_name("data.gpkg")),
                 offline_layers,
                 bbox,
                 self._export_title,
@@ -550,7 +548,7 @@ class OfflineConverter(QObject):
             "TILE_SIZE": self.project_configuration.base_map_tile_size,
             "MAP_UNITS_PER_PIXEL": self.project_configuration.base_map_mupp,
             "MAKE_BACKGROUND_TRANSPARENT": False,
-            "OUTPUT": os.path.join(self._export_filename.parent, "basemap.gpkg"),
+            "OUTPUT": str(self._export_filename.with_name("basemap.gpkg")),
         }
 
         if base_map_type == ProjectProperties.BaseMapType.SINGLE_LAYER:
