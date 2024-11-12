@@ -19,7 +19,6 @@
  ***************************************************************************/
 """
 
-import os
 import sys
 from enum import Enum
 from pathlib import Path
@@ -84,7 +83,7 @@ class OfflineConverter(QObject):
     def __init__(
         self,
         project: QgsProject,
-        export_folder: str,
+        export_filename: str,
         area_of_interest_wkt: str,
         area_of_interest_crs: Union[str, QgsCoordinateReferenceSystem],
         attachment_dirs: List[str],
@@ -92,6 +91,7 @@ class OfflineConverter(QObject):
         export_type: ExportType = ExportType.Cable,
         create_basemap: bool = True,
         dirs_to_copy: Optional[Dict[str, bool]] = None,
+        export_title: str = "",
     ):
         super(OfflineConverter, self).__init__(parent=None)
         self.__max_task_progress = 0
@@ -102,7 +102,11 @@ class OfflineConverter(QObject):
         # elipsis workaround
         self.trUtf8 = self.tr
 
-        self.export_folder = Path(export_folder)
+        if not export_filename:
+            raise Exception("Empty export filename provided!")
+
+        self._export_filename = Path(export_filename)
+        self._export_title = export_title
         self.export_type = export_type
         self.create_basemap = create_basemap
         self.area_of_interest = QgsPolygon()
@@ -188,7 +192,7 @@ class OfflineConverter(QObject):
         # NOTE force delete the `QgsProject`, otherwise the `QgsApplication` might be deleted by the time the project is garbage collected
         del tmp_project
 
-        self.export_folder.mkdir(parents=True, exist_ok=True)
+        self._export_filename.parent.mkdir(parents=True, exist_ok=True)
         self.total_progress_updated.emit(0, 100, self.trUtf8("Converting project…"))
 
         project_layers: List[QgsMapLayer] = list(project.mapLayers().values())
@@ -266,15 +270,16 @@ class OfflineConverter(QObject):
             elif (
                 layer_action == SyncAction.COPY or layer_action == SyncAction.NO_ACTION
             ):
-                copied_files = layer_source.copy(self.export_folder, copied_files)
+                copied_files = layer_source.copy(
+                    self._export_filename.parent,
+                    copied_files,
+                )
             elif layer_action == SyncAction.KEEP_EXISTENT:
-                layer_source.copy(self.export_folder, copied_files, True)
+                layer_source.copy(self._export_filename.parent, copied_files, True)
             elif layer_action == SyncAction.REMOVE:
                 project.removeMapLayer(layer)
 
-        export_project_filename = self.export_folder.joinpath(
-            f"{self.original_filename.stem}_qfield.qgs"
-        )
+        export_project_filename = self._export_filename
 
         # save the original project path
         self.project_configuration.original_project_path = str(self.original_filename)
@@ -306,7 +311,6 @@ class OfflineConverter(QObject):
                 plugin_file, export_project_filename.parent.joinpath(plugin_file.name)
             )
 
-        gpkg_filename = str(self.export_folder.joinpath("data.gpkg"))
         if offline_layers:
             bbox = None
             if self.project_configuration.offline_copy_only_aoi:
@@ -317,9 +321,10 @@ class OfflineConverter(QObject):
                 ).transformBoundingBox(self.area_of_interest.boundingBox())
 
             is_success = self.offliner.convert_to_offline(
-                gpkg_filename,
+                str(self._export_filename.with_name("data.gpkg")),
                 offline_layers,
                 bbox,
+                self._export_title,
             )
 
             if not is_success:
@@ -543,7 +548,7 @@ class OfflineConverter(QObject):
             "TILE_SIZE": self.project_configuration.base_map_tile_size,
             "MAP_UNITS_PER_PIXEL": self.project_configuration.base_map_mupp,
             "MAKE_BACKGROUND_TRANSPARENT": False,
-            "OUTPUT": os.path.join(self.export_folder, "basemap.gpkg"),
+            "OUTPUT": str(self._export_filename.with_name("basemap.gpkg")),
         }
 
         if base_map_type == ProjectProperties.BaseMapType.SINGLE_LAYER:

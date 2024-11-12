@@ -53,6 +53,7 @@ class BaseOffliner(QObject):
         offline_db_filename: str,
         layers: List[QgsMapLayer],
         bbox: Optional[QgsRectangle],
+        exported_project_title: str = "",
     ) -> bool:
         raise NotImplementedError(
             "Expected `BaseOffliner` to be extended by a class that implements `convert_to_offline`."
@@ -86,6 +87,7 @@ class QgisCoreOffliner(BaseOffliner):
         offline_db_filename: str,
         layers: List[QgsMapLayer],
         bbox: Optional[QgsRectangle],
+        exported_project_title: str = "",
     ) -> bool:
         project = QgsProject.instance()
         offline_db_path = Path(offline_db_filename).parent
@@ -124,6 +126,9 @@ class QgisCoreOffliner(BaseOffliner):
                     if layer.selectedFeatureCount() == 0:
                         layer.selectByIds([FID_NULL])
 
+        if exported_project_title:
+            project.setTitle(exported_project_title)
+
         is_success = self.offliner.convertToOfflineProject(
             str(offline_db_path),
             str(offline_db_filename),
@@ -144,8 +149,14 @@ class PythonMiniOffliner(BaseOffliner):
         offline_db_filename: str,
         layers: List[QgsMapLayer],
         bbox: Optional[QgsRectangle],
+        exported_project_title: str = "",
     ) -> bool:
-        self._convert_to_offline_project(str(offline_db_filename), layers, bbox)
+        self._convert_to_offline_project(
+            str(offline_db_filename),
+            layers,
+            bbox,
+            exported_project_title,
+        )
         return True
 
     def ogr_field_type(self, field: QgsField) -> ogr.FieldDefn:
@@ -351,6 +362,7 @@ class PythonMiniOffliner(BaseOffliner):
         offline_gpkg_path: str,
         offline_layers: Optional[List[QgsMapLayer]],
         bbox: Optional[QgsRectangle],
+        exported_project_title: str = "",
     ) -> None:
         """Converts the currently loaded QgsProject to an offline project.
         Offline layers are written to ``offline_gpkg_path``. Only valid vector layers are written.
@@ -444,12 +456,18 @@ class PythonMiniOffliner(BaseOffliner):
                 self.update_data_provider(layer_info.layer, source)
                 layer_info.layer.setSubsetString(layer_info.subset_string)
 
-        project_title = project.title()
-        if not project_title:
-            project_title = QFileInfo(project.fileName()).baseName()
+        if exported_project_title:
+            project_title = exported_project_title
+        else:
+            project_title = project.title()
 
-        project_title += f"{project_title} (offline)"
+            if not project_title:
+                project_title = QFileInfo(project.fileName()).baseName()
+
+            project_title += f"{project_title} (offline)"
+
         project.setTitle(project_title)
+
         project.writeEntry(
             PROJECT_ENTRY_SCOPE_OFFLINE,
             PROJECT_ENTRY_KEY_OFFLINE_DB_PATH,
