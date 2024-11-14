@@ -42,6 +42,7 @@ from qgis.core import (
     QgsRasterLayer,
     QgsValueRelationFieldFormatter,
     QgsVectorLayer,
+    QgsLayerTreeGroup,
 )
 from qgis.PyQt.QtCore import QCoreApplication, QObject, pyqtSignal
 
@@ -279,6 +280,8 @@ class OfflineConverter(QObject):
             elif layer_action == SyncAction.REMOVE:
                 project.removeMapLayer(layer)
 
+        self.remove_empty_groups_from_layer_tree_group(project.layerTreeRoot())
+
         export_project_filename = self._export_filename
 
         # save the original project path
@@ -345,6 +348,22 @@ class OfflineConverter(QObject):
         project.writeProject.connect(on_original_project_write)
         QgsProject.instance().write(str(export_project_filename))
         project.writeProject.disconnect(on_original_project_write)
+
+    def remove_empty_groups_from_layer_tree_group(
+        self, group: QgsLayerTreeGroup
+    ) -> None:
+        """
+        Recursively removes any empty groups from the given layer tree group.
+        """
+        for child in group.children():
+            if not isinstance(child, QgsLayerTreeGroup):
+                continue
+
+            # remove recursively
+            self.remove_empty_groups_from_layer_tree_group(child)
+
+            if not child.children():
+                group.removeChildNode(child)
 
     def post_process_offline_layers(self):
         project = QgsProject.instance()
