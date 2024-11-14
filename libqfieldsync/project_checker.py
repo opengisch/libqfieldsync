@@ -105,6 +105,11 @@ class ProjectChecker:
             },
             {
                 "type": Feedback.Level.WARNING,
+                "fn": self.check_external_layers,
+                "scope": None,
+            },
+            {
+                "type": Feedback.Level.WARNING,
                 "fn": self.check_layer_primary_key,
                 "scope": ExportType.Cloud,
             },
@@ -408,5 +413,24 @@ class ProjectChecker:
             main_msg += "\n".join(f"- {r}" for r in reason_msgs)
 
             return FeedbackResult(main_msg)
+
+        return None
+
+    def check_external_layers(
+        self, layer_source: LayerSource
+    ) -> Optional[FeedbackResult]:
+        home_path = Path(self.project.fileName()).parent
+
+        if layer_source.is_file and not layer_source.is_localized_path:
+            layer_path = Path(layer_source.layer.source()).resolve()
+
+            if home_path not in layer_path.parents:
+                return FeedbackResult(
+                    self.tr(
+                        'Layer "{}" is outside the project\'s home directory.'
+                        "This layers may cause issues."
+                        'Please move the layer within "{}".'
+                    ).format(layer_source.filename, home_path)
+                )
 
         return None
