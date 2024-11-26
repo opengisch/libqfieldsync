@@ -367,7 +367,11 @@ class OfflineConverter(QObject):
 
     def post_process_offline_layers(self):
         project = QgsProject.instance()
-        project.setEvaluateDefaultValues(False)
+
+        if Qgis.QGIS_VERSION_INT >= 34000:
+            project.setFlag(Qgis.ProjectFlag.EvaluateDefaultValuesOnProviderSide, False)
+        else:
+            project.setEvaluateDefaultValues(False)
 
         if Qgis.QGIS_VERSION_INT >= 32600:
             project.setTransactionMode(Qgis.TransactionMode.Disabled)
