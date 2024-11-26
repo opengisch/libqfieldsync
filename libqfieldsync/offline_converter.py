@@ -368,7 +368,11 @@ class OfflineConverter(QObject):
     def post_process_offline_layers(self):
         project = QgsProject.instance()
         project.setEvaluateDefaultValues(False)
-        project.setAutoTransaction(False)
+
+        if Qgis.QGIS_VERSION_INT >= 32600:
+            project.setTransactionMode(Qgis.TransactionMode.Disabled)
+        else:
+            project.setAutoTransaction(False)
 
         # check if value relations point to offline layers and adjust if necessary
         for e_layer in project.mapLayers().values():
