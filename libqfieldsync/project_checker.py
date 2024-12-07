@@ -419,18 +419,23 @@ class ProjectChecker:
     def check_external_layers(
         self, layer_source: LayerSource
     ) -> Optional[FeedbackResult]:
-        home_path = Path(self.project.fileName()).parent
+        if (
+            not layer_source.is_file
+            or not layer_source.filename
+            or layer_source.is_localized_path
+        ):
+            return None
 
-        if layer_source.is_file and not layer_source.is_localized_path:
-            layer_path = Path(layer_source.layer.source()).resolve()
+        home_path = Path(self.project.fileName()).parent.resolve()
+        layer_path = Path(layer_source.filename).resolve()
 
-            if home_path not in layer_path.parents:
-                return FeedbackResult(
-                    self.tr(
-                        'Layer "{}" is outside the project\'s home directory.'
-                        "This layers may cause issues."
-                        'Please move the layer within "{}".'
-                    ).format(layer_source.filename, home_path)
-                )
+        if home_path and home_path not in layer_path.parents:
+            return FeedbackResult(
+                self.tr(
+                    'Layer "{}" is outside the project\'s home directory. '
+                    "QFieldSync may not transfer your layer. "
+                    'Please move the file to "{}".'
+                ).format(layer_source.filename, home_path)
+            )
 
         return None
