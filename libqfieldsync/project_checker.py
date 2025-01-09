@@ -1,4 +1,5 @@
 import sys
+from collections import defaultdict
 from enum import Enum
 from pathlib import Path
 from typing import Callable, Dict, List, Optional
@@ -90,6 +91,11 @@ class ProjectChecker:
                 "type": Feedback.Level.WARNING,
                 "fn": self.check_project_is_dirty,
                 "scope": ExportType.Cloud,
+            },
+            {
+                "type": Feedback.Level.ERROR,
+                "fn": self.check_project_layers_sources_actions,
+                "scope": ExportType.Cable,
             },
         ]
         self.layer_checks: List[ProjectChecker.CheckConfig] = [
@@ -483,3 +489,44 @@ class ProjectChecker:
                 "GeoPackage or PostGIS datasources."
             ).format(storage_type)
         )
+
+    def check_project_layers_sources_actions(self) -> Optional[FeedbackResult]:
+        """Check if layers from the same GeoPackage have offline and copy actions."""
+        layer_sources_by_filename: dict[str, list[LayerSource]] = defaultdict(list)
+
+        for project_layer in self.project.mapLayers().values():
+            layer_source = LayerSource(project_layer)
+
+            if not layer_source.is_file:
+                continue
+
+            if layer_source.action not in [SyncAction.OFFLINE, SyncAction.COPY]:
+                continue
+
+            layer_sources_by_filename[layer_source.filename].append(layer_source)
+
+            # Check for layers with mixed actions
+            for filename, layer_sources in layer_sources_by_filename.items():
+                assert layer_sources
+
+                has_mixed_actions = False
+                first_layer_source_action = layer_sources[0].action
+
+                for layer_source in layer_sources:
+                    if layer_source.action != first_layer_source_action:
+                        has_mixed_actions = True
+                        break
+
+                if not has_mixed_actions:
+                    continue
+
+                message = self.tr(
+                    "Layers having the same file datasource have conflicting sync actions that may cause data loss.\n"
+                    'Layers {} share the same file "{}".'
+                ).format(
+                    ", ".join(f'"{layer.name}"' for layer in layer_sources),
+                    filename,
+                )
+                return FeedbackResult(message)
+
+        return None
