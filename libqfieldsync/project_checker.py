@@ -128,6 +128,11 @@ class ProjectChecker:
                 "fn": self.check_layer_package_prevention,
                 "scope": None,
             },
+            {
+                "type": Feedback.Level.WARNING,
+                "fn": self.check_layer_has_experimental_cloud_support,
+                "scope": ExportType.Cloud,
+            },
         ]
 
     def check(self, scope: ExportType) -> ProjectCheckerFeedback:
@@ -439,3 +444,42 @@ class ProjectChecker:
             )
 
         return None
+
+    def check_layer_has_experimental_cloud_support(
+        self, layer_source: LayerSource
+    ) -> Optional[FeedbackResult]:
+        """Check if layer has experimental cloud support"""
+        layer = layer_source.layer
+
+        if layer_source.cloud_action != SyncAction.OFFLINE:
+            return None
+
+        if layer.readOnly():
+            return None
+
+        if not layer.dataProvider():
+            return None
+
+        provider_type = layer.providerType()
+        storage_type = layer.dataProvider().storageType()
+
+        # We support GeoPackages on the cloud, so return early
+        if storage_type == "GPKG":
+            return None
+
+        if provider_type == "postgres":
+            return None
+
+        if (
+            provider_type == "delimitedtext" and storage_type == "Delimited text file"
+        ) or (provider_type == "ogr" and storage_type == "CSV"):
+            return None
+
+        return FeedbackResult(
+            self.tr(
+                'The datasource type "{}" '
+                "has experimental support on QFieldCloud. "
+                "Consider converting your data to the officially supported "
+                "GeoPackage or PostGIS datasources."
+            ).format(storage_type)
+        )
