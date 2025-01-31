@@ -2,9 +2,9 @@ import hashlib
 from collections import defaultdict
 from enum import Enum
 from pathlib import Path
-from typing import List, NamedTuple, Optional
+from typing import List, NamedTuple, Optional, NewType
 
-from osgeo import ogr, osr
+from osgeo import gdal, ogr, osr
 from PyQt5.QtCore import QFileInfo, QVariant
 from qgis.core import (
     Qgis,
@@ -24,6 +24,12 @@ from qgis.core import (
 from qgis.PyQt.QtCore import QObject, pyqtSignal
 
 from .utils.logger import logger
+
+# In GDAL 3.10.0 the return value of `ogr.CreateDataSource` changed from `ogr.DataSource` to `gdal.Dataset`.
+if gdal.VersionInfo() > "3010000":
+    OgrDataset = NewType("OgrDataset", gdal.Dataset)  # type: ignore
+else:
+    OgrDataset = NewType("OgrDataset", ogr.DataSource)  # type: ignore
 
 FID_NULL = -4294967296
 
@@ -219,7 +225,7 @@ class PythonMiniOffliner(BaseOffliner):
         return data
 
     def create_layer(
-        self, layer: QgsVectorLayer, data_source: ogr.DataSource, offline_gpkg_path: str
+        self, layer: QgsVectorLayer, data_source: OgrDataset, offline_gpkg_path: str
     ) -> None:
         """
         Will create a new layer for ``layer`` in the GeoPackage specified as ``data_source`` which is stored at ``offline_gpkg_path``.
@@ -270,7 +276,7 @@ class PythonMiniOffliner(BaseOffliner):
     def convert_to_offline_layer(
         self,
         layer: QgsVectorLayer,
-        data_source: ogr.DataSource,
+        data_source: OgrDataset,
         offline_gpkg_path: str,
         feature_request: QgsFeatureRequest = QgsFeatureRequest(),
     ) -> str:
