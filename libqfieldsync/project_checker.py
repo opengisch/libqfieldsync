@@ -1,4 +1,5 @@
 import sys
+from collections import defaultdict
 from enum import Enum
 from pathlib import Path
 from typing import Callable, Dict, List, Optional
@@ -91,6 +92,11 @@ class ProjectChecker:
                 "fn": self.check_project_is_dirty,
                 "scope": ExportType.Cloud,
             },
+            {
+                "type": Feedback.Level.ERROR,
+                "fn": self.check_project_layers_sources_actions,
+                "scope": ExportType.Cable,
+            },
         ]
         self.layer_checks: List[ProjectChecker.CheckConfig] = [
             {
@@ -126,11 +132,6 @@ class ProjectChecker:
             {
                 "type": Feedback.Level.WARNING,
                 "fn": self.check_layer_package_prevention,
-                "scope": None,
-            },
-            {
-                "type": Feedback.Level.WARNING,
-                "fn": self.check_layer_geopackage_actions,
                 "scope": None,
             },
         ]
@@ -445,68 +446,41 @@ class ProjectChecker:
 
         return None
 
-    def check_layer_geopackage_actions(
-        self, layer: LayerSource
-    ) -> Optional[FeedbackResult]:
+    def check_project_layers_sources_actions(self) -> Optional[FeedbackResult]:
         """Check if layers from the same GeoPackage have offline and copy actions."""
-        if not layer.is_file or not layer.filename:
-            return None
+        layer_sources_by_filename: dict[str, list[LayerSource]] = defaultdict(list)
 
-        # Check if is GeoPackage layer
-        if not layer.filename.lower().endswith(".gpkg"):
-            return None
-
-        current_action = layer.action
-        if current_action not in [SyncAction.OFFLINE, SyncAction.COPY]:
-            return None
-
-        # Group all layers by their GeoPackage file
-        gpkg_layers = {}
         for project_layer in self.project.mapLayers().values():
-            source = LayerSource(project_layer)
-            if not source.is_file or not source.filename:
+            layer_source = LayerSource(project_layer)
+            if not layer_source.is_file:
                 continue
 
-            if not source.filename.lower().endswith(".gpkg"):
+            if layer_source.action not in [SyncAction.OFFLINE, SyncAction.COPY]:
                 continue
 
-            if source.action not in [SyncAction.OFFLINE, SyncAction.COPY]:
-                continue
-
-            if source.filename not in gpkg_layers:
-                gpkg_layers[source.filename] = []
-            gpkg_layers[source.filename].append((project_layer.name(), source.action))
-
-        # Check for GeoPackages with mixed actions
-        if layer.filename in gpkg_layers and len(gpkg_layers[layer.filename]) > 1:
-            has_offline = any(
-                action == SyncAction.OFFLINE
-                for _, action in gpkg_layers[layer.filename]
-            )
-            has_copy = any(
-                action == SyncAction.COPY for _, action in gpkg_layers[layer.filename]
+            layer_sources_by_filename[layer_source.filename].append(
+                (layer_source.name, layer_source.action)
             )
 
-            if has_offline and has_copy:
-                offline_layers = [
-                    name
-                    for name, action in gpkg_layers[layer.filename]
-                    if action == SyncAction.OFFLINE
-                ]
-                copy_layers = [
-                    name
-                    for name, action in gpkg_layers[layer.filename]
-                    if action == SyncAction.COPY
-                ]
+            # Check for layers with mixed actions
+            for filename, layer_sources in layer_sources_by_filename.items():
+                has_mixed_actions = False
+                first_layer_action = layer_sources[0][1]
+
+                for layer_source in layer_sources:
+                    if layer_source[1] != first_layer_action:
+                        has_mixed_actions = True
+                        break
+
+                if not has_mixed_actions:
+                    continue
 
                 message = self.tr(
-                    "Multiple layers from the same GeoPackage have conflicting sync actions: "
-                    "Offline editing layers: {}\n. "
-                    "Copy layers: {}\n. "
-                    "The information on offline editing layers will be overwritten."
+                    "Layers having the same file datasource have conflicting sync actions that may cause dataloss.\n"
+                    'Layers {} share the same file "{}".'
                 ).format(
-                    ", ".join(f'"{layer}"' for layer in offline_layers),
-                    ", ".join(f'"{layer}"' for layer in copy_layers),
+                    ", ".join(f'"{layer[0]}"' for layer in layer_sources),
+                    filename,
                 )
                 return FeedbackResult(message)
 
