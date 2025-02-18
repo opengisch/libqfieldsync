@@ -19,10 +19,10 @@ jobs:
           pipenv install pre_commit
           pipenv run python -m pre_commit run --all-files
   test:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
-        qgis_version: [release-3_16, release-3_22, release-3_28, final-3_36_1]
+        qgis_version: [release-3_22, release-3_28, final-3_36_1]
     env:
       QGIS_TEST_VERSION: ${{ matrix.qgis_version }}
     steps:
