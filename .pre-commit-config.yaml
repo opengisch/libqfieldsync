@@ -27,3 +27,10 @@ repos:
     hooks:
       - id: mypy
         additional_dependencies: []
+
+  # Sort imports alphabetically
+  - repo: https://github.com/PyCQA/isort
+    rev: 6.0.0
+    hooks:
+      - id: isort
+        args: ["--profile", "black"]
