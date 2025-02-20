@@ -20,6 +20,7 @@
 """
 
 import sys
+import tempfile
 from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Optional, Union
@@ -27,20 +28,21 @@ from typing import Dict, List, Optional, Union
 from qgis.core import (
     Qgis,
     QgsApplication,
-    QgsBilinearRasterResampler,
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
-    QgsCubicRasterResampler,
     QgsEditorWidgetSetup,
     QgsField,
     QgsFields,
     QgsLayerTreeGroup,
+    QgsLayerTreeModel,
     QgsMapLayer,
+    QgsMapThemeCollection,
     QgsPolygon,
     QgsProcessingContext,
     QgsProcessingFeedback,
     QgsProject,
     QgsRasterLayer,
+    QgsRectangle,
     QgsValueRelationFieldFormatter,
     QgsVectorLayer,
 )
@@ -70,6 +72,13 @@ else:
     LayerData = Dict
 
 
+class PackagingCanceledException(Exception):
+    """Exception to be raised when offline converting is canceled"""
+
+    def __init__(self, *args):
+        super().__init__(QObject().tr("Packaging canceled by the user"), *args)
+
+
 class ExportType(Enum):
     Cable = "cable"
     Cloud = "cloud"
@@ -80,6 +89,11 @@ class OfflineConverter(QObject):
     warning = pyqtSignal(str, str)
     task_progress_updated = pyqtSignal(int, int)
     total_progress_updated = pyqtSignal(int, int, str)
+
+    # feedback used for basemap generation processing algorithm
+    _feedback = QgsProcessingFeedback()
+
+    _is_canceled: bool = False
 
     def __init__(
         self,
@@ -201,7 +215,13 @@ class OfflineConverter(QObject):
         copied_files = list()
 
         if self.create_basemap and self.project_configuration.create_base_map:
-            self._export_basemap()
+            is_basemap_export_success = self._export_basemap()
+
+            if not is_basemap_export_success and not self._is_canceled:
+                self.warning.emit(
+                    self.tr("Failed to create basemap"),
+                    self.tr("The basemap creation was unsuccessful."),
+                )
 
         # We store the pks of the original vector layers
         for layer_idx, layer in enumerate(project_layers):
@@ -265,6 +285,8 @@ class OfflineConverter(QObject):
                 self.trUtf8("Copying layers…"),
             )
 
+            self._check_canceled()
+
             if layer_action == SyncAction.OFFLINE:
                 offline_layers.append(layer)
                 self.__offline_layer_names.append(layer.name())
@@ -287,6 +309,8 @@ class OfflineConverter(QObject):
         # save the original project path
         self.project_configuration.original_project_path = str(self.original_filename)
 
+        self._check_canceled()
+
         # save the offline project twice so that the offline plugin can "know" that it's a relative path
         QgsProject.instance().write(str(export_project_filename))
 
@@ -301,6 +325,8 @@ class OfflineConverter(QObject):
             if not should_copy:
                 continue
 
+            self._check_canceled()
+
             copy_attachments(
                 self.original_filename.parent,
                 export_project_filename.parent,
@@ -310,6 +336,8 @@ class OfflineConverter(QObject):
         # copy project plugin if present
         plugin_file = Path("{}.qml".format(str(self.original_filename)[:-4]))
         if plugin_file.exists():
+            self._check_canceled()
+
             copy_multifile(
                 plugin_file, export_project_filename.parent.joinpath(plugin_file.name)
             )
@@ -322,6 +350,8 @@ class OfflineConverter(QObject):
                     QgsProject.instance().crs(),
                     QgsProject.instance(),
                 ).transformBoundingBox(self.area_of_interest.boundingBox())
+
+            self._check_canceled()
 
             is_success = self.offliner.convert_to_offline(
                 str(self._export_filename.with_name("data.gpkg")),
@@ -337,9 +367,13 @@ class OfflineConverter(QObject):
                     )
                 )
 
+            self._check_canceled()
+
             # Disable project options that could create problems on a portable
             # project with offline layers
             self.post_process_offline_layers()
+
+        self._check_canceled()
 
         # Now we have a project state which can be saved as offline project
         on_original_project_write = self._on_original_project_write_wrapper(
@@ -556,53 +590,127 @@ class OfflineConverter(QObject):
                 )
                 return False
 
-        extent_string = "{},{},{},{}".format(
-            extent.xMinimum(),
-            extent.xMaximum(),
-            extent.yMinimum(),
-            extent.yMaximum(),
-        )
+        exported_mbtiles = self._export_basemap_as_mbtiles(extent, base_map_type)
+
+        return exported_mbtiles
+
+    def _export_basemap_as_mbtiles(
+        self, extent: QgsRectangle, base_map_type: ProjectProperties.BaseMapType
+    ) -> bool:
+        """
+        Exports a basemap to mbtiles format.
+        This method handles several zoom levels.
+        This should be preferred over the legacy `_export_basemap_as_tiff` method.
+
+        Args:
+            extent (QgsRectangle): extent of the area of interest
+            base_map_type (ProjectProperties.BaseMapType): basemap type (layer or theme)
+
+        Returns:
+            bool: if basemap layer could be exported as mbtiles
+        """
 
         alg = (
             QgsApplication.instance()
             .processingRegistry()
-            .createAlgorithmById("native:rasterize")
+            .createAlgorithmById("native:tilesxyzmbtiles")
         )
 
         params = {
-            "EXTENT": extent_string,
-            "EXTENT_BUFFER": 0,
-            "TILE_SIZE": self.project_configuration.base_map_tile_size,
-            "MAP_UNITS_PER_PIXEL": self.project_configuration.base_map_mupp,
-            "MAKE_BACKGROUND_TRANSPARENT": False,
-            "OUTPUT": str(self._export_filename.with_name("basemap.gpkg")),
+            "EXTENT": extent,
+            "ZOOM_MIN": self.project_configuration.base_map_tiles_min_zoom_level,
+            "ZOOM_MAX": self.project_configuration.base_map_tiles_max_zoom_level,
+            "TILE_SIZE": 256,
+            "OUTPUT_FILE": str(self._export_filename.with_name("basemap.mbtiles")),
         }
 
+        # clone current QGIS project
+        current_project = QgsProject.instance()
+        cloned_project = QgsProject(
+            parent=current_project.parent(), capabilities=current_project.capabilities()
+        )
+        cloned_project.setCrs(current_project.crs())
+
         if base_map_type == ProjectProperties.BaseMapType.SINGLE_LAYER:
-            params["LAYERS"] = [self.project_configuration.base_map_layer]
+            # the `native:tilesxyzmbtiles` alg does not have any LAYERS param
+            # so just add basemap layer to the cloned project
+            basemap_layer = current_project.mapLayer(
+                self.project_configuration.base_map_layer
+            )
+            # here we use a cloned version of the raster layer, otherwise QGIS might crash
+            clone_layer = basemap_layer.clone()
+            cloned_project.addMapLayer(clone_layer)
+
         elif base_map_type == ProjectProperties.BaseMapType.MAP_THEME:
-            params["MAP_THEME"] = self.project_configuration.base_map_theme
+            # clone and recreate the current QGIS project, and recreate original themes
+            current_themes = QgsMapThemeCollection(current_project)
+            themes_data = {}
 
-        feedback = QgsProcessingFeedback()
+            for theme_name in current_themes.mapThemes():
+                layers, visibility = current_themes.mapThemeLayers(theme_name)
+                themes_data[theme_name] = (layers, visibility)
+
+            # create a temp file to store current QGIS project
+            temp_file = tempfile.NamedTemporaryFile(suffix=".qgz", delete=False)
+            temp_path = temp_file.name
+            temp_file.close()
+            current_project.write(temp_path)
+
+            cloned_project.read(temp_path)
+
+            cloned_themes_collection = QgsMapThemeCollection(cloned_project)
+            for theme_name, (layers, visibility) in themes_data.items():
+                cloned_themes_collection.storeMapTheme(theme_name, layers, visibility)
+
+            layer_tree_root = cloned_project.layerTreeRoot()
+            layer_tree_model = QgsLayerTreeModel(layer_tree_root)
+            cloned_project.mapThemeCollection().applyTheme(
+                self.project_configuration.base_map_theme,
+                layer_tree_root,
+                layer_tree_model,
+            )
+
         context = QgsProcessingContext()
-        context.setProject(QgsProject.instance())
+        context.setProject(cloned_project)
 
-        results, ok = alg.run(params, context, feedback)
+        # connect subtask feedback progress signal
+        self._feedback.progressChanged.connect(self._on_tiles_gen_alg_progress_changed)
 
-        if not ok:
-            self.warning.emit(self.tr("Failed to create basemap"), feedback.textLog())
-            return False
+        # we use a try clause to make sure the feedback's `progressChanged` signal
+        # is disconnected in the finally clause.
+        try:
+            results, ok = alg.run(params, context, self._feedback)
 
-        new_layer = QgsRasterLayer(results["OUTPUT"], self.tr("Basemap"))
+            if not ok:
+                self.warning.emit(
+                    self.tr("Failed to create mbtiles basemap"),
+                    self._feedback.textLog(),
+                )
+                return False
 
-        resample_filter = new_layer.resampleFilter()
-        resample_filter.setZoomedInResampler(QgsCubicRasterResampler())
-        resample_filter.setZoomedOutResampler(QgsBilinearRasterResampler())
-        self.project_configuration.project.addMapLayer(new_layer, False)
-        layer_tree = QgsProject.instance().layerTreeRoot()
-        layer_tree.insertLayer(len(layer_tree.children()), new_layer)
+            new_layer = QgsRasterLayer(results["OUTPUT_FILE"], self.tr("Basemap"))
 
-        return True
+            self.project_configuration.project.addMapLayer(new_layer, False)
+
+            layer_tree = QgsProject.instance().layerTreeRoot()
+            layer_tree.insertLayer(len(layer_tree.children()), new_layer)
+
+            return True
+
+        finally:
+            self._feedback.progressChanged.disconnect(
+                self._on_tiles_gen_alg_progress_changed
+            )
+
+    def _on_tiles_gen_alg_progress_changed(self, revision: float) -> None:
+        """
+        Called when the native `native:tilesxyzmbtiles` algorithm's execution emits progress.
+        This method will notify the accurate signal about this progress, e.g. QFieldSync progress bar UI.
+
+        Args:
+            revision (float): progress value of the tiles generation algorithm (between 0 and 100)
+        """
+        self.task_progress_updated.emit(int(revision), 100)
 
     def _on_offline_editing_next_layer(self, layer_index, layer_count):
         msg = self.trUtf8("Packaging layer {layer_name}…").format(
@@ -633,6 +741,20 @@ class OfflineConverter(QObject):
 
     def _on_offline_editing_task_progress(self, progress):
         self.task_progress_updated.emit(progress, self.__max_task_progress)
+
+    def cancel(self) -> None:
+        """
+        Cancels the offline packaging of a QField project.
+        Typically used when the QField export dialog is closed.
+        """
+        self._is_canceled = True
+        self._feedback.cancel()
+
+    def _check_canceled(self) -> None:
+        """Checks if packaging has been and should be canceled."""
+        QCoreApplication.processEvents()
+        if self._is_canceled:
+            raise PackagingCanceledException()
 
     def convertorProcessingProgress(self):
         """
