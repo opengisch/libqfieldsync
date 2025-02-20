@@ -2,7 +2,7 @@ import hashlib
 from collections import defaultdict
 from enum import Enum
 from pathlib import Path
-from typing import List, NamedTuple, Optional, NewType
+from typing import List, NamedTuple, NewType, Optional
 
 from osgeo import gdal, ogr, osr
 from PyQt5.QtCore import QFileInfo, QVariant
