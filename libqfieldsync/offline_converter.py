@@ -37,10 +37,12 @@ from qgis.core import (
     QgsLayerTreeGroup,
     QgsMapLayer,
     QgsPolygon,
+    QgsProcessingAlgorithm,
     QgsProcessingContext,
     QgsProcessingFeedback,
     QgsProject,
     QgsRasterLayer,
+    QgsRectangle,
     QgsValueRelationFieldFormatter,
     QgsVectorLayer,
 )
@@ -556,6 +558,26 @@ class OfflineConverter(QObject):
                 )
                 return False
 
+        exported_tiff = self._export_basemap_as_tiff(extent, base_map_type)
+        exported_mbtiles = self._export_basemap_as_mbtiles(extent, base_map_type)
+
+        return exported_tiff and exported_mbtiles
+
+    def _export_basemap_as_tiff(
+        self, extent: QgsRectangle, base_map_type: ProjectProperties.BaseMapType
+    ) -> bool:
+        """
+        Exports a basemap to TIFF format.
+        This method does not handle several zoom levels.
+        This should not be used, actually.
+
+        Args:
+            extent (QgsRectangle): extent of the area of interest
+            base_map_type (ProjectProperties.BaseMapType): basemap type (layer or theme)
+
+        Returns:
+            bool: if basemap layer could be exported as tiff
+        """
         extent_string = "{},{},{},{}".format(
             extent.xMinimum(),
             extent.xMaximum(),
@@ -598,6 +620,78 @@ class OfflineConverter(QObject):
         resample_filter = new_layer.resampleFilter()
         resample_filter.setZoomedInResampler(QgsCubicRasterResampler())
         resample_filter.setZoomedOutResampler(QgsBilinearRasterResampler())
+        self.project_configuration.project.addMapLayer(new_layer, False)
+        layer_tree = QgsProject.instance().layerTreeRoot()
+        layer_tree.insertLayer(len(layer_tree.children()), new_layer)
+
+        return True
+
+    def _export_basemap_as_mbtiles(
+        self, extent: QgsRectangle, base_map_type: ProjectProperties.BaseMapType
+    ) -> bool:
+        """
+        Exports a basemap to mbtiles format.
+        This method handles several zoom levels.
+        This should be preferred over the legacy `_export_basemap_as_tiff` method.
+
+        Args:
+            extent (QgsRectangle): extent of the area of interest
+            base_map_type (ProjectProperties.BaseMapType): basemap type (layer or theme)
+
+        Returns:
+            bool: if basemap layer could be exported as mbtiles
+        """
+
+        alg = (
+            QgsApplication.instance()
+            .processingRegistry()
+            .createAlgorithmById("native:tilesxyzmbtiles")
+        )
+
+        params = {
+            "EXTENT": extent,
+            "ZOOM_MIN": self.project_configuration.base_map_tiles_min_zoom_level,
+            "ZOOM_MAX": self.project_configuration.base_map_tiles_max_zoom_level,
+            "TILE_SIZE": 256,
+            "OUTPUT_FILE": str(self._export_filename.with_name("basemap.mbtiles")),
+        }
+
+        # clone current QGIS project
+        current_project = QgsProject.instance()
+        project = QgsProject(
+            parent=current_project.parent(), capabilities=current_project.capabilities()
+        )
+        project.setCrs(current_project.crs())
+
+        if base_map_type == ProjectProperties.BaseMapType.SINGLE_LAYER:
+            # the `native:tilesxyzmbtiles` alg does not have any LAYERS param
+            # so just add basemap layer to the cloned project
+            basemap_layer = current_project.mapLayer(
+                self.project_configuration.base_map_layer
+            )
+            project.addMapLayer(basemap_layer)
+
+        elif base_map_type == ProjectProperties.BaseMapType.MAP_THEME:
+            # just use all the layers to generate map theme tiles
+            project.mapThemeCollection().applyTheme(
+                self.project_configuration.base_map_theme
+            )
+
+        feedback = QgsProcessingFeedback()
+        context = QgsProcessingContext()
+        context.setProject(project)
+        context.setFlags(context.flags() | QgsProcessingAlgorithm.FlagNoThreading)
+
+        results, ok = alg.run(params, context, feedback)
+
+        if not ok:
+            self.warning.emit(
+                self.tr("Failed to create mbtiles basemap"), feedback.textLog()
+            )
+            return False
+
+        new_layer = QgsRasterLayer(results["OUTPUT_FILE"], self.tr("Basemap"))
+
         self.project_configuration.project.addMapLayer(new_layer, False)
         layer_tree = QgsProject.instance().layerTreeRoot()
         layer_tree.insertLayer(len(layer_tree.children()), new_layer)
