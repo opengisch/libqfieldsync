@@ -9,7 +9,7 @@ from qgis.PyQt.QtCore import QObject
 
 from libqfieldsync.layer import LayerSource, SyncAction, UnsupportedPrimaryKeyError
 from libqfieldsync.project import ProjectConfiguration, ProjectProperties
-from libqfieldsync.utils.file_utils import isascii, is_valid_filepath
+from libqfieldsync.utils.file_utils import is_valid_filepath, isascii
 
 from .offline_converter import ExportType
 

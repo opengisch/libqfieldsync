@@ -34,6 +34,7 @@ from qgis.core import (
     QgsEditorWidgetSetup,
     QgsField,
     QgsFields,
+    QgsLayerTreeGroup,
     QgsMapLayer,
     QgsPolygon,
     QgsProcessingContext,
@@ -42,7 +43,6 @@ from qgis.core import (
     QgsRasterLayer,
     QgsValueRelationFieldFormatter,
     QgsVectorLayer,
-    QgsLayerTreeGroup,
 )
 from qgis.PyQt.QtCore import QCoreApplication, QObject, pyqtSignal
 
