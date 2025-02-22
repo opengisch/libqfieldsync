@@ -11,6 +11,8 @@ class ProjectProperties(object):
     BASE_MAP_LAYER = "/baseMapLayer"
     BASE_MAP_TILE_SIZE = "/baseMapTileSize"
     BASE_MAP_MUPP = "/baseMapMupp"
+    BASE_MAP_TILES_MIN_ZOOM_LEVEL = "/baseMapTilesMinZoomLevel"
+    BASE_MAP_TILES_MAX_ZOOM_LEVEL = "/baseMapTilesMaxZoomLevel"
     OFFLINE_COPY_ONLY_AOI = "/offlineCopyOnlyAoi"
     ORIGINAL_PROJECT_PATH = "/originalProjectPath"
     IMPORTED_FILES_CHECKSUMS = "/importedFilesChecksums"
@@ -257,6 +259,32 @@ class ProjectConfiguration(object):
     def base_map_mupp(self, value):
         self.project.writeEntryDouble(
             "qfieldsync", ProjectProperties.BASE_MAP_MUPP, value
+        )
+
+    @property
+    def base_map_tiles_min_zoom_level(self) -> int:
+        base_map_tiles_min_zoom_level, _ = self.project.readNumEntry(
+            "qfieldsync", ProjectProperties.BASE_MAP_TILES_MIN_ZOOM_LEVEL, 14
+        )
+        return base_map_tiles_min_zoom_level
+
+    @base_map_tiles_min_zoom_level.setter
+    def base_map_tiles_min_zoom_level(self, value: int):
+        self.project.writeEntry(
+            "qfieldsync", ProjectProperties.BASE_MAP_TILES_MIN_ZOOM_LEVEL, value
+        )
+
+    @property
+    def base_map_tiles_max_zoom_level(self) -> int:
+        base_map_tiles_max_zoom_level, _ = self.project.readNumEntry(
+            "qfieldsync", ProjectProperties.BASE_MAP_TILES_MAX_ZOOM_LEVEL, 14
+        )
+        return base_map_tiles_max_zoom_level
+
+    @base_map_tiles_max_zoom_level.setter
+    def base_map_tiles_max_zoom_level(self, value):
+        self.project.writeEntry(
+            "qfieldsync", ProjectProperties.BASE_MAP_TILES_MAX_ZOOM_LEVEL, value
         )
 
     @property
