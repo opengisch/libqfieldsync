@@ -277,7 +277,7 @@ class ProjectConfiguration(object):
     @property
     def base_map_tiles_max_zoom_level(self) -> int:
         base_map_tiles_max_zoom_level, _ = self.project.readNumEntry(
-            "qfieldsync", ProjectProperties.BASE_MAP_TILES_MAX_ZOOM_LEVEL, 16
+            "qfieldsync", ProjectProperties.BASE_MAP_TILES_MAX_ZOOM_LEVEL, 14
         )
         return base_map_tiles_max_zoom_level
 
