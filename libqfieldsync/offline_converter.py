@@ -51,7 +51,11 @@ from qgis.PyQt.QtCore import QCoreApplication, QObject, pyqtSignal
 from .layer import LayerSource, SyncAction
 from .offliners import BaseOffliner
 from .project import ProjectConfiguration, ProjectProperties
-from .utils.file_utils import copy_attachments, copy_multifile
+from .utils.file_utils import (
+    copy_attachments,
+    copy_multifile,
+    embed_layer_symbols_on_project,
+)
 from .utils.logger import logger
 from .utils.qgis import make_temp_qgis_file, open_project
 from .utils.xml import get_themapcanvas
@@ -301,6 +305,9 @@ class OfflineConverter(QObject):
                 layer_source.copy(self._export_filename.parent, copied_files, True)
             elif layer_action == SyncAction.REMOVE:
                 project.removeMapLayer(layer)
+
+            # Change symbol path to embedded marker
+            embed_layer_symbols_on_project(layer)
 
         self.remove_empty_groups_from_layer_tree_group(project.layerTreeRoot())
 
