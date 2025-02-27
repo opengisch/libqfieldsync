@@ -19,6 +19,7 @@
  ***************************************************************************/
 """
 
+import base64
 import hashlib
 import os
 import platform
@@ -29,6 +30,16 @@ import unicodedata
 from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
+from qgis.core import (
+    QgsCategorizedSymbolRenderer,
+    QgsRasterMarkerSymbolLayer,
+    QgsRuleBasedRenderer,
+    QgsSingleSymbolRenderer,
+    QgsSvgMarkerSymbolLayer,
+    QgsSymbol,
+    QgsVectorLayer,
+    QgsWkbTypes,
+)
 from qgis.PyQt.QtCore import QCoreApplication
 
 from .exceptions import NoProjectFoundError, QFieldSyncError
@@ -216,3 +227,82 @@ def is_valid_filepath(path: str) -> bool:
             return False
 
     return True
+
+
+def update_symbols_to_embedded(symbol: QgsSymbol) -> None:
+    """
+    Update SVG or Raster symbols layer to embed it in the QGIS project.
+    Args:
+        symbol: The QGIS symbol (from a renderer).
+    """
+    if symbol is None:
+        return
+
+    for symbol_layer in symbol.symbolLayers():
+        # Filter out only symbology that includes SVG and Raster, skip the rest
+        if not isinstance(
+            symbol_layer, (QgsSvgMarkerSymbolLayer, QgsRasterMarkerSymbolLayer)
+        ):
+            continue
+
+        source_path = Path(symbol_layer.path())
+
+        # Check if symbol is already embedded
+        if str(source_path)[:8].startswith("base64:"):
+            continue
+
+        # The symbol is already broken; its file is not reachable
+        if not source_path.is_file():
+            continue
+
+        with open(source_path, "rb") as file:
+            file_data = file.read()
+            encoded_data = base64.b64encode(file_data).decode()
+            symbol_layer.setPath(f"base64:{encoded_data}")
+
+
+def embed_layer_symbols_on_project(layer: QgsVectorLayer) -> None:
+    """
+    Update the paths of symbols to embedded symbols in the QGIS project.
+
+    Args:
+        layer: The QgsVectorLayer to update.  The layer is a point layer.
+    """
+
+    if (
+        not isinstance(layer, QgsVectorLayer)
+        or layer.geometryType() != QgsWkbTypes.PointGeometry
+    ):
+        return
+
+    renderer = layer.renderer()
+
+    if not renderer:
+        return
+
+    if isinstance(renderer, QgsSingleSymbolRenderer):
+        symbol = renderer.symbol()
+        if symbol:
+            update_symbols_to_embedded(symbol=symbol)
+
+    elif isinstance(renderer, QgsRuleBasedRenderer):
+        for rule in renderer.rootRule().children():
+            symbols = rule.symbols()
+
+            if not symbols:
+                continue
+
+            for symbol in symbols:
+                update_symbols_to_embedded(symbol=symbol)
+
+    elif isinstance(renderer, QgsCategorizedSymbolRenderer):
+        categories = renderer.categories()
+        if categories:
+            for index in range(len(categories)):
+                # Get a fresh category.  The renderer doesn't update in-place modifications.
+                category = renderer.categories()[index]
+                symbol = category.symbol().clone()
+                update_symbols_to_embedded(symbol=symbol)
+                renderer.updateCategorySymbol(index, symbol)
+
+    layer.setRenderer(renderer)
