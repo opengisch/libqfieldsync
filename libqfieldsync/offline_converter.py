@@ -307,7 +307,7 @@ class OfflineConverter(QObject):
                 project.removeMapLayer(layer)
 
             # Change symbol path to embedded marker
-            embed_layer_symbols_on_project(layer)
+            embed_layer_symbols_on_project(layer, self._export_filename.parent)
 
         self.remove_empty_groups_from_layer_tree_group(project.layerTreeRoot())
 

@@ -32,6 +32,7 @@ from typing import List, Optional, Tuple, Union
 
 from qgis.core import (
     QgsCategorizedSymbolRenderer,
+    QgsProject,
     QgsRasterMarkerSymbolLayer,
     QgsRuleBasedRenderer,
     QgsSingleSymbolRenderer,
@@ -229,7 +230,7 @@ def is_valid_filepath(path: str) -> bool:
     return True
 
 
-def update_symbols_to_embedded(symbol: QgsSymbol) -> None:
+def update_symbols_to_embedded(symbol: QgsSymbol, new_path: Path) -> None:
     """
     Update SVG or Raster symbols layer to embed it in the QGIS project.
     Args:
@@ -247,6 +248,10 @@ def update_symbols_to_embedded(symbol: QgsSymbol) -> None:
 
         source_path = Path(symbol_layer.path())
 
+        # If the symbol's path is already relative, we have nothing to do
+        if source_path.is_relative_to(new_path):
+            continue
+
         # Check if symbol is already embedded
         if str(source_path)[:8].startswith("base64:"):
             continue
@@ -261,7 +266,9 @@ def update_symbols_to_embedded(symbol: QgsSymbol) -> None:
             symbol_layer.setPath(f"base64:{encoded_data}")
 
 
-def embed_layer_symbols_on_project(layer: QgsVectorLayer) -> None:
+def embed_layer_symbols_on_project(
+    layer: QgsVectorLayer, new_path: Optional[Path] = None
+) -> None:
     """
     Update the paths of symbols to embedded symbols in the QGIS project.
 
@@ -280,10 +287,15 @@ def embed_layer_symbols_on_project(layer: QgsVectorLayer) -> None:
     if not renderer:
         return
 
+    if new_path is None:
+        project = QgsProject.instance()
+        project_home = project.homePath()
+        new_path = Path(project_home)
+
     if isinstance(renderer, QgsSingleSymbolRenderer):
         symbol = renderer.symbol()
         if symbol:
-            update_symbols_to_embedded(symbol=symbol)
+            update_symbols_to_embedded(symbol=symbol, new_path=new_path)
 
     elif isinstance(renderer, QgsRuleBasedRenderer):
         for rule in renderer.rootRule().children():
@@ -293,7 +305,7 @@ def embed_layer_symbols_on_project(layer: QgsVectorLayer) -> None:
                 continue
 
             for symbol in symbols:
-                update_symbols_to_embedded(symbol=symbol)
+                update_symbols_to_embedded(symbol=symbol, new_path=new_path)
 
     elif isinstance(renderer, QgsCategorizedSymbolRenderer):
         categories = renderer.categories()
@@ -302,7 +314,7 @@ def embed_layer_symbols_on_project(layer: QgsVectorLayer) -> None:
                 # Get a fresh category.  The renderer doesn't update in-place modifications.
                 category = renderer.categories()[index]
                 symbol = category.symbol().clone()
-                update_symbols_to_embedded(symbol=symbol)
+                update_symbols_to_embedded(symbol=symbol, new_path=new_path)
                 renderer.updateCategorySymbol(index, symbol)
 
     layer.setRenderer(renderer)
