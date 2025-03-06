@@ -377,7 +377,7 @@ class OfflineConverter(QObject):
             # project with offline layers
             self.post_process_offline_layers()
         # Change SVG and Raster symbols path to relative or embedded
-        for layer in project_layers:
+        for layer in QgsProject.instance().mapLayers().values():
             set_relative_embed_layer_symbols_on_project(
                 layer, self.original_filename.parent, self._export_filename.parent
             )
