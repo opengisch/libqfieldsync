@@ -32,7 +32,6 @@ from typing import List, Optional, Tuple, Union
 
 from qgis.core import (
     QgsCategorizedSymbolRenderer,
-    QgsProject,
     QgsRasterMarkerSymbolLayer,
     QgsRuleBasedRenderer,
     QgsSingleSymbolRenderer,
@@ -230,11 +229,12 @@ def is_valid_filepath(path: str) -> bool:
     return True
 
 
-def update_symbols_to_embedded(symbol: QgsSymbol, new_path: Path) -> None:
+def update_symbols_to_relative_embedded(symbol: QgsSymbol, home_path: Path) -> None:
     """
-    Update SVG or Raster symbols layer to embed it in the QGIS project.
+    Update SVG or Raster symbols layer to relative path or embed it in the QGIS project.
     Args:
         symbol: The QGIS symbol (from a renderer).
+        home_path: QGIS Project home path.
     """
     if symbol is None:
         return
@@ -248,10 +248,6 @@ def update_symbols_to_embedded(symbol: QgsSymbol, new_path: Path) -> None:
 
         source_path = Path(symbol_layer.path())
 
-        # If the symbol's path is already relative, we have nothing to do
-        if source_path.is_relative_to(new_path):
-            continue
-
         # Check if symbol is already embedded
         if str(source_path)[:8].startswith("base64:"):
             continue
@@ -260,20 +256,25 @@ def update_symbols_to_embedded(symbol: QgsSymbol, new_path: Path) -> None:
         if not source_path.is_file():
             continue
 
-        with open(source_path, "rb") as file:
-            file_data = file.read()
-            encoded_data = base64.b64encode(file_data).decode()
-            symbol_layer.setPath(f"base64:{encoded_data}")
+        # If the symbol's path is already relative, we have nothing to do
+        if source_path.is_relative_to(str(home_path)):
+            symbol_layer.setPath(str(source_path.relative_to(home_path)))
+        else:
+            with open(source_path, "rb") as file:
+                file_data = file.read()
+                encoded_data = base64.b64encode(file_data).decode()
+                symbol_layer.setPath(f"base64:{encoded_data}")
 
 
-def embed_layer_symbols_on_project(
-    layer: QgsVectorLayer, new_path: Optional[Path] = None
+def set_relative_embed_layer_symbols_on_project(
+    layer: QgsVectorLayer, project_home: Path
 ) -> None:
     """
-    Update the paths of symbols to embedded symbols in the QGIS project.
+    Update the paths of symbols to relative or embedded symbols in the QGIS project if not relative to project home.
 
     Args:
         layer: The QgsVectorLayer to update.  The layer is a point layer.
+        project_home: QGIS Project home path.
     """
 
     if (
@@ -287,15 +288,10 @@ def embed_layer_symbols_on_project(
     if not renderer:
         return
 
-    if new_path is None:
-        project = QgsProject.instance()
-        project_home = project.homePath()
-        new_path = Path(project_home)
-
     if isinstance(renderer, QgsSingleSymbolRenderer):
         symbol = renderer.symbol()
         if symbol:
-            update_symbols_to_embedded(symbol=symbol, new_path=new_path)
+            update_symbols_to_relative_embedded(symbol, project_home)
 
     elif isinstance(renderer, QgsRuleBasedRenderer):
         for rule in renderer.rootRule().children():
@@ -305,16 +301,17 @@ def embed_layer_symbols_on_project(
                 continue
 
             for symbol in symbols:
-                update_symbols_to_embedded(symbol=symbol, new_path=new_path)
+                update_symbols_to_relative_embedded(symbol, project_home)
 
     elif isinstance(renderer, QgsCategorizedSymbolRenderer):
         categories = renderer.categories()
         if categories:
             for index in range(len(categories)):
-                # Get a fresh category.  The renderer doesn't update in-place modifications.
+                # Get a fresh category.
+                # The renderer doesn't update in-place modifications on categorized.
                 category = renderer.categories()[index]
                 symbol = category.symbol().clone()
-                update_symbols_to_embedded(symbol=symbol, new_path=new_path)
+                update_symbols_to_relative_embedded(symbol, project_home)
                 renderer.updateCategorySymbol(index, symbol)
 
     layer.setRenderer(renderer)
