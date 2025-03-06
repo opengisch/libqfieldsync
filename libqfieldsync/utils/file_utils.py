@@ -31,6 +31,7 @@ from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
 from qgis.core import (
+    Qgis,
     QgsCategorizedSymbolRenderer,
     QgsRasterMarkerSymbolLayer,
     QgsRuleBasedRenderer,
@@ -38,7 +39,6 @@ from qgis.core import (
     QgsSvgMarkerSymbolLayer,
     QgsSymbol,
     QgsVectorLayer,
-    QgsWkbTypes,
 )
 from qgis.PyQt.QtCore import QCoreApplication
 
@@ -288,9 +288,17 @@ def set_relative_embed_layer_symbols_on_project(
         export_project_path: The target directory for the exported offline QGIS project.
     """
 
+    if Qgis.QGIS_VERSION_INT >= 33000:
+        point_geometry = Qgis.GeometryType.Point
+    else:
+        from qgis.core import QgsWkbTypes
+
+        point_geometry = QgsWkbTypes.GeometryType.PointGeometry
+
     if (
-        not isinstance(layer, QgsVectorLayer)
-        or layer.geometryType() != QgsWkbTypes.PointGeometry
+        not layer.isValid()
+        or not isinstance(layer, QgsVectorLayer)
+        or layer.geometryType() != point_geometry
     ):
         return
 
