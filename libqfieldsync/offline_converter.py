@@ -379,7 +379,7 @@ class OfflineConverter(QObject):
         # Change SVG and Raster symbols path to relative or embedded
         for layer in project_layers:
             set_relative_embed_layer_symbols_on_project(
-                layer, self.original_filename.parent
+                layer, self.original_filename.parent, self._export_filename.parent
             )
 
         self._check_canceled()

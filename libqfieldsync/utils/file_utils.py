@@ -229,12 +229,15 @@ def is_valid_filepath(path: str) -> bool:
     return True
 
 
-def update_symbols_to_relative_embedded(symbol: QgsSymbol, home_path: Path) -> None:
+def update_symbols_to_relative_embedded(
+    symbol: QgsSymbol, home_path: Path, destination_path: Path
+) -> None:
     """
     Update SVG or Raster symbols layer to relative path or embed it in the QGIS project.
     Args:
         symbol: The QGIS symbol (from a renderer).
-        home_path: QGIS Project home path.
+        home_path: The root of QGIS Project home path.
+        destination_path: The target directory where the exported project will be saved.
     """
     if symbol is None:
         return
@@ -256,25 +259,33 @@ def update_symbols_to_relative_embedded(symbol: QgsSymbol, home_path: Path) -> N
         if not source_path.is_file():
             continue
 
-        # If the symbol's path is already relative, we have nothing to do
-        if source_path.is_relative_to(str(home_path)):
-            symbol_layer.setPath(str(source_path.relative_to(home_path)))
-        else:
-            with open(source_path, "rb") as file:
-                file_data = file.read()
-                encoded_data = base64.b64encode(file_data).decode()
+        if source_path.is_relative_to(home_path):
+            relative_path = source_path.relative_to(home_path)
+            destination_path_file = destination_path / relative_path
+
+            if destination_path_file.exists():
+                symbol_layer.setPath(str(relative_path))
+            else:
+                with source_path.open("rb") as file:
+                    encoded_data = base64.b64encode(file.read()).decode()
                 symbol_layer.setPath(f"base64:{encoded_data}")
+
+        else:
+            with source_path.open("rb") as file:
+                encoded_data = base64.b64encode(file.read()).decode()
+            symbol_layer.setPath(f"base64:{encoded_data}")
 
 
 def set_relative_embed_layer_symbols_on_project(
-    layer: QgsVectorLayer, project_home: Path
+    layer: QgsVectorLayer, project_home: Path, export_project_path: Path
 ) -> None:
     """
     Update the paths of symbols to relative or embedded symbols in the QGIS project if not relative to project home.
 
     Args:
         layer: The QgsVectorLayer to update.  The layer is a point layer.
-        project_home: QGIS Project home path.
+        project_home: The root of QGIS Project home path.
+        export_project_path: The target directory for the exported offline QGIS project.
     """
 
     if (
@@ -291,7 +302,9 @@ def set_relative_embed_layer_symbols_on_project(
     if isinstance(renderer, QgsSingleSymbolRenderer):
         symbol = renderer.symbol()
         if symbol:
-            update_symbols_to_relative_embedded(symbol, project_home)
+            update_symbols_to_relative_embedded(
+                symbol, project_home, export_project_path
+            )
 
     elif isinstance(renderer, QgsRuleBasedRenderer):
         for rule in renderer.rootRule().children():
@@ -301,7 +314,9 @@ def set_relative_embed_layer_symbols_on_project(
                 continue
 
             for symbol in symbols:
-                update_symbols_to_relative_embedded(symbol, project_home)
+                update_symbols_to_relative_embedded(
+                    symbol, project_home, export_project_path
+                )
 
     elif isinstance(renderer, QgsCategorizedSymbolRenderer):
         categories = renderer.categories()
@@ -311,7 +326,9 @@ def set_relative_embed_layer_symbols_on_project(
                 # The renderer doesn't update in-place modifications on categorized.
                 category = renderer.categories()[index]
                 symbol = category.symbol().clone()
-                update_symbols_to_relative_embedded(symbol, project_home)
+                update_symbols_to_relative_embedded(
+                    symbol, project_home, export_project_path
+                )
                 renderer.updateCategorySymbol(index, symbol)
 
     layer.setRenderer(renderer)
