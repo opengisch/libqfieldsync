@@ -19,6 +19,7 @@
  ***************************************************************************/
 """
 
+import os
 import sys
 import tempfile
 from enum import Enum
@@ -607,7 +608,6 @@ class OfflineConverter(QObject):
         """
         Exports a basemap to mbtiles format.
         This method handles several zoom levels.
-        This should be preferred over the legacy `_export_basemap_as_tiff` method.
 
         Args:
             extent (QgsRectangle): extent of the area of interest
@@ -623,12 +623,14 @@ class OfflineConverter(QObject):
             .createAlgorithmById("native:tilesxyzmbtiles")
         )
 
+        basemap_export_path = str(self._export_filename.with_name("basemap.mbtiles"))
+
         params = {
             "EXTENT": extent,
             "ZOOM_MIN": self.project_configuration.base_map_tiles_min_zoom_level,
             "ZOOM_MAX": self.project_configuration.base_map_tiles_max_zoom_level,
             "TILE_SIZE": 256,
-            "OUTPUT_FILE": str(self._export_filename.with_name("basemap.mbtiles")),
+            "OUTPUT_FILE": basemap_export_path,
         }
 
         # clone current QGIS project
@@ -686,6 +688,11 @@ class OfflineConverter(QObject):
         # we use a try clause to make sure the feedback's `progressChanged` signal
         # is disconnected in the finally clause.
         try:
+            # if the basemap file already exists on target destination,
+            # the `native:tilesxyzmbtiles` alg will throw an error.
+            if os.path.exists(basemap_export_path):
+                os.remove(basemap_export_path)
+
             results, ok = alg.run(params, context, self._feedback)
 
             if not ok:
