@@ -261,7 +261,7 @@ def update_symbols_to_relative_embedded(
 
         if source_path.is_relative_to(home_path):
             relative_path = source_path.relative_to(home_path)
-            destination_path_file = destination_path / relative_path
+            destination_path_file = destination_path.joinpath(relative_path)
 
             if destination_path_file.exists():
                 symbol_layer.setPath(str(relative_path))
