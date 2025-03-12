@@ -112,7 +112,7 @@ class ProjectChecker:
             {
                 "type": Feedback.Level.WARNING,
                 "fn": self.check_external_layers,
-                "scope": None,
+                "scope": ExportType.Cloud,
             },
             {
                 "type": Feedback.Level.WARNING,
