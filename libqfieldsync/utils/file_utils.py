@@ -266,13 +266,11 @@ def update_symbols_to_relative_embedded(
             if destination_path_file.exists():
                 symbol_layer.setPath(str(relative_path))
             else:
-                with source_path.open("rb") as file:
-                    encoded_data = base64.b64encode(file.read()).decode()
+                encoded_data = base64.b64encode(source_path.read_bytes()).decode()
                 symbol_layer.setPath(f"base64:{encoded_data}")
 
         else:
-            with source_path.open("rb") as file:
-                encoded_data = base64.b64encode(file.read()).decode()
+            encoded_data = base64.b64encode(source_path.read_bytes()).decode()
             symbol_layer.setPath(f"base64:{encoded_data}")
 
 
@@ -280,7 +278,10 @@ def set_relative_embed_layer_symbols_on_project(
     layer: QgsVectorLayer, project_home: Path, export_project_path: Path
 ) -> None:
     """
-    Update the paths of symbols to relative or embedded symbols in the QGIS project if not relative to project home.
+    Update the layer style SVG or Raster symbol paths to relative or embedded them in the QGIS project file.
+
+    First try to ensure the paths are within to the QGIS project path.
+    If the resulting path is impossible, then embed the symbols in the QGIS project.
 
     Args:
         layer: The QgsVectorLayer to update.  The layer is a point layer.
@@ -334,9 +335,11 @@ def set_relative_embed_layer_symbols_on_project(
                 # The renderer doesn't update in-place modifications on categorized.
                 category = renderer.categories()[index]
                 symbol = category.symbol().clone()
+
                 update_symbols_to_relative_embedded(
                     symbol, project_home, export_project_path
                 )
+
                 renderer.updateCategorySymbol(index, symbol)
 
     layer.setRenderer(renderer)
