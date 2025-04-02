@@ -100,6 +100,11 @@ class ProjectChecker:
                 "fn": self.check_project_layers_sources_actions,
                 "scope": ExportType.Cable,
             },
+            {
+                "type": Feedback.Level.WARNING,
+                "fn": self.check_for_conflicting_base_filenames,
+                "scope": None,
+            },
         ]
         self.layer_checks: List[ProjectChecker.CheckConfig] = [
             {
@@ -280,6 +285,45 @@ class ProjectChecker:
                 self.tr(
                     "QGIS project has unsaved changes. "
                     "Unsaved changes will not be uploaded to QFieldCloud."
+                )
+            )
+        else:
+            return None
+
+    def check_for_conflicting_base_filenames(self) -> Optional[FeedbackResult]:
+        conflicting_files: List[Path] = []
+        try:
+            project_file_path = Path(self.project.fileName())
+
+            if not project_file_path.is_file():
+                return None
+
+            home_path: Path = project_file_path.parent
+            project_base_name: str = project_file_path.stem
+
+            if not home_path.is_dir():
+                return None
+
+            for item in home_path.rglob("*"):
+                if (
+                    item.is_file()
+                    and item != project_file_path
+                    and item.stem == project_base_name
+                    and not item.name.endswith("~")
+                    and ".qfieldsync" not in item.relative_to(home_path).parts
+                ):
+                    conflicting_files.append(item)
+
+        except (TypeError, Exception):
+            pass
+
+        if conflicting_files:
+            return FeedbackResult(
+                self.tr(
+                    'The project "{}" shares its base name with the following files, which might cause issues: {}.'
+                ).format(
+                    project_base_name,
+                    (", ".join([f'"{path}"' for path in conflicting_files])),
                 )
             )
         else:
