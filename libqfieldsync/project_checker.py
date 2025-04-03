@@ -100,7 +100,7 @@ class ProjectChecker:
             {
                 "type": Feedback.Level.WARNING,
                 "fn": self.check_for_conflicting_base_filenames,
-                "scope": None,
+                "scope": ExportType.Cloud,
             },
         ]
         self.layer_checks: List[ProjectChecker.CheckConfig] = [
@@ -296,18 +296,22 @@ class ProjectChecker:
 
     def check_for_conflicting_base_filenames(self) -> Optional[FeedbackResult]:
         conflicting_files: List[Path] = []
+
         try:
             project_file_path = Path(self.project.fileName())
+        except TypeError:
+            return None
 
-            if not project_file_path.is_file():
-                return None
+        if not project_file_path.is_file():
+            return None
 
-            home_path: Path = project_file_path.parent
-            project_base_name: str = project_file_path.stem
+        home_path: Path = project_file_path.parent
+        project_base_name: str = project_file_path.stem
 
-            if not home_path.is_dir():
-                return None
+        if not home_path.is_dir():
+            return None
 
+        try:
             for item in home_path.rglob("*"):
                 if (
                     item.is_file()
@@ -317,21 +321,21 @@ class ProjectChecker:
                     and ".qfieldsync" not in item.relative_to(home_path).parts
                 ):
                     conflicting_files.append(item)
-
-        except (TypeError, Exception):
-            pass
+        except Exception:
+            return None
 
         if conflicting_files:
             return FeedbackResult(
                 self.tr(
-                    'The project "{}" shares its base name with the following files, which might cause issues: {}.'
+                    'The project "{}" shares its base file name ({}) with the following files, which might cause issues: {}.'
                 ).format(
                     project_base_name,
-                    (", ".join([f'"{path}"' for path in conflicting_files])),
+                    project_file_path.name,
+                    ", ".join([f'"{path}"' for path in conflicting_files]),
                 )
             )
-        else:
-            return None
+
+        return None
 
     def check_layer_has_utf8_datasources(
         self, layer_source: LayerSource
