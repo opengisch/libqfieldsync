@@ -297,32 +297,19 @@ class ProjectChecker:
     def check_for_conflicting_base_filenames(self) -> Optional[FeedbackResult]:
         conflicting_files: List[Path] = []
 
-        try:
-            project_file_path = Path(self.project.fileName())
-        except TypeError:
-            return None
-
-        if not project_file_path.is_file():
-            return None
-
-        home_path: Path = project_file_path.parent
+        project_file_path = Path(self.project.fileName())
+        project_home_path: Path = project_file_path.parent
         project_base_name: str = project_file_path.stem
 
-        if not home_path.is_dir():
-            return None
-
-        try:
-            for item in home_path.rglob("*"):
-                if (
-                    item.is_file()
-                    and item != project_file_path
-                    and item.stem == project_base_name
-                    and not item.name.endswith("~")
-                    and ".qfieldsync" not in item.relative_to(home_path).parts
-                ):
-                    conflicting_files.append(item)
-        except Exception:
-            return None
+        for item in project_home_path.rglob("*"):
+            if (
+                item.is_file()
+                and item != project_file_path
+                and item.stem == project_base_name
+                and not item.name.endswith("~")
+                and ".qfieldsync" not in item.relative_to(project_home_path).parts
+            ):
+                conflicting_files.append(item)
 
         if conflicting_files:
             return FeedbackResult(
