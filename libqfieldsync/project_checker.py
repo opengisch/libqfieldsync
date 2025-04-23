@@ -291,11 +291,11 @@ class ProjectChecker:
             return None
 
     def check_for_conflicting_base_filenames(self) -> Optional[FeedbackResult]:
-        conflicting_files: List[Path] = []
+        conflicting_files: list[Path] = []
 
         project_file_path = Path(self.project.fileName())
-        project_home_path: Path = project_file_path.parent
-        project_base_name: str = project_file_path.stem
+        project_home_path = project_file_path.parent
+        project_base_name = project_file_path.stem
 
         for item in project_home_path.rglob("*"):
             if (
