@@ -291,7 +291,7 @@ class ProjectChecker:
             return None
 
     def check_for_conflicting_base_filenames(self) -> Optional[FeedbackResult]:
-        conflicting_files: list[Path] = []
+        conflicting_files: List[Path] = []
 
         project_file_path = Path(self.project.fileName())
         project_home_path = project_file_path.parent
