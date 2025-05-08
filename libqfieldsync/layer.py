@@ -929,8 +929,9 @@ class LayerSource(object):
         if not self.is_supported:
             reasons.append(LayerSource.PackagePreventionReason.UNSUPPORTED_DATASOURCE)
 
-        # do not package the layers within localized paths (stored outside project dir and shared among multiple projects)
-        if self.is_localized_path:
+        # The layer is invalid and it is a localized datasource.
+        # The project is available locally, but the localized dataset is not found in the localized datasets, probably not downloaded yet.
+        if not self.layer.isValid() and self.is_localized_path:
             reasons.append(LayerSource.PackagePreventionReason.LOCALIZED_PATH)
         # sometimes the remote layers are inaccessible from the current network, but we should spare them from removal
         elif not self.layer.isValid() and self.is_remote_raster_layer:
