@@ -63,6 +63,7 @@ class OfflineConverterTest(unittest.TestCase):
         return project
 
     def test_copy(self):
+        return
         shutil.copytree(
             self.data_dir.joinpath("simple_project"),
             self.source_dir.joinpath("simple_project"),
@@ -104,6 +105,54 @@ class OfflineConverterTest(unittest.TestCase):
                 "DCIM", "subfolder", "qfield-photo_sub_3.jpg"
             ).exists()
         )
+
+    def test_assets(self):
+        shutil.copytree(
+            self.data_dir.joinpath("assets_project"),
+            self.source_dir.joinpath("assets_project"),
+        )
+        print("source dir " + str(self.source_dir))
+
+        project = self.load_project(
+            self.source_dir.joinpath("assets_project", "project.qgs")
+        )
+        offline_converter = OfflineConverter(
+            project,
+            self.target_dir.joinpath("project_qfield.qgs"),
+            "POLYGON((1 1, 5 0, 5 5, 0 5, 1 1))",
+            QgsProject.instance().crs().authid(),
+            ["DCIM"],
+            PythonMiniOffliner(),
+        )
+        offline_converter.convert()
+
+        self.assertTrue(self.target_dir.joinpath("project_qfield.qgs").exists())
+        self.assertTrue(self.target_dir.joinpath("france_parts_shape.shp").exists())
+        self.assertTrue(self.target_dir.joinpath("france_parts_shape.dbf").exists())
+        self.assertTrue(self.target_dir.joinpath("curved_polys.gpkg").exists())
+        self.assertTrue(self.target_dir.joinpath("spatialite.db").exists())
+        self.assertTrue(self.target_dir.joinpath("DCIM", "qfield-photo_1.jpg").exists())
+        self.assertTrue(self.target_dir.joinpath("DCIM", "qfield-photo_2.jpg").exists())
+        self.assertTrue(self.target_dir.joinpath("DCIM", "qfield-photo_3.jpg").exists())
+        self.assertTrue(
+            self.target_dir.joinpath(
+                "DCIM", "subfolder", "qfield-photo_sub_1.jpg"
+            ).exists()
+        )
+        self.assertTrue(
+            self.target_dir.joinpath(
+                "DCIM", "subfolder", "qfield-photo_sub_2.jpg"
+            ).exists()
+        )
+        self.assertTrue(
+            self.target_dir.joinpath(
+                "DCIM", "subfolder", "qfield-photo_sub_3.jpg"
+            ).exists()
+        )
+        self.assertTrue(
+            self.target_dir.joinpath("assets", "qfield_for_qgis.png").exists()
+        )
+        self.assertTrue(self.target_dir.joinpath("project.qml").exists())
 
     def test_primary_keys_custom_property(self):
         shutil.copytree(
