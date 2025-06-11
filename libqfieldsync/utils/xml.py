@@ -19,7 +19,7 @@
 
 from typing import Optional
 
-from PyQt5.QtXml import QDomDocument, QDomElement
+from qgis.PyQt.QtXml import QDomDocument, QDomElement
 
 
 def get_themapcanvas(doc: QDomDocument) -> Optional[QDomElement]:

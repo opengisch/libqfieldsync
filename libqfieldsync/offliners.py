@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import List, NamedTuple, NewType, Optional
 
 from osgeo import gdal, ogr, osr
-from PyQt5.QtCore import QFileInfo, QVariant
 from qgis.core import (
     Qgis,
     QgsCoordinateReferenceSystem,
@@ -21,7 +20,7 @@ from qgis.core import (
     QgsVectorLayer,
     edit,
 )
-from qgis.PyQt.QtCore import QObject, pyqtSignal
+from qgis.PyQt.QtCore import QFileInfo, QObject, QVariant, pyqtSignal
 
 from .utils.logger import logger
 
