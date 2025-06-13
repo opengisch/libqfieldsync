@@ -19,6 +19,7 @@
  ***************************************************************************/
 """
 
+import shutil
 import sys
 import tempfile
 from enum import Enum
@@ -53,7 +54,6 @@ from .offliners import BaseOffliner
 from .project import ProjectConfiguration, ProjectProperties
 from .utils.file_utils import (
     copy_attachments,
-    copy_multifile,
     set_relative_embed_layer_symbols_on_project,
 )
 from .utils.logger import logger
@@ -172,6 +172,31 @@ class OfflineConverter(QObject):
 
             self.total_progress_updated.emit(100, 100, self.tr("Finished"))
 
+    def _get_additional_project_files(self, project: QgsProject) -> list[str]:
+        original_project_path = Path(self.original_filename).parent
+        additional_project_files = []
+
+        # Check for image decoration asset
+        image_decoration_path, _ = project.readEntry("Image", "/ImagePath", "")
+        if image_decoration_path:
+            image_decoration_path = Path(image_decoration_path)
+            if not image_decoration_path.is_absolute():
+                image_decoration_path = original_project_path.joinpath(
+                    image_decoration_path
+                ).resolve()
+
+            if image_decoration_path.is_file() and image_decoration_path.is_relative_to(
+                original_project_path
+            ):
+                additional_project_files.append(str(image_decoration_path))
+
+        # Check for project plugin asset
+        plugin_file = Path("{}.qml".format(str(self.original_filename)[:-4]))
+        if plugin_file.exists():
+            additional_project_files.append(str(plugin_file))
+
+        return additional_project_files
+
     def _convert(self, project: QgsProject) -> None:
         xml_elements_to_preserve = {}
         tmp_project_filename = ""
@@ -207,6 +232,9 @@ class OfflineConverter(QObject):
         tmp_project.readProject.connect(on_original_project_read)
         tmp_project.read(tmp_project_filename, read_flags)
         tmp_project.readProject.disconnect(on_original_project_read)
+
+        # Additional project files, such as image decoration, to be copied to the converted project
+        additional_project_files = self._get_additional_project_files(project)
 
         # NOTE force delete the `QgsProject`, otherwise the `QgsApplication` might be deleted by the time the project is garbage collected
         del tmp_project
@@ -315,6 +343,18 @@ class OfflineConverter(QObject):
 
         self._check_canceled()
 
+        # copy additional project files (e.g. layout images, symbology images, etc)
+        if additional_project_files:
+            project_path = Path(project.fileName()).parent
+            for additional_project_file in additional_project_files:
+                additional_project_file_path = Path(additional_project_file)
+                relative_path = additional_project_file_path.relative_to(project_path)
+                destination_file = self._export_filename.parent.joinpath(
+                    relative_path
+                ).resolve()
+                destination_file.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy(additional_project_file, str(destination_file))
+
         # save the offline project twice so that the offline plugin can "know" that it's a relative path
         QgsProject.instance().write(str(export_project_filename))
 
@@ -335,15 +375,6 @@ class OfflineConverter(QObject):
                 self.original_filename.parent,
                 export_project_filename.parent,
                 Path(source_dir),
-            )
-
-        # copy project plugin if present
-        plugin_file = Path("{}.qml".format(str(self.original_filename)[:-4]))
-        if plugin_file.exists():
-            self._check_canceled()
-
-            copy_multifile(
-                plugin_file, export_project_filename.parent.joinpath(plugin_file.name)
             )
 
         if offline_layers:
