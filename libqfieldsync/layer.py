@@ -186,6 +186,7 @@ class LayerSource(object):
             "QFieldSync/value_map_button_interface_threshold", 0
         )
 
+        # Compatibility with pre-QFieldSync 4.15.0 where no fine-grained permission lock existed
         if "QFieldSync/is_geometry_locked" in self.layer.customPropertyKeys():
             is_locked = self.layer.customProperty(
                 "QFieldSync/is_geometry_locked", False
