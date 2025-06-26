@@ -143,9 +143,18 @@ class LayerSource(object):
         self._photo_naming = {}
         self._relationship_maximum_visible = {}
         self._value_map_button_interface_threshold = 0
-        self._is_geometry_locked = None
-        self._is_geometry_locked_expression_active = False
-        self._geometry_locked_expression = ""
+        self._is_feature_addition_locked = None
+        self._is_feature_addition_locked_expression_active = False
+        self._feature_addition_locked_expression = ""
+        self._is_attribute_editing_locked = None
+        self._is_attribute_editing_locked_expression_active = False
+        self._attribute_editing_locked_expression = ""
+        self._is_geometry_editing_locked = None
+        self._is_geometry_editing_locked_expression_active = False
+        self._geometry_editing_locked_expression = ""
+        self._is_feature_deletion_locked = None
+        self._is_feature_deletion_locked_expression_active = False
+        self._feature_deletion_locked_expression = ""
         self._tracking_session_active = False
         self._tracking_time_requirement_active = False
         self._tracking_time_requirement_interval_seconds = 30
@@ -176,15 +185,81 @@ class LayerSource(object):
         self._value_map_button_interface_threshold = self.layer.customProperty(
             "QFieldSync/value_map_button_interface_threshold", 0
         )
-        self._is_geometry_locked = self.layer.customProperty(
-            "QFieldSync/is_geometry_locked", False
-        )
-        self._is_geometry_locked_expression_active = self.layer.customProperty(
-            "QFieldSync/is_geometry_locked_expression_active", False
-        )
-        self._geometry_locked_expression = self.layer.customProperty(
-            "QFieldSync/geometry_locked_expression", ""
-        )
+
+        if "QFieldSync/is_geometry_locked" in self.layer.customPropertyKeys():
+            is_locked = self.layer.customProperty(
+                "QFieldSync/is_geometry_locked", False
+            )
+            is_locked_expression_active = self.layer.customProperty(
+                "QFieldSync/is_geometry_locked_expression_active", False
+            )
+            locked_expression = self.layer.customProperty(
+                "QFieldSync/geometry_locked_expression", ""
+            )
+
+            self._is_feature_addition_locked = is_locked
+            self._is_feature_addition_locked_expression_active = (
+                is_locked_expression_active
+            )
+            self._feature_addition_locked_expression = locked_expression
+            self._is_attribute_editing_locked = False
+            self._is_attribute_editing_locked_expression_active = False
+            self._attribute_editing_locked_expression = ""
+            self._is_geometry_editing_locked = is_locked
+            self._is_geometry_editing_locked_expression_active = (
+                is_locked_expression_active
+            )
+            self._geometry_editing_locked_expression = locked_expression
+            self._is_feature_deletion_locked = is_locked
+            self._is_feature_deletion_locked_expression_active = (
+                is_locked_expression_active
+            )
+            self._feature_deletion_locked_expression = locked_expression
+        else:
+            self._is_feature_addition_locked = self.layer.customProperty(
+                "QFieldSync/is_feature_addition_locked", False
+            )
+            self._is_feature_addition_locked_expression_active = (
+                self.layer.customProperty(
+                    "QFieldSync/is_feature_addition_locked_expression_active", False
+                )
+            )
+            self._feature_addition_locked_expression = self.layer.customProperty(
+                "QFieldSync/feature_addition_locked_expression", ""
+            )
+            self._is_attribute_editing_locked = self.layer.customProperty(
+                "QFieldSync/is_attribute_editing_locked", False
+            )
+            self._is_attribute_editing_locked_expression_active = (
+                self.layer.customProperty(
+                    "QFieldSync/is_attribute_editing_locked_expression_active", False
+                )
+            )
+            self._attribute_editing_locked_expression = self.layer.customProperty(
+                "QFieldSync/attribute_editing_locked_expression", ""
+            )
+            self._is_geometry_editing_locked = self.layer.customProperty(
+                "QFieldSync/is_geometry_editing_locked", False
+            )
+            self._is_geometry_editing_locked_expression_active = (
+                self.layer.customProperty(
+                    "QFieldSync/is_geometry_editing_locked_expression_active", False
+                )
+            )
+            self._geometry_editing_locked_expression = self.layer.customProperty(
+                "QFieldSync/geometry_editing_locked_expression", ""
+            )
+            self._is_feature_deletion_locked = self.layer.customProperty(
+                "QFieldSync/is_feature_deletion_locked", False
+            )
+            self._is_feature_deletion_locked_expression_active = (
+                self.layer.customProperty(
+                    "QFieldSync/is_feature_deletion_locked_expression_active", False
+                )
+            )
+            self._feature_deletion_locked_expression = self.layer.customProperty(
+                "QFieldSync/feature_deletion_locked_expression", ""
+            )
 
         self._tracking_session_active = self.layer.customProperty(
             "QFieldSync/tracking_session_active", False
@@ -245,21 +320,86 @@ class LayerSource(object):
             self.layer.customProperty("QFieldSync/value_map_button_interface_threshold")
             != self.value_map_button_interface_threshold
         )
+
         has_changed |= (
-            bool(self.layer.customProperty("QFieldSync/is_geometry_locked"))
-            != self.is_geometry_locked
+            bool(self.layer.customProperty("QFieldSync/is_feature_addition_locked"))
+            != self.is_feature_addition_locked
         )
         has_changed |= (
             bool(
                 self.layer.customProperty(
-                    "QFieldSync/is_geometry_locked_expression_active"
+                    "QFieldSync/is_feature_addition_locked_expression_active"
                 )
             )
-            != self.is_geometry_locked_expression_active
+            != self.is_feature_addition_locked_expression_active
         )
         has_changed |= (
-            bool(self.layer.customProperty("QFieldSync/geometry_locked_expression"))
-            != self.geometry_locked_expression
+            bool(
+                self.layer.customProperty(
+                    "QFieldSync/feature_addition_locked_expression"
+                )
+            )
+            != self.feature_addition_locked_expression
+        )
+        has_changed |= (
+            bool(self.layer.customProperty("QFieldSync/is_attribute_editing_locked"))
+            != self.is_attribute_editing_locked
+        )
+        has_changed |= (
+            bool(
+                self.layer.customProperty(
+                    "QFieldSync/is_attribute_editing_locked_expression_active"
+                )
+            )
+            != self.is_attribute_editing_locked_expression_active
+        )
+        has_changed |= (
+            bool(
+                self.layer.customProperty(
+                    "QFieldSync/attribute_editing_locked_expression"
+                )
+            )
+            != self.attribute_editing_locked_expression
+        )
+        has_changed |= (
+            bool(self.layer.customProperty("QFieldSync/is_geometry_editing_locked"))
+            != self.is_geometry_editing_locked
+        )
+        has_changed |= (
+            bool(
+                self.layer.customProperty(
+                    "QFieldSync/is_geometry_editing_locked_expression_active"
+                )
+            )
+            != self.is_geometry_editing_locked_expression_active
+        )
+        has_changed |= (
+            bool(
+                self.layer.customProperty(
+                    "QFieldSync/geometry_editing_locked_expression"
+                )
+            )
+            != self.geometry_editing_locked_expression
+        )
+        has_changed |= (
+            bool(self.layer.customProperty("QFieldSync/is_feature_deletion_locked"))
+            != self.is_feature_deletion_locked
+        )
+        has_changed |= (
+            bool(
+                self.layer.customProperty(
+                    "QFieldSync/is_feature_deletion_locked_expression_active"
+                )
+            )
+            != self.is_feature_deletion_locked_expression_active
+        )
+        has_changed |= (
+            bool(
+                self.layer.customProperty(
+                    "QFieldSync/feature_deletion_locked_expression"
+                )
+            )
+            != self.feature_deletion_locked_expression
         )
 
         has_changed |= (
@@ -339,24 +479,77 @@ class LayerSource(object):
             "QFieldSync/value_map_button_interface_threshold",
             self.value_map_button_interface_threshold,
         )
-        # custom properties does not store the data type, so it is safer to remove boolean custom properties, rather than setting them to the string 'false' (which is boolean `True`)
-        if self.is_geometry_locked:
-            self.layer.setCustomProperty("QFieldSync/is_geometry_locked", True)
-        else:
-            self.layer.removeCustomProperty("QFieldSync/is_geometry_locked")
 
-        if self.is_geometry_locked_expression_active:
+        # clear old, outdated properties
+        self.layer.removeCustomProperty("QFieldSync/is_geometry_locked")
+        self.layer.removeCustomProperty(
+            "QFieldSync/is_geometry_locked_expression_active"
+        )
+        self.layer.removeCustomProperty("QFieldSync/geometry_locked_expression")
+
+        if self.is_feature_addition_locked:
+            self.layer.setCustomProperty("QFieldSync/is_feature_addition_locked", True)
+        else:
+            self.layer.removeCustomProperty("QFieldSync/is_feature_addition_locked")
+        if self.is_feature_addition_locked_expression_active:
             self.layer.setCustomProperty(
-                "QFieldSync/is_geometry_locked_expression_active", True
+                "QFieldSync/is_feature_addition_locked_expression_active", True
             )
         else:
             self.layer.removeCustomProperty(
-                "QFieldSync/is_geometry_locked_expression_active"
+                "QFieldSync/is_feature_addition_locked_expression_active"
             )
-
         self.layer.setCustomProperty(
-            "QFieldSync/geometry_locked_expression",
-            self.geometry_locked_expression,
+            "QFieldSync/feature_addition_locked_expression",
+            self.feature_addition_locked_expression,
+        )
+        if self.is_attribute_editing_locked:
+            self.layer.setCustomProperty("QFieldSync/is_attribute_editing_locked", True)
+        else:
+            self.layer.removeCustomProperty("QFieldSync/is_attribute_editing_locked")
+        if self.is_attribute_editing_locked_expression_active:
+            self.layer.setCustomProperty(
+                "QFieldSync/is_attribute_editing_locked_expression_active", True
+            )
+        else:
+            self.layer.removeCustomProperty(
+                "QFieldSync/is_attribute_editing_locked_expression_active"
+            )
+        self.layer.setCustomProperty(
+            "QFieldSync/attribute_editing_locked_expression",
+            self.attribute_editing_locked_expression,
+        )
+        if self.is_geometry_editing_locked:
+            self.layer.setCustomProperty("QFieldSync/is_geometry_editing_locked", True)
+        else:
+            self.layer.removeCustomProperty("QFieldSync/is_geometry_editing_locked")
+        if self.is_geometry_editing_locked_expression_active:
+            self.layer.setCustomProperty(
+                "QFieldSync/is_geometry_editing_locked_expression_active", True
+            )
+        else:
+            self.layer.removeCustomProperty(
+                "QFieldSync/is_geometry_editing_locked_expression_active"
+            )
+        self.layer.setCustomProperty(
+            "QFieldSync/geometry_editing_locked_expression",
+            self.geometry_editing_locked_expression,
+        )
+        if self.is_feature_deletion_locked:
+            self.layer.setCustomProperty("QFieldSync/is_feature_deletion_locked", True)
+        else:
+            self.layer.removeCustomProperty("QFieldSync/is_feature_deletion_locked")
+        if self.is_feature_deletion_locked_expression_active:
+            self.layer.setCustomProperty(
+                "QFieldSync/is_feature_deletion_locked_expression_active", True
+            )
+        else:
+            self.layer.removeCustomProperty(
+                "QFieldSync/is_feature_deletion_locked_expression_active"
+            )
+        self.layer.setCustomProperty(
+            "QFieldSync/feature_deletion_locked_expression",
+            self.feature_deletion_locked_expression,
         )
 
         if self.tracking_session_active:
@@ -712,32 +905,116 @@ class LayerSource(object):
         )
 
     @property
-    def is_geometry_locked(self):
-        return bool(self._is_geometry_locked)
+    def is_feature_addition_locked(self):
+        return bool(self._is_feature_addition_locked)
 
-    @is_geometry_locked.setter
-    def is_geometry_locked(self, is_geometry_locked):
-        self._is_geometry_locked = is_geometry_locked
+    @is_feature_addition_locked.setter
+    def is_feature_addition_locked(self, is_feature_addition_locked):
+        self._is_feature_addition_locked = is_feature_addition_locked
 
     @property
-    def is_geometry_locked_expression_active(self):
-        return bool(self._is_geometry_locked_expression_active)
+    def is_feature_addition_locked_expression_active(self):
+        return bool(self._is_feature_addition_locked_expression_active)
 
-    @is_geometry_locked_expression_active.setter
-    def is_geometry_locked_expression_active(
-        self, is_geometry_locked_expression_active
+    @is_feature_addition_locked_expression_active.setter
+    def is_feature_addition_locked_expression_active(
+        self, is_feature_addition_locked_expression_active
     ):
-        self._is_geometry_locked_expression_active = (
-            is_geometry_locked_expression_active
+        self._is_feature_addition_locked_expression_active = (
+            is_feature_addition_locked_expression_active
         )
 
     @property
-    def geometry_locked_expression(self):
-        return self._geometry_locked_expression
+    def feature_addition_locked_expression(self):
+        return self._feature_addition_locked_expression
 
-    @geometry_locked_expression.setter
-    def geometry_locked_expression(self, geometry_locked_expression):
-        self._geometry_locked_expression = geometry_locked_expression
+    @feature_addition_locked_expression.setter
+    def feature_addition_locked_expression(self, feature_addition_locked_expression):
+        self._feature_addition_locked_expression = feature_addition_locked_expression
+
+    @property
+    def is_attribute_editing_locked(self):
+        return bool(self._is_attribute_editing_locked)
+
+    @is_attribute_editing_locked.setter
+    def is_attribute_editing_locked(self, is_attribute_editing_locked):
+        self._is_attribute_editing_locked = is_attribute_editing_locked
+
+    @property
+    def is_attribute_editing_locked_expression_active(self):
+        return bool(self._is_attribute_editing_locked_expression_active)
+
+    @is_attribute_editing_locked_expression_active.setter
+    def is_attribute_editing_locked_expression_active(
+        self, is_attribute_editing_locked_expression_active
+    ):
+        self._is_attribute_editing_locked_expression_active = (
+            is_attribute_editing_locked_expression_active
+        )
+
+    @property
+    def attribute_editing_locked_expression(self):
+        return self._attribute_editing_locked_expression
+
+    @attribute_editing_locked_expression.setter
+    def attribute_editing_locked_expression(self, attribute_editing_locked_expression):
+        self._attribute_editing_locked_expression = attribute_editing_locked_expression
+
+    @property
+    def is_geometry_editing_locked(self):
+        return bool(self._is_geometry_editing_locked)
+
+    @is_geometry_editing_locked.setter
+    def is_geometry_editing_locked(self, is_geometry_editing_locked):
+        self._is_geometry_editing_locked = is_geometry_editing_locked
+
+    @property
+    def is_geometry_editing_locked_expression_active(self):
+        return bool(self._is_geometry_editing_locked_expression_active)
+
+    @is_geometry_editing_locked_expression_active.setter
+    def is_geometry_editing_locked_expression_active(
+        self, is_geometry_editing_locked_expression_active
+    ):
+        self._is_geometry_editing_locked_expression_active = (
+            is_geometry_editing_locked_expression_active
+        )
+
+    @property
+    def geometry_editing_locked_expression(self):
+        return self._geometry_editing_locked_expression
+
+    @geometry_editing_locked_expression.setter
+    def geometry_editing_locked_expression(self, geometry_editing_locked_expression):
+        self._geometry_editing_locked_expression = geometry_editing_locked_expression
+
+    @property
+    def is_feature_deletion_locked(self):
+        return bool(self._is_feature_deletion_locked)
+
+    @is_feature_deletion_locked.setter
+    def is_feature_deletion_locked(self, is_feature_deletion_locked):
+        self._is_feature_deletion_locked = is_feature_deletion_locked
+
+    @property
+    def is_feature_deletion_locked_expression_active(self):
+        return bool(self._is_feature_deletion_locked_expression_active)
+
+    @is_feature_deletion_locked_expression_active.setter
+    def is_feature_deletion_locked_expression_active(
+        self, is_feature_deletion_locked_expression_active
+    ):
+        self._is_feature_deletion_locked_expression_active = (
+            is_feature_deletion_locked_expression_active
+        )
+
+    @property
+    def feature_deletion_locked_expression(self):
+        return self._feature_deletion_locked_expression
+
+    @feature_deletion_locked_expression.setter
+    def feature_deletion_locked_expression(self, feature_deletion_locked_expression):
+        self._feature_deletion_locked_expression = feature_deletion_locked_expression
 
     @property
     def tracking_session_active(self):
