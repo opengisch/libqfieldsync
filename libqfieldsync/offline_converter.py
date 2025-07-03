@@ -661,7 +661,7 @@ class OfflineConverter(QObject):
             "EXTENT": extent,
             "ZOOM_MIN": self.project_configuration.base_map_tiles_min_zoom_level,
             "ZOOM_MAX": self.project_configuration.base_map_tiles_max_zoom_level,
-            "TILE_SIZE": 256,
+            "TILE_SIZE": self.project_configuration.base_map_tile_size,
             "OUTPUT_FILE": str(basemap_export_path),
         }
 
