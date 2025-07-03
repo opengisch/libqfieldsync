@@ -1165,7 +1165,6 @@
     <qfieldsync>
       <areaOfInterest type="QString"></areaOfInterest>
       <areaOfInterestCrs type="QString"></areaOfInterestCrs>
-      <baseMapMupp type="double">10</baseMapMupp>
       <baseMapTheme type="QString"></baseMapTheme>
       <baseMapTileSize type="int">1024</baseMapTileSize>
       <baseMapType type="QString">singleLayer</baseMapType>
