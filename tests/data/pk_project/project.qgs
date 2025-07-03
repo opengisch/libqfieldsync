@@ -546,7 +546,6 @@
       <ProjectionsEnabled type="int">1</ProjectionsEnabled>
     </SpatialRefSys>
     <qfieldsync>
-      <baseMapMupp type="double">10</baseMapMupp>
       <baseMapTheme type="QString"></baseMapTheme>
       <baseMapTileSize type="int">1024</baseMapTileSize>
       <baseMapType type="QString">singleLayer</baseMapType>

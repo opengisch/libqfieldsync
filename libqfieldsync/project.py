@@ -10,7 +10,6 @@ class ProjectProperties(object):
     BASE_MAP_THEME = "/baseMapTheme"
     BASE_MAP_LAYER = "/baseMapLayer"
     BASE_MAP_TILE_SIZE = "/baseMapTileSize"
-    BASE_MAP_MUPP = "/baseMapMupp"
     BASE_MAP_TILES_MIN_ZOOM_LEVEL = "/baseMapTilesMinZoomLevel"
     BASE_MAP_TILES_MAX_ZOOM_LEVEL = "/baseMapTilesMaxZoomLevel"
     OFFLINE_COPY_ONLY_AOI = "/offlineCopyOnlyAoi"
@@ -246,19 +245,6 @@ class ProjectConfiguration(object):
     def base_map_tile_size(self, value):
         self.project.writeEntry(
             "qfieldsync", ProjectProperties.BASE_MAP_TILE_SIZE, value
-        )
-
-    @property
-    def base_map_mupp(self):
-        base_map_mupp, _ = self.project.readDoubleEntry(
-            "qfieldsync", ProjectProperties.BASE_MAP_MUPP, 10.0
-        )
-        return base_map_mupp
-
-    @base_map_mupp.setter
-    def base_map_mupp(self, value):
-        self.project.writeEntryDouble(
-            "qfieldsync", ProjectProperties.BASE_MAP_MUPP, value
         )
 
     @property
