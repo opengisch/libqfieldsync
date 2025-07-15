@@ -27,6 +27,11 @@ class ProjectProperties(object):
     GEOFENCING_BEHAVIOR = "/geofencingBehavior"
     GEOFENCING_SHOULD_PREVENT_DIGITIZING = "/geofencingShouldPreventDigitizing"
     MAP_THEMES_ACTIVE_LAYER = "/mapThemesActiveLayers"
+    FORCE_STAMPING = "/forceStamping"
+    STAMPING_FONT_STYLE = "/stampingFontStyle"
+    STAMPING_HORIZONTAL_ALIGNMENT = "/stampingHorizontalAlignment"
+    STAMPING_IMAGE_DECORATION = "/stampingImageDecoration"
+    STAMPING_DETAILS_EXPRESSION = "/stampingDetailsExpression"
 
     class BaseMapType(object):
         def __init__(self):
@@ -162,6 +167,69 @@ class ProjectConfiguration(object):
         self.project.writeEntry(
             "qfieldsync", ProjectProperties.GEOFENCING_SHOULD_PREVENT_DIGITIZING, value
         )
+
+    @property
+    def stamping_font_style(self):
+        stamping_font_style, _ = self.project.readEntry(
+            "qfieldsync", ProjectProperties.STAMPING_FONT_STYLE
+        )
+        return stamping_font_style
+
+    @stamping_font_style.setter
+    def stamping_font_style(self, value):
+        self.project.writeEntry(
+            "qfieldsync", ProjectProperties.STAMPING_FONT_STYLE, value
+        )
+
+    @property
+    def stamping_horizontal_alignment(self):
+        stamping_horizontal_alignment, _ = self.project.readNumEntry(
+            "qfieldsync", ProjectProperties.STAMPING_HORIZONTAL_ALIGNMENT
+        )
+        return stamping_horizontal_alignment
+
+    @stamping_horizontal_alignment.setter
+    def stamping_horizontal_alignment(self, value):
+        self.project.writeEntry(
+            "qfieldsync", ProjectProperties.STAMPING_HORIZONTAL_ALIGNMENT, value
+        )
+
+    @property
+    def stamping_image_decoration(self):
+        stamping_image_decoration, _ = self.project.readEntry(
+            "qfieldsync", ProjectProperties.STAMPING_IMAGE_DECORATION
+        )
+        return stamping_image_decoration
+
+    @stamping_image_decoration.setter
+    def stamping_image_decoration(self, value):
+        self.project.writeEntry(
+            "qfieldsync", ProjectProperties.STAMPING_IMAGE_DECORATION, value
+        )
+
+    @property
+    def stamping_details_expression(self):
+        stamping_details_expression, _ = self.project.readEntry(
+            "qfieldsync", ProjectProperties.STAMPING_DETAILS_EXPRESSION
+        )
+        return stamping_details_expression
+
+    @stamping_details_expression.setter
+    def stamping_details_expression(self, value):
+        self.project.writeEntry(
+            "qfieldsync", ProjectProperties.STAMPING_DETAILS_EXPRESSION, value
+        )
+
+    @property
+    def force_stamping(self):
+        force_stamping, _ = self.project.readBoolEntry(
+            "qfieldsync", ProjectProperties.FORCE_STAMPING, False
+        )
+        return force_stamping
+
+    @force_stamping.setter
+    def force_stamping(self, value):
+        self.project.writeEntry("qfieldsync", ProjectProperties.FORCE_STAMPING, value)
 
     @property
     def map_themes_active_layer(self):
