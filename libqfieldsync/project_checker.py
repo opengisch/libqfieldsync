@@ -418,7 +418,7 @@ class ProjectChecker:
                         self.tr("The layer data source is not supported on QField!")
                     )
                 elif reason == LayerSource.PackagePreventionReason.LOCALIZED_PATH:
-                    reason_msgs.append(self.tr("The layer is localized data path!"))
+                    reason_msgs.append(self.tr("The layer is a shared dateset path!"))
 
             main_msg += "\n\n"
             main_msg += "\n".join(f"- {r}" for r in reason_msgs)
