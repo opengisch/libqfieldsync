@@ -31,7 +31,7 @@ class ProjectProperties(object):
     STAMPING_FONT_STYLE = "/stampingFontStyle"
     STAMPING_HORIZONTAL_ALIGNMENT = "/stampingHorizontalAlignment"
     STAMPING_IMAGE_DECORATION = "/stampingImageDecoration"
-    STAMPING_DETAILS_EXPRESSION = "/stampingDetailsExpression"
+    STAMPING_DETAILS_TEMPLATE = "/stampingDetailsTemplate"
 
     class BaseMapType(object):
         def __init__(self):
@@ -208,16 +208,16 @@ class ProjectConfiguration(object):
         )
 
     @property
-    def stamping_details_expression(self):
-        stamping_details_expression, _ = self.project.readEntry(
-            "qfieldsync", ProjectProperties.STAMPING_DETAILS_EXPRESSION
+    def stamping_details_template(self):
+        stamping_details_template, _ = self.project.readEntry(
+            "qfieldsync", ProjectProperties.STAMPING_DETAILS_TEMPLATE
         )
-        return stamping_details_expression
+        return stamping_details_template
 
-    @stamping_details_expression.setter
-    def stamping_details_expression(self, value):
+    @stamping_details_template.setter
+    def stamping_details_template(self, value):
         self.project.writeEntry(
-            "qfieldsync", ProjectProperties.STAMPING_DETAILS_EXPRESSION, value
+            "qfieldsync", ProjectProperties.STAMPING_DETAILS_TEMPLATE, value
         )
 
     @property
