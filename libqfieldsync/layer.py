@@ -804,7 +804,7 @@ class LayerSource(object):
     def available_cloud_actions(self):
         actions = []
 
-        if self.is_virtual:
+        if self.is_virtual or self.is_localized_path:
             actions.append(
                 (
                     SyncAction.NO_ACTION,
@@ -813,6 +813,13 @@ class LayerSource(object):
                     ),
                 )
             )
+            actions.append(
+                (
+                    SyncAction.REMOVE,
+                    QCoreApplication.translate("LayerAction", "Remove from project"),
+                )
+            )
+
             return actions
 
         if self.layer.type() == QgsMapLayer.VectorLayer:
@@ -825,16 +832,7 @@ class LayerSource(object):
             )
 
             # only online layers support direct access, e.g. PostGIS or WFS
-            if not (self.is_file and not self.is_localized_path):
-                actions.append(
-                    (
-                        SyncAction.NO_ACTION,
-                        QCoreApplication.translate(
-                            "LayerAction", "Directly access data source"
-                        ),
-                    )
-                )
-            elif self.is_file and not self.is_localized_path:
+            if not self.is_file or self.layer.readOnly():
                 actions.append(
                     (
                         SyncAction.NO_ACTION,
