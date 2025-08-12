@@ -1168,7 +1168,8 @@ class LayerSource:
 
     @property
     def filename(self) -> str:
-        """Returns the filename of the file if the layer is file based. E.g. GPKG, CSV, but not PostGIS, WFS
+        """
+        Returns the filename of the file if the layer is file based. E.g. GPKG, CSV, but not PostGIS, WFS
 
         Note: This may return garbage path, e.g. on online layers such as PostGIS or WFS. Always check with os.path.isfile(),
         as Path.is_file() raises an exception prior to Python 3.8

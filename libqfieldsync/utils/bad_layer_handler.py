@@ -43,7 +43,8 @@ bad_layer_handler = BadLayerHandler()
 
 
 class set_bad_layer_handler:
-    """QGIS bad layer handler catches all unavailable layers, including the localized ones.
+    """
+    QGIS bad layer handler catches all unavailable layers, including the localized ones.
     Can be used a context manager or decorator around `QgsProject.read()` call.
     """
 
