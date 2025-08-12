@@ -2,7 +2,7 @@ import hashlib
 from collections import defaultdict
 from enum import Enum
 from pathlib import Path
-from typing import List, NamedTuple, NewType, Optional
+from typing import Dict, List, NamedTuple, NewType, Optional
 
 from osgeo import gdal, ogr, osr
 from qgis.core import (
@@ -152,6 +152,10 @@ class QgisCoreOffliner(BaseOffliner):
 
 
 class PythonMiniOffliner(BaseOffliner):
+    class LayerInfo(NamedTuple):
+        layer: QgsVectorLayer
+        subset_string: str
+
     def convert_to_offline(
         self,
         offline_db_filename: str,
@@ -384,41 +388,11 @@ class PythonMiniOffliner(BaseOffliner):
         """
         project = QgsProject.instance()
 
+        assert project
+
         driver = ogr.GetDriverByName("GPKG")
         data_source = driver.CreateDataSource(offline_gpkg_path)
-
-        class LayerInfo(NamedTuple):
-            layer: QgsVectorLayer
-            subset_string: str
-
-        # A dict that maps data sources (tables) to a list of layers connecting them
-        datasource_mapping = defaultdict(list)
-        for layer in project.mapLayers().values():
-            if layer.type() != QgsMapLayer.VectorLayer:
-                logger.info(f"Skipping layer {layer.name()} :: not a vector layer")
-                continue
-
-            if not layer.isValid():
-                reason = ""
-                if layer.dataProvider():
-                    reason = layer.dataProvider().error()
-                logger.info(f"Skipping layer {layer.name()} :: invalid ({reason})")
-                continue
-
-            if offline_layers is not None and layer not in offline_layers:
-                logger.info(
-                    f"Skipping layer {layer.name()} :: not configured as offline layer"
-                )
-                continue
-
-            subset_string = layer.subsetString()
-            layer.setSubsetString("")
-
-            datasource_hash = hashlib.sha256(
-                layer.dataProvider().dataSourceUri().encode()
-            ).hexdigest()
-
-            datasource_mapping[datasource_hash].append(LayerInfo(layer, subset_string))
+        datasource_mapping = self._get_datasource_mapping(project, offline_layers)
 
         for layer_infos in datasource_mapping.values():
             layer_to_offline = layer_infos[0].layer
@@ -480,3 +454,46 @@ class PythonMiniOffliner(BaseOffliner):
             PROJECT_ENTRY_KEY_OFFLINE_DB_PATH,
             project.writePath(offline_gpkg_path),
         )
+
+    def _get_datasource_mapping(
+        self,
+        project: QgsProject,
+        offline_layers: Optional[List[QgsMapLayer]],
+    ) -> Dict[str, List[LayerInfo]]:
+        """
+        Create a dict of data sources (tables/files) to a list of layers that consume data from them.
+
+        For example `data.geojson` can be referred by multiple layers in QGIS, but the data source is still the same.
+        """
+        # A dict that maps data sources (tables) to a list of layers connecting them
+        datasource_mapping = defaultdict(list)
+        for layer in project.mapLayers().values():
+            if layer.type() != QgsMapLayer.VectorLayer:
+                logger.info(f"Skipping layer {layer.name()} :: not a vector layer")
+                continue
+
+            if not layer.isValid():
+                reason = ""
+                if layer.dataProvider():
+                    reason = layer.dataProvider().error()
+                logger.info(f"Skipping layer {layer.name()} :: invalid ({reason})")
+                continue
+
+            if offline_layers is not None and layer not in offline_layers:
+                logger.info(
+                    f"Skipping layer {layer.name()} :: not configured as offline layer"
+                )
+                continue
+
+            subset_string = layer.subsetString()
+            layer.setSubsetString("")
+
+            datasource_hash = hashlib.sha256(
+                layer.dataProvider().dataSourceUri().encode()
+            ).hexdigest()
+
+            datasource_mapping[datasource_hash].append(
+                PythonMiniOffliner.LayerInfo(layer, subset_string)
+            )
+
+        return datasource_mapping
