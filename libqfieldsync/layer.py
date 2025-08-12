@@ -155,6 +155,7 @@ class LayerSource(object):
         self._is_feature_deletion_locked = None
         self._is_feature_deletion_locked_expression_active = False
         self._feature_deletion_locked_expression = ""
+        self._allow_value_relation_feature_addition = False
         self._tracking_session_active = False
         self._tracking_time_requirement_active = False
         self._tracking_time_requirement_interval_seconds = 30
@@ -261,7 +262,9 @@ class LayerSource(object):
             self._feature_deletion_locked_expression = self.layer.customProperty(
                 "QFieldSync/feature_deletion_locked_expression", ""
             )
-
+        self._allow_value_relation_feature_addition = self.layer.customProperty(
+            "QFieldSync/allow_value_relation_feature_addition", False
+        )
         self._tracking_session_active = self.layer.customProperty(
             "QFieldSync/tracking_session_active", False
         )
@@ -402,7 +405,10 @@ class LayerSource(object):
             )
             != self.feature_deletion_locked_expression
         )
-
+        has_changed |= (
+            bool(self.layer.customProperty("QFieldSync/allow_value_relation_feature_addition"))
+            != self.allow_value_relation_feature_addition
+        )
         has_changed |= (
             bool(self.layer.customProperty("QFieldSync/tracking_session_active"))
             != self.tracking_session_active
@@ -552,6 +558,11 @@ class LayerSource(object):
             "QFieldSync/feature_deletion_locked_expression",
             self.feature_deletion_locked_expression,
         )
+
+        if self.allow_value_relation_feature_addition:
+            self.layer.setCustomProperty("QFieldSync/allow_value_relation_feature_addition", True)
+        else:
+            self.layer.removeCustomProperty("QFieldSync/allow_value_relation_feature_addition")
 
         if self.tracking_session_active:
             self.layer.setCustomProperty("QFieldSync/tracking_session_active", True)
@@ -1014,6 +1025,14 @@ class LayerSource(object):
     @feature_deletion_locked_expression.setter
     def feature_deletion_locked_expression(self, feature_deletion_locked_expression):
         self._feature_deletion_locked_expression = feature_deletion_locked_expression
+
+    @property
+    def allow_value_relation_feature_addition(self):
+        return bool(self._allow_value_relation_feature_addition)
+
+    @allow_value_relation_feature_addition.setter
+    def allow_value_relation_feature_addition(self, allow_value_relation_feature_addition):
+        self._allow_value_relation_feature_addition = allow_value_relation_feature_addition
 
     @property
     def tracking_session_active(self):
