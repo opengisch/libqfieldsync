@@ -306,7 +306,7 @@ class PythonMiniOffliner(BaseOffliner):
 
             for feature in layer.dataProvider().getFeatures(feature_request):
                 # Prepend an empty attribute for the new FID
-                attrs = [None] + feature.attributes()
+                attrs = [None, *feature.attributes()]
 
                 # Fixup list and json attributes
                 for i in range(new_layer.fields().count()):
