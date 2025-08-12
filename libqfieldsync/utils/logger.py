@@ -19,7 +19,7 @@ def addLoggingLevel(level_name, levelno, method_name=None):
     raise an `AttributeError` if the level name is already an attribute of the
     `logging` module or if the method name is already present
 
-    Example
+    Example:
     -------
     >>> addLoggingLevel('TRACE', logging.DEBUG - 5)
     >>> logging.getLogger(__name__).setLevel("TRACE")
