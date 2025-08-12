@@ -236,6 +236,7 @@ def update_symbols_to_relative_embedded(
         symbol: The QGIS symbol (from a renderer).
         home_path: The root of QGIS Project home path.
         destination_path: The target directory where the exported project will be saved.
+
     """
     if symbol is None:
         return
@@ -285,6 +286,7 @@ def set_relative_embed_layer_symbols_on_project(
         layer: The QgsVectorLayer to update.  The layer is a point layer.
         project_home: The root of QGIS Project home path.
         export_project_path: The target directory for the exported offline QGIS project.
+
     """
 
     if Qgis.QGIS_VERSION_INT >= 33000:

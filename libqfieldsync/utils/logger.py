@@ -29,6 +29,7 @@ def addLoggingLevel(level_name, levelno, method_name=None):
     5
 
     Shamelessly adapted from: https://stackoverflow.com/a/35804945
+
     """
     if not method_name:
         method_name = level_name.lower()

@@ -63,6 +63,7 @@ def get_file_extension_group(filename):
     Examples:
          airports.shp -> 'airport', ['.shp', '.shx', '.dbf', '.sbx', '.sbn', '.shp.xml']
          forests.gpkg -> 'forests', ['.gpkg']
+
     """
     for group in file_extension_groups:
         for extension in group:

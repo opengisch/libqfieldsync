@@ -32,6 +32,7 @@ def get_themapcanvas(doc: QDomDocument) -> Optional[QDomElement]:
 
     Returns:
         Optional[QDomElement]: the "themapcanvas" element
+
     """
     nodes = doc.elementsByTagName("mapcanvas")
 
