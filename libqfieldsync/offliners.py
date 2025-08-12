@@ -168,24 +168,24 @@ class PythonMiniOffliner(BaseOffliner):
         """Converts a QGIS field type to a matching OGR field type"""
         ogr_sub_type = ogr.OFSTNone
 
-        type = field.type()
+        field_type = field.type()
 
-        if type == QVariant.Int:
+        if field_type == QVariant.Int:
             ogr_type = ogr.OFTInteger
-        elif type == QVariant.LongLong:
+        elif field_type == QVariant.LongLong:
             ogr_type = ogr.OFTInteger64
-        elif type == QVariant.Double:
+        elif field_type == QVariant.Double:
             ogr_type = ogr.OFTReal
-        elif type == QVariant.Time:
+        elif field_type == QVariant.Time:
             ogr_type = ogr.OFTTime
-        elif type == QVariant.Date:
+        elif field_type == QVariant.Date:
             ogr_type = ogr.OFTDate
-        elif type == QVariant.DateTime:
+        elif field_type == QVariant.DateTime:
             ogr_type = ogr.OFTDateTime
-        elif type == QVariant.Bool:
+        elif field_type == QVariant.Bool:
             ogr_type = ogr.OFTInteger
             ogr_sub_type = ogr.OFSTBoolean
-        elif type == QVariant.StringList or type == QVariant.List:
+        elif field_type == QVariant.StringList or field_type == QVariant.List:
             ogr_type = ogr.OFTString
             ogr_sub_type = ogr.OFSTJSON
         else:
@@ -306,8 +306,8 @@ class PythonMiniOffliner(BaseOffliner):
 
                 # Fixup list and json attributes
                 for i in range(new_layer.fields().count()):
-                    type = new_layer.fields().at(i).type()
-                    if type == QVariant.StringList or type == QVariant.List:
+                    field_type = new_layer.fields().at(i).type()
+                    if field_type == QVariant.StringList or field_type == QVariant.List:
                         attrs[i] = QgsJsonUtils.encodeValue(attrs[i])
 
                 feature.setFields(new_fields)
