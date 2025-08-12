@@ -365,7 +365,8 @@ class PythonMiniOffliner(BaseOffliner):
         bbox: Optional[QgsRectangle],
         exported_project_title: str = "",
     ) -> None:
-        """Converts the currently loaded QgsProject to an offline project.
+        """
+        Converts the currently loaded QgsProject to an offline project.
         Offline layers are written to ``offline_gpkg_path``. Only valid vector layers are written.
         If ``layer_ids`` is specified, only layers present in this list are written.
         If ``bbox`` is specified, only features within this ``bbox`` are written.
