@@ -154,7 +154,6 @@ class OfflineConverter(QObject):
                 self.area_of_interest_crs.isValid()
             ), f"Invalid CRS specified for area of interest {area_of_interest_crs}"
 
-    # flake8: noqa: max-complexity: 33
     def convert(self, reload_original_project: bool = True) -> None:
         """Convert the project to a portable project."""
         project = QgsProject.instance()
