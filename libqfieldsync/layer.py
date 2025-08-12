@@ -1394,7 +1394,7 @@ class LayerSource:
             options = QgsVectorFileWriter.SaveVectorOptions()
             options.fileEncoding = "UTF-8"
             options.driverName = "GPKG"
-            if Qgis.QGIS_VERSION_INT > 32000:
+            if Qgis.versionInt() > 32000:  # noqa: PLR2004
                 (
                     error,
                     error_msg,

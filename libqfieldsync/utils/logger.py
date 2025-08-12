@@ -55,7 +55,7 @@ def addLoggingLevel(level_name, levelno, method_name=None):
 # add QGIS success log level
 addLoggingLevel("SUCCESS", logging.DEBUG - 5)
 
-if Qgis.QGIS_VERSION_INT >= 32000:
+if Qgis.versionInt() >= 32000:  # noqa: PLR2004
     LogNoLevel = Qgis.MessageLevel.NoLevel
 else:
     LogNoLevel = getattr(Qgis.MessageLevel, "None")

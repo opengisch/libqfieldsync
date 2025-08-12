@@ -286,7 +286,7 @@ def set_relative_embed_layer_symbols_on_project(
         export_project_path: The target directory for the exported offline QGIS project.
 
     """
-    if Qgis.QGIS_VERSION_INT >= 33000:
+    if Qgis.versionInt() >= 33000:  # noqa: PLR2004
         point_geometry = Qgis.GeometryType.Point
     else:
         from qgis.core import QgsWkbTypes
