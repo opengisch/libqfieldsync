@@ -649,9 +649,7 @@ class LayerSource:
         if ews.type() != "ExternalResource":
             return None
 
-        resource_type = (
-            ews.config()["DocumentViewer"] if "DocumentViewer" in ews.config() else 0
-        )
+        resource_type = ews.config().get("DocumentViewer", 0)
         return self.get_attachment_type_by_int_value(resource_type)
 
     def get_attachment_fields(self) -> Dict[str, AttachmentType]:
