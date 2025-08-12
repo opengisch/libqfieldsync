@@ -1371,7 +1371,7 @@ class LayerSource:
         :param target_path: A path to a folder into which the data will be copied
         :param keep_existent: if True and target file already exists, keep it as it is
         """
-        if not self.layer.type() == QgsMapLayer.VectorLayer or not self.layer.isValid():
+        if self.layer.type() != QgsMapLayer.VectorLayer or not self.layer.isValid():
             return None
 
         file_path = self.filename
