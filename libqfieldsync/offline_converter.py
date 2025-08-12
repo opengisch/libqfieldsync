@@ -90,7 +90,7 @@ class ExportType(Enum):
 
 
 class OfflineConverter(QObject):
-    progressStopped = pyqtSignal()
+    progress_stopped = pyqtSignal()
     warning = pyqtSignal(str, str)
     task_progress_updated = pyqtSignal(int, int)
     total_progress_updated = pyqtSignal(int, int, str)
@@ -137,9 +137,11 @@ class OfflineConverter(QObject):
 
         self.offliner = offliner
 
-        self.offliner.layerProgressUpdated.connect(self._on_offline_editing_next_layer)
-        self.offliner.progressModeSet.connect(self._on_offline_editing_max_changed)
-        self.offliner.progressUpdated.connect(self._on_offline_editing_task_progress)
+        self.offliner.layer_progress_updated.connect(
+            self._on_offline_editing_next_layer
+        )
+        self.offliner.progress_mode_set.connect(self._on_offline_editing_max_changed)
+        self.offliner.progress_updated.connect(self._on_offline_editing_task_progress)
 
         self.project_configuration = ProjectConfiguration(project)
 
