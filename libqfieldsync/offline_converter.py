@@ -168,7 +168,7 @@ class OfflineConverter(QObject):
 
             self.total_progress_updated.emit(100, 100, self.tr("Finished"))
 
-    def _get_additional_project_files(self, project: QgsProject) -> list[str]:
+    def _get_additional_project_files(self, project: QgsProject) -> List[str]:
         original_project_path = Path(self.original_filename).parent
         additional_project_files = []
 
