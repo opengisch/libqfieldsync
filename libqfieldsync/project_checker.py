@@ -485,7 +485,7 @@ class ProjectChecker:
 
     def check_project_layers_sources_actions(self) -> Optional[FeedbackResult]:
         """Check if layers from the same GeoPackage have offline and copy actions."""
-        layer_sources_by_filename: dict[str, list[LayerSource]] = defaultdict(list)
+        layer_sources_by_filename: Dict[str, List[LayerSource]] = defaultdict(list)
 
         for project_layer in self.project.mapLayers().values():
             layer_source = LayerSource(project_layer)
