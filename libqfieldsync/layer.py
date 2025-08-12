@@ -18,6 +18,7 @@ from qgis.core import (
     QgsProviderRegistry,
     QgsReadWriteContext,
     QgsVectorFileWriter,
+    QgsVectorLayer,
 )
 from qgis.PyQt.QtCore import QCoreApplication
 from qgis.PyQt.QtXml import QDomDocument
@@ -1340,6 +1341,8 @@ class LayerSource:
         if self.layer.type() != QgsMapLayer.VectorLayer or not self.layer.isValid():
             return None
 
+        assert isinstance(self.layer, QgsVectorLayer)
+
         file_path = self.filename
         suffix = ""
         uri_parts = self.layer.source().split("|", 1)
@@ -1380,6 +1383,9 @@ class LayerSource:
 
             # clone vector layer and strip it of filter, joins, and virtual fields
             source_layer = self.layer.clone()
+
+            assert source_layer is not None
+
             source_layer.setSubsetString("")
             source_layer_joins = source_layer.vectorJoins()
             for join in source_layer_joins:
