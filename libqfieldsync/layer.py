@@ -1383,7 +1383,7 @@ class LayerSource:
 
         layer_subset_string = self.layer.subsetString()
         if new_source == "":
-            pattern = re.compile(r"[\W_]+")  # NOQA
+            pattern = re.compile(r"[\W_]+")
             cleaned_name = pattern.sub("", self.layer.name())
             dest_file = os.path.join(target_path, "{}.gpkg".format(cleaned_name))
             suffix = 0
