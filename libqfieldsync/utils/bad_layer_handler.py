@@ -26,7 +26,7 @@ from qgis.PyQt.QtXml import QDomNode
 class BadLayerHandler(QgsProjectBadLayerHandler):
     invalid_layer_sources_by_id: ClassVar[Dict[str, str]] = {}
 
-    def handleBadLayers(self, layer_nodes: List[QDomNode]):
+    def handleBadLayers(self, layer_nodes: List[QDomNode]):  # noqa: N802
         super().handleBadLayers(layer_nodes)
 
         for layer_node in layer_nodes:

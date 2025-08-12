@@ -4,7 +4,7 @@ from qgis.core import Qgis, QgsMessageLog
 from qgis.PyQt.QtCore import QObject, pyqtSignal
 
 
-def addLoggingLevel(level_name, levelno, method_name=None):
+def add_logging_level(level_name, levelno, method_name=None):
     """
     Comprehensively adds a new logging level to the `logging` module and the
     currently configured logging class.
@@ -21,7 +21,7 @@ def addLoggingLevel(level_name, levelno, method_name=None):
 
     Example:
     -------
-    >>> addLoggingLevel('TRACE', logging.DEBUG - 5)
+    >>> add_logging_level('TRACE', logging.DEBUG - 5)
     >>> logging.getLogger(__name__).setLevel("TRACE")
     >>> logging.getLogger(__name__).trace('that worked')
     >>> logging.trace('so did this')
@@ -43,17 +43,17 @@ def addLoggingLevel(level_name, levelno, method_name=None):
     # This method was inspired by the answers to Stack Overflow post
     # http://stackoverflow.com/q/2183233/2988730, especially
     # http://stackoverflow.com/a/13638084/2988730
-    def logForLevel(self, message, *args, **kwargs):
+    def log_for_level(self, message, *args, **kwargs):
         if self.isEnabledFor(levelno):
             self._log(levelno, message, args, **kwargs)
 
     logging.addLevelName(levelno, level_name)
     setattr(logging, level_name, levelno)
-    setattr(logging.getLoggerClass(), method_name, logForLevel)
+    setattr(logging.getLoggerClass(), method_name, log_for_level)
 
 
 # add QGIS success log level
-addLoggingLevel("SUCCESS", logging.DEBUG - 5)
+add_logging_level("SUCCESS", logging.DEBUG - 5)
 
 if Qgis.versionInt() >= 32000:  # noqa: PLR2004
     LogNoLevel = Qgis.MessageLevel.NoLevel
