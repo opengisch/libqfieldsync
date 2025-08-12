@@ -1335,7 +1335,7 @@ class LayerSource:
                 else:
                     new_source = os.path.join(target_path, file_name)
                     if suffix != "":
-                        new_source = "{}|{}".format(new_source, suffix)
+                        new_source = "{}|{}".format(new_source, suffix)  # noqa: UP032
 
             self._change_data_source(new_source)
         return copied_files
@@ -1379,19 +1379,17 @@ class LayerSource:
             if new_source == "":
                 new_source = os.path.join(target_path, file_name)
                 if suffix != "":
-                    new_source = "{}|{}".format(new_source, suffix)
+                    new_source = "{}|{}".format(new_source, suffix)  # noqa: UP032
 
         layer_subset_string = self.layer.subsetString()
         if new_source == "":
             pattern = re.compile(r"[\W_]+")
             cleaned_name = pattern.sub("", self.layer.name())
-            dest_file = os.path.join(target_path, "{}.gpkg".format(cleaned_name))
+            dest_file = os.path.join(target_path, f"{cleaned_name}.gpkg")
             suffix = 0
             while os.path.isfile(dest_file):
                 suffix += 1
-                dest_file = os.path.join(
-                    target_path, "{}_{}.gpkg".format(cleaned_name, suffix)
-                )
+                dest_file = os.path.join(target_path, f"{cleaned_name}_{suffix}.gpkg")
 
             # clone vector layer and strip it of filter, joins, and virtual fields
             source_layer = self.layer.clone()

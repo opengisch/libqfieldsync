@@ -94,7 +94,7 @@ def get_project_in_folder(path: str) -> str:
     try:
         return get_children_with_extension(path, "qgs", count=1)[0]
     except QFieldSyncError:
-        message = "No .qgs file found in folder {}".format(path)
+        message = f"No .qgs file found in folder {path}"
         raise NoProjectFoundError(message)
 
 
@@ -106,7 +106,7 @@ def open_folder(path: Union[Path, str]) -> None:
     """
     path = Path(path)
     if platform.system() == "Windows":
-        subprocess.Popen(r'explorer /select,"{}"'.format(path))
+        subprocess.Popen(rf'explorer /select,"{path}"')
     elif platform.system() == "Darwin":
         subprocess.Popen(["open", "-R", path])
     else:

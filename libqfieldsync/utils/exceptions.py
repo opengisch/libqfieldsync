@@ -38,10 +38,10 @@ class QFieldSyncError(Exception):
         log_message = self.message
 
         if self.long_message is not None:
-            log_message = "\nDetails:\n {}".format(self.long_message)
+            log_message = f"\nDetails:\n {self.long_message}"
 
         if self.exception is not None:
-            log_message = "\nException:\n {}".format(self.long_message)
+            log_message = f"\nException:\n {self.long_message}"
 
         QgsMessageLog.logMessage(log_message, tag, Qgis.Critical)
 

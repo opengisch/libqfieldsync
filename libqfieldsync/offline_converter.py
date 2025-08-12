@@ -187,7 +187,7 @@ class OfflineConverter(QObject):
                 additional_project_files.append(str(image_decoration_path))
 
         # Check for project plugin asset
-        plugin_file = Path("{}.qml".format(str(self.original_filename)[:-4]))
+        plugin_file = Path("{}.qml".format(str(self.original_filename)[:-4]))  # noqa: UP032
         if plugin_file.exists():
             additional_project_files.append(str(plugin_file))
 
