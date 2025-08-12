@@ -74,7 +74,7 @@ else:
     LayerData = Dict
 
 
-class PackagingCanceledException(Exception):
+class PackagingCanceledError(Exception):
     """Exception to be raised when offline converting is canceled"""
 
     def __init__(self, *args):
@@ -794,7 +794,7 @@ class OfflineConverter(QObject):
         """Checks if packaging has been and should be canceled."""
         QCoreApplication.processEvents()
         if self._is_canceled:
-            raise PackagingCanceledException()
+            raise PackagingCanceledError()
 
     def convertorProcessingProgress(self):
         """
