@@ -353,7 +353,7 @@ class ProjectChecker:
                     "The layer will be packaged **as a read-only layer on QFieldCloud**. "
                     "Geopackages are [the recommended data format for QFieldCloud](https://docs.qfield.org/get-started/tutorials/get-started-qfc/#configure-your-project-layers-for-qfield). "
                 )
-                return FeedbackResult(f"{str(err)} {suffix}")
+                return FeedbackResult(f"{err!s} {suffix}")
 
         return None
 
