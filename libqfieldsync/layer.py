@@ -296,7 +296,7 @@ class LayerSource:
             "QFieldSync/tracking_measurement_type", 0
         )
 
-    def apply(self):
+    def apply(self):  # noqa: PLR0912, PLR0915
         attachment_naming_json = json.dumps(self._attachment_naming)
         # compatibility with QFieldSync <4.3 and QField <2.7
         photo_naming_json = json.dumps(self._photo_naming)
@@ -1328,7 +1328,7 @@ class LayerSource:
             self._change_data_source(new_source)
         return copied_files
 
-    def convert_to_gpkg(self, target_path):
+    def convert_to_gpkg(self, target_path):  # noqa: PLR0912, PLR0915
         """
         Convert a layer to geopackage in the target path and adjust its datasource. If
         a layer is already a geopackage, the dataset will merely be copied to the target

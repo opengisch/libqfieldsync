@@ -198,7 +198,7 @@ class OfflineConverter(QObject):
 
         return additional_project_files
 
-    def _convert(self, project: QgsProject) -> None:
+    def _convert(self, project: QgsProject) -> None:  # noqa: PLR0912, PLR0915
         xml_elements_to_preserve = {}
         tmp_project_filename = ""
 

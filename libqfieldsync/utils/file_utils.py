@@ -271,7 +271,7 @@ def update_symbols_to_relative_embedded(
             symbol_layer.setPath(f"base64:{encoded_data}")
 
 
-def set_relative_embed_layer_symbols_on_project(
+def set_relative_embed_layer_symbols_on_project(  # noqa: PLR0912
     layer: QgsVectorLayer, project_home: Path, export_project_path: Path
 ) -> None:
     """
