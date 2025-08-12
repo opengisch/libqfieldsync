@@ -17,7 +17,7 @@
  ***************************************************************************/
 """
 
-from typing import ClassVar, Dict, List
+from typing import ClassVar, Dict, Iterable
 
 from qgis.core import QgsProject, QgsProjectBadLayerHandler
 from qgis.PyQt.QtXml import QDomNode
@@ -26,10 +26,10 @@ from qgis.PyQt.QtXml import QDomNode
 class BadLayerHandler(QgsProjectBadLayerHandler):
     invalid_layer_sources_by_id: ClassVar[Dict[str, str]] = {}
 
-    def handleBadLayers(self, layer_nodes: List[QDomNode]):  # noqa: N802
-        super().handleBadLayers(layer_nodes)
+    def handleBadLayers(self, layers: Iterable[QDomNode]):  # noqa: N802
+        super().handleBadLayers(layers)
 
-        for layer_node in layer_nodes:
+        for layer_node in layers:
             layer_id = layer_node.namedItem("id").toElement().text()
             self.invalid_layer_sources_by_id[layer_id] = self.dataSource(layer_node)
 
