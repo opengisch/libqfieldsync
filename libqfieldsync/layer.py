@@ -759,7 +759,7 @@ class LayerSource:
 
     @property
     def available_actions(self):
-        actions = list()
+        actions = []
 
         if self.is_virtual:
             actions.append(

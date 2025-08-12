@@ -240,7 +240,7 @@ class OfflineConverter(QObject):
 
         project_layers: List[QgsMapLayer] = list(project.mapLayers().values())
         offline_layers: List[QgsMapLayer] = []
-        copied_files = list()
+        copied_files = []
 
         if self.create_basemap and self.project_configuration.create_base_map:
             is_basemap_export_success = self._export_basemap()
