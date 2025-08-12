@@ -121,7 +121,8 @@ def import_file_checksum(path: str) -> Optional[str]:
     if os.path.exists(path):
         with open(path, "rb") as f:
             file_data = f.read()
-            md5sum = hashlib.md5(file_data).hexdigest()
+            # TODO: Python 3.9, pass `usedforsecurity=False`
+            md5sum = hashlib.md5(file_data).hexdigest()  # noqa: S324
 
     return md5sum
 
