@@ -1302,7 +1302,7 @@ class LayerSource:
         """
         if not self.is_file:
             # Copy will also be called on non-file layers like WMS. In this case, just do nothing.
-            return
+            return None
 
         suffix = ""
         uri_parts = self.layer.source().split("|", 1)
@@ -1372,7 +1372,7 @@ class LayerSource:
         :param keep_existent: if True and target file already exists, keep it as it is
         """
         if not self.layer.type() == QgsMapLayer.VectorLayer or not self.layer.isValid():
-            return
+            return None
 
         file_path = self.filename
         suffix = ""
@@ -1447,7 +1447,7 @@ class LayerSource:
                     source_layer, dest_file, QgsCoordinateTransformContext(), options
                 )
             if error != QgsVectorFileWriter.NoError:
-                return
+                return None
             if returned_dest_file:
                 new_source = returned_dest_file
             else:
