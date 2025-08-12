@@ -867,7 +867,7 @@ class LayerSource:
                 if action == SyncAction.NO_ACTION:
                     return idx, action
             else:
-                if (
+                if (  # noqa: SIM114
                     (self.is_file and not self.is_localized_path)
                     or self.layer.type() != QgsMapLayer.VectorLayer
                 ) and action == SyncAction.NO_ACTION:
