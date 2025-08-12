@@ -165,9 +165,7 @@ class PythonMiniOffliner(BaseOffliner):
         return True
 
     def ogr_field_type(self, field: QgsField) -> ogr.FieldDefn:
-        """
-        Converts a QGIS field type to a matching OGR field type
-        """
+        """Converts a QGIS field type to a matching OGR field type"""
         ogr_sub_type = ogr.OFSTNone
 
         type = field.type()
@@ -226,9 +224,7 @@ class PythonMiniOffliner(BaseOffliner):
     def create_layer(
         self, layer: QgsVectorLayer, data_source: OgrDataset, offline_gpkg_path: str
     ) -> None:
-        """
-        Will create a new layer for ``layer`` in the GeoPackage specified as ``data_source`` which is stored at ``offline_gpkg_path``.
-        """
+        """Will create a new layer for ``layer`` in the GeoPackage specified as ``data_source`` which is stored at ``offline_gpkg_path``."""
 
         identifier = hashlib.sha256(
             layer.dataProvider().dataSourceUri().encode()

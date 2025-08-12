@@ -75,9 +75,7 @@ def get_file_extension_group(filename):
 
 
 class SyncAction(object):
-    """
-    Enumeration of sync actions
-    """
+    """Enumeration of sync actions"""
 
     # Make an offline editing copy
     def __init__(self):
@@ -1466,9 +1464,7 @@ class LayerSource(object):
         return dest_file
 
     def _change_data_source(self, new_data_source, new_provider=None):
-        """
-        Changes the datasource string of the layer
-        """
+        """Changes the datasource string of the layer"""
         context = QgsReadWriteContext()
         document = QDomDocument("style")
         map_layers_element = document.createElement("maplayers")

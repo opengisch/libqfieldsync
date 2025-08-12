@@ -54,9 +54,7 @@ class ProjectProperties(object):
 
 
 class ProjectConfiguration(object):
-    """
-    Manages the QFieldSync specific configuration for a QGIS project.
-    """
+    """Manages the QFieldSync specific configuration for a QGIS project."""
 
     def __init__(self, project):
         self.project = project

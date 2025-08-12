@@ -151,9 +151,7 @@ class OfflineConverter(QObject):
 
     # flake8: noqa: max-complexity: 33
     def convert(self, reload_original_project: bool = True) -> None:
-        """
-        Convert the project to a portable project.
-        """
+        """Convert the project to a portable project."""
         project = QgsProject.instance()
         self.original_filename = Path(project.fileName())
         self.backup_filename = make_temp_qgis_file(project)
@@ -424,9 +422,7 @@ class OfflineConverter(QObject):
     def remove_empty_groups_from_layer_tree_group(
         self, group: QgsLayerTreeGroup
     ) -> None:
-        """
-        Recursively removes any empty groups from the given layer tree group.
-        """
+        """Recursively removes any empty groups from the given layer tree group."""
         for child in group.children():
             if not isinstance(child, QgsLayerTreeGroup):
                 continue
