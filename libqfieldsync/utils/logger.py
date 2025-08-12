@@ -60,7 +60,7 @@ if Qgis.QGIS_VERSION_INT >= 32000:
 else:
     LogNoLevel = getattr(Qgis.MessageLevel, "None")
 
-_pythonLevelToQgisLogLevel = {
+PYTHON_LOG_LEVEL_TO_QGIS_LOG_LEVEL = {
     logging.CRITICAL: Qgis.MessageLevel.Critical,
     logging.ERROR: Qgis.MessageLevel.Critical,
     logging.WARNING: Qgis.MessageLevel.Warning,
@@ -86,7 +86,7 @@ class QgisLogHandler(logging.Handler):
         super().__init__(*args, **kwargs)
 
     def _get_qgis_log_level(self, record: logging.LogRecord) -> int:
-        return _pythonLevelToQgisLogLevel.get(record.levelno, LogNoLevel)
+        return PYTHON_LOG_LEVEL_TO_QGIS_LOG_LEVEL.get(record.levelno, LogNoLevel)
 
     def emit(self, record):
         try:
