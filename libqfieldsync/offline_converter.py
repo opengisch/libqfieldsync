@@ -320,9 +320,7 @@ class OfflineConverter(QObject):
             if layer_action == SyncAction.OFFLINE:
                 offline_layers.append(layer)
                 self.__offline_layer_names.append(layer.name())
-            elif (
-                layer_action == SyncAction.COPY or layer_action == SyncAction.NO_ACTION
-            ):
+            elif layer_action in (SyncAction.COPY, SyncAction.NO_ACTION):
                 copied_files = layer_source.copy(
                     self._export_filename.parent,
                     copied_files,
