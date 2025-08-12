@@ -216,7 +216,7 @@ class OfflineConverter(QObject):
         read_flags = QgsProject.ReadFlags()
         read_flags |= QgsProject.FlagDontResolveLayers
         read_flags |= QgsProject.FlagDontLoadLayouts
-        if Qgis.versionInt() >= 32600:
+        if Qgis.versionInt() >= 32600:  # noqa: PLR2004
             read_flags |= QgsProject.FlagDontLoad3DViews
 
         # Make a new function object that we can connect and disconnect easily
@@ -439,12 +439,12 @@ class OfflineConverter(QObject):
     def post_process_offline_layers(self):
         project = QgsProject.instance()
 
-        if Qgis.QGIS_VERSION_INT >= 34000:
+        if Qgis.versionInt() >= 34000:  # noqa: PLR2004
             project.setFlag(Qgis.ProjectFlag.EvaluateDefaultValuesOnProviderSide, False)
         else:
             project.setEvaluateDefaultValues(False)
 
-        if Qgis.QGIS_VERSION_INT >= 32600:
+        if Qgis.versionInt() >= 32600:  # noqa: PLR2004
             project.setTransactionMode(Qgis.TransactionMode.Disabled)
         else:
             project.setAutoTransaction(False)

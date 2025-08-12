@@ -103,7 +103,7 @@ class QgisCoreOffliner(BaseOffliner):
         if bbox and bbox.isFinite():
             only_selected = True
             for layer in layers:
-                if Qgis.QGIS_VERSION_INT >= 33000:
+                if Qgis.versionInt() >= 33000:  # noqa: PLR2004
                     no_geometry_types = [
                         Qgis.GeometryType.Null,
                         Qgis.GeometryType.Unknown,
@@ -427,7 +427,7 @@ class PythonMiniOffliner(BaseOffliner):
             # Here we get the first layer for convenience, but it doesn't really matter.
             layer_to_offline = layer_infos[0].layer
 
-            if Qgis.QGIS_VERSION_INT >= 33000:
+            if Qgis.versionInt() >= 33000:  # noqa: PLR2004
                 no_geometry_types = [
                     Qgis.GeometryType.Null,
                     Qgis.GeometryType.Unknown,
