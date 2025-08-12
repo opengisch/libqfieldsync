@@ -74,11 +74,20 @@ else:
     LayerData = Dict
 
 
-class PackagingCanceledError(Exception):
+class PackagingError(Exception):
+    pass
+
+
+class PackagingCanceledError(PackagingError):
     """Exception to be raised when offline converting is canceled"""
 
     def __init__(self, *args):
         super().__init__(QObject().tr("Packaging canceled by the user"), *args)
+
+
+class PackagingFailedError(PackagingError):
+    def __init__(self, *args):
+        super().__init__(*args)
 
 
 class ExportType(Enum):
@@ -120,7 +129,7 @@ class OfflineConverter(QObject):
         self.trUtf8 = self.tr
 
         if not export_filename:
-            raise Exception("Empty export filename provided!")
+            raise PackagingFailedError(self.tr("Empty export filename provided!"))
 
         self._export_filename = Path(export_filename)
         self._export_title = export_title
@@ -392,7 +401,7 @@ class OfflineConverter(QObject):
             )
 
             if not is_success:
-                raise Exception(
+                raise PackagingFailedError(
                     self.tr(
                         "QGIS Offline editing error: failed to convert layers to offline layers"
                     )
