@@ -222,7 +222,10 @@ class PythonMiniOffliner(BaseOffliner):
         return data
 
     def create_layer(
-        self, layer: QgsVectorLayer, data_source: OgrDataset, offline_gpkg_path: str
+        self,
+        layer: QgsVectorLayer,
+        data_source: OgrDataset,
+        _offline_gpkg_path: str,
     ) -> None:
         """Will create a new layer for ``layer`` in the GeoPackage specified as ``data_source`` which is stored at ``offline_gpkg_path``."""
         identifier = hashlib.sha256(
@@ -270,7 +273,7 @@ class PythonMiniOffliner(BaseOffliner):
     def convert_to_offline_layer(
         self,
         layer: QgsVectorLayer,
-        data_source: OgrDataset,
+        _data_source: OgrDataset,
         offline_gpkg_path: str,
         feature_request: QgsFeatureRequest = QgsFeatureRequest(),
     ) -> str:
