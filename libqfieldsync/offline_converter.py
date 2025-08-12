@@ -21,7 +21,7 @@ import shutil
 import tempfile
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, TypedDict, Union
+from typing import Dict, List, Optional, TypedDict, Union, cast
 
 from qgis.core import (
     Qgis,
@@ -473,7 +473,8 @@ class OfflineConverter(QObject):
         remote_layer_id = e_layer.customProperty("QFieldSync/remoteLayerId")
         e_layer_source = LayerSource(e_layer)
         o_layer_data = self.__layer_data_by_id[remote_layer_id]
-        o_layer_fields: QgsFields = o_layer_data["fields"]  # type: ignore
+        # since we have vector layer, then the fields must be available
+        o_layer_fields: QgsFields = cast(QgsFields, o_layer_data["fields"])
         o_layer_field_names = o_layer_fields.names()
 
         for e_field_name in e_layer_source.visible_fields_names():

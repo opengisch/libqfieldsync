@@ -26,9 +26,9 @@ from .utils.logger import logger
 
 # In GDAL 3.10.0 the return value of `ogr.CreateDataSource` changed from `ogr.DataSource` to `gdal.Dataset`.
 if gdal.VersionInfo() > "3010000":
-    OgrDataset = NewType("OgrDataset", gdal.Dataset)  # type: ignore
+    OgrDataset = NewType("OgrDataset", gdal.Dataset)  # type: ignore[valid-newtype]
 else:
-    OgrDataset = NewType("OgrDataset", ogr.DataSource)  # type: ignore
+    OgrDataset = NewType("OgrDataset", ogr.DataSource)  # type: ignore[valid-newtype, misc, no-redef]
 
 FID_NULL = -4294967296
 MAX_SUPPORTED_FID_FIELDS = 1000

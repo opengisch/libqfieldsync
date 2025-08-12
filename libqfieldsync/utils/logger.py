@@ -66,7 +66,7 @@ PYTHON_LOG_LEVEL_TO_QGIS_LOG_LEVEL = {
     logging.WARNING: Qgis.MessageLevel.Warning,
     logging.INFO: Qgis.MessageLevel.Info,
     logging.DEBUG: Qgis.MessageLevel.Info,
-    logging.SUCCESS: Qgis.MessageLevel.Success,  # type: ignore
+    logging.SUCCESS: Qgis.MessageLevel.Success,  # type: ignore[attr-defined]
     logging.NOTSET: LogNoLevel,
 }
 
