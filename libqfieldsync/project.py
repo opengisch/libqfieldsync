@@ -84,9 +84,9 @@ class ProjectConfiguration:
 
     @base_map_type.setter
     def base_map_type(self, value):
-        if (
-            value != ProjectProperties.BaseMapType.SINGLE_LAYER
-            and value != ProjectProperties.BaseMapType.MAP_THEME
+        if value not in (
+            ProjectProperties.BaseMapType.SINGLE_LAYER,
+            ProjectProperties.BaseMapType.MAP_THEME,
         ):
             raise ValueError("Only supported types can be set")
 

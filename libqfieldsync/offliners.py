@@ -185,7 +185,7 @@ class PythonMiniOffliner(BaseOffliner):
         elif field_type == QVariant.Bool:
             ogr_type = ogr.OFTInteger
             ogr_sub_type = ogr.OFSTBoolean
-        elif field_type == QVariant.StringList or field_type == QVariant.List:
+        elif field_type in (QVariant.StringList, QVariant.List):
             ogr_type = ogr.OFTString
             ogr_sub_type = ogr.OFSTJSON
         else:
@@ -307,7 +307,7 @@ class PythonMiniOffliner(BaseOffliner):
                 # Fixup list and json attributes
                 for i in range(new_layer.fields().count()):
                     field_type = new_layer.fields().at(i).type()
-                    if field_type == QVariant.StringList or field_type == QVariant.List:
+                    if field_type in (QVariant.StringList, QVariant.List):
                         attrs[i] = QgsJsonUtils.encodeValue(attrs[i])
 
                 feature.setFields(new_fields)
