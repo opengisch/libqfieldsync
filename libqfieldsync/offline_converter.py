@@ -552,10 +552,6 @@ class OfflineConverter(QObject):
             # NOTE if qgis is built without GUI, there is no `qgis.utils`, since it depends on `qgis.gui`
             import qgis.utils
 
-            # TODO investigate why starPlugin fails in docker
-            # print(1111111111010301, qgis.utils.loadPlugin("processing"))
-            # print(1111111111010302, qgis.utils.startPlugin("processing"))
-
             if "processing" in qgis.utils.plugins:
                 return True
 
