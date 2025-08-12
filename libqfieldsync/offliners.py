@@ -413,11 +413,11 @@ class PythonMiniOffliner(BaseOffliner):
 
             datasource_mapping[datasource_hash].append(LayerInfo(layer, subset_string))
 
-        for datasource_hash, layer_infos in datasource_mapping.items():
+        for layer_infos in datasource_mapping.values():
             layer_to_offline = layer_infos[0].layer
             self.create_layer(layer_to_offline, data_source, offline_gpkg_path)
 
-        for datasource_hash, layer_infos in datasource_mapping.items():
+        for layer_infos in datasource_mapping.values():
             request = QgsFeatureRequest()
             # All layers for given `datasource_hash` are pointing to the very same file/datasource.
             # Here we get the first layer for convenience, but it doesn't really matter.
