@@ -65,7 +65,7 @@ class ProjectChecker:
     tr = QObject().tr
 
     class CheckConfig(TypedDict):
-        type: Feedback.Level
+        level: Feedback.Level
         fn: Callable
         scope: Optional[ExportType]
 
@@ -73,69 +73,69 @@ class ProjectChecker:
         self.project = project
         self.project_checks: List[ProjectChecker.CheckConfig] = [
             {
-                "type": Feedback.Level.ERROR,
+                "level": Feedback.Level.ERROR,
                 "fn": self.check_no_absolute_filepaths,
                 "scope": None,
             },
             {
-                "type": Feedback.Level.ERROR,
+                "level": Feedback.Level.ERROR,
                 "fn": self.check_no_homepath,
                 "scope": None,
             },
             {
-                "type": Feedback.Level.ERROR,
+                "level": Feedback.Level.ERROR,
                 "fn": self.check_files_have_unsupported_characters,
                 "scope": None,
             },
             {
-                "type": Feedback.Level.WARNING,
+                "level": Feedback.Level.WARNING,
                 "fn": self.check_project_is_dirty,
                 "scope": ExportType.Cloud,
             },
             {
-                "type": Feedback.Level.ERROR,
+                "level": Feedback.Level.ERROR,
                 "fn": self.check_project_layers_sources_actions,
                 "scope": ExportType.Cable,
             },
         ]
         self.layer_checks: List[ProjectChecker.CheckConfig] = [
             {
-                "type": Feedback.Level.WARNING,
+                "level": Feedback.Level.WARNING,
                 "fn": self.check_layer_has_utf8_datasources,
                 "scope": None,
             },
             {
-                "type": Feedback.Level.WARNING,
+                "level": Feedback.Level.WARNING,
                 "fn": self.check_layer_has_ascii_filename,
                 "scope": None,
             },
             {
-                "type": Feedback.Level.WARNING,
+                "level": Feedback.Level.WARNING,
                 "fn": self.check_external_layers,
                 "scope": None,
             },
             {
-                "type": Feedback.Level.WARNING,
+                "level": Feedback.Level.WARNING,
                 "fn": self.check_layer_primary_key,
                 "scope": ExportType.Cloud,
             },
             {
-                "type": Feedback.Level.WARNING,
+                "level": Feedback.Level.WARNING,
                 "fn": self.check_layer_memory,
                 "scope": None,
             },
             {
-                "type": Feedback.Level.WARNING,
+                "level": Feedback.Level.WARNING,
                 "fn": self.check_layer_configured,
                 "scope": None,
             },
             {
-                "type": Feedback.Level.WARNING,
+                "level": Feedback.Level.WARNING,
                 "fn": self.check_layer_package_prevention,
                 "scope": None,
             },
             {
-                "type": Feedback.Level.WARNING,
+                "level": Feedback.Level.WARNING,
                 "fn": self.check_layer_has_experimental_cloud_support,
                 "scope": ExportType.Cloud,
             },
@@ -150,7 +150,7 @@ class ProjectChecker:
 
             feedback_result = check["fn"]()
             if feedback_result:
-                checked_feedback.add(Feedback(check["type"], feedback_result))
+                checked_feedback.add(Feedback(check["level"], feedback_result))
 
         for layer in self.project.mapLayers().values():
             layer_source = LayerSource(layer)
@@ -177,7 +177,7 @@ class ProjectChecker:
                 feedback_result = check["fn"](layer_source)
                 if feedback_result:
                     checked_feedback.add(
-                        Feedback(check["type"], feedback_result, layer)
+                        Feedback(check["level"], feedback_result, layer)
                     )
 
         return checked_feedback
