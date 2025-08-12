@@ -1418,7 +1418,7 @@ class LayerSource:
                 source_layer.removeJoin(join.joinLayerId())
             fields = source_layer.fields()
             virtual_field_count = 0
-            for i in range(0, len(fields)):
+            for i in range(len(fields)):
                 if fields.fieldOrigin(i) == QgsFields.OriginExpression:
                     source_layer.removeExpressionField(i - virtual_field_count)
                     virtual_field_count += 1
