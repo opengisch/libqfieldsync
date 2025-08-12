@@ -515,16 +515,16 @@ class OfflineConverter(QObject):
             return
 
         e_referenced_layer_id = None
-        for e_layer in project.mapLayers().values():
+        for layer in project.mapLayers().values():
             o_layer_data = self.__layer_data_by_id[o_referenced_layer_id]
 
-            if e_layer.customProperty("remoteSource") == o_layer_data["source"]:
+            if layer.customProperty("remoteSource") == o_layer_data["source"]:
                 #  First try strict matching: the offline layer should have a "remoteSource" property
-                e_referenced_layer_id = e_layer.id()
+                e_referenced_layer_id = layer.id()
                 break
-            elif e_layer.name() == o_layer_data["name"]:
+            elif layer.name() == o_layer_data["name"]:
                 #  If that did not work, go with loose matching
-                e_referenced_layer_id = e_layer.id()
+                e_referenced_layer_id = layer.id()
                 break
 
         if not e_referenced_layer_id:
