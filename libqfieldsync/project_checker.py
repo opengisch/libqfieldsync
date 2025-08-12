@@ -444,7 +444,7 @@ class ProjectChecker:
 
         return None
 
-    def check_layer_has_experimental_cloud_support(
+    def check_layer_has_experimental_cloud_support(  # noqa: PLR0911
         self, layer_source: LayerSource
     ) -> Optional[FeedbackResult]:
         """Check if layer has experimental cloud support"""
