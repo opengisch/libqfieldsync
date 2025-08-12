@@ -265,12 +265,14 @@ class OfflineConverter(QObject):
                         logger.warning(
                             f'Layer "{layer.name()}" cannot be packaged and will be removed because "{reason}".'
                         )
+
                         project.removeMapLayer(layer)
+
                         break
-                    else:
-                        logger.warning(
-                            f'Layer "{layer.name()}" cannot be packaged due to "{reason}", skipping…'
-                        )
+
+                    logger.warning(
+                        f'Layer "{layer.name()}" cannot be packaged due to "{reason}", skipping…'
+                    )
 
                 # do not attempt to package the layer
                 continue
@@ -522,7 +524,8 @@ class OfflineConverter(QObject):
                 #  First try strict matching: the offline layer should have a "remoteSource" property
                 e_referenced_layer_id = layer.id()
                 break
-            elif layer.name() == o_layer_data["name"]:
+
+            if layer.name() == o_layer_data["name"]:
                 #  If that did not work, go with loose matching
                 e_referenced_layer_id = layer.id()
                 break
