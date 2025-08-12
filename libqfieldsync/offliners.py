@@ -275,12 +275,15 @@ class PythonMiniOffliner(BaseOffliner):
         layer: QgsVectorLayer,
         _data_source: OgrDataset,
         offline_gpkg_path: str,
-        feature_request: QgsFeatureRequest = QgsFeatureRequest(),
+        feature_request: Optional[QgsFeatureRequest] = None,
     ) -> str:
         """
         Will fill a copy of ``layer`` in the GeoPackage specified as ``data_source`` which is stored at ``offline_gpkg_path``.
         It will replace the dataProvider of the original layer.
         """
+        if not feature_request:
+            feature_request = QgsFeatureRequest()
+
         identifier = hashlib.sha256(
             layer.dataProvider().dataSourceUri().encode()
         ).hexdigest()
