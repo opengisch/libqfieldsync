@@ -31,6 +31,7 @@ else:
     OgrDataset = NewType("OgrDataset", ogr.DataSource)  # type: ignore
 
 FID_NULL = -4294967296
+MAX_SUPPORTED_FID_FIELDS = 1000
 
 CUSTOM_PROPERTY_IS_OFFLINE_EDITABLE = "isOfflineEditable"
 CUSTOM_PROPERTY_REMOTE_SOURCE = "remoteSource"
@@ -243,7 +244,7 @@ class PythonMiniOffliner(BaseOffliner):
         while layer.dataProvider().fields().lookupField(fid) >= 0:
             fid = f"fid_{counter}"
             counter += 1
-            if counter == 10000:
+            if counter == MAX_SUPPORTED_FID_FIELDS:
                 raise RuntimeError(
                     f"Cannot determine usable FID field name for GPKG {layer.name()}"
                 )
