@@ -50,9 +50,9 @@ class OfflinerType(str, Enum):
 
 class BaseOffliner(QObject):
     warning = pyqtSignal(str, str)
-    layerProgressUpdated = pyqtSignal(int, int)
-    progressModeSet = pyqtSignal(QgsOfflineEditing.ProgressMode, int)
-    progressUpdated = pyqtSignal(int)
+    layer_progress_updated = pyqtSignal(int, int)
+    progress_mode_set = pyqtSignal(QgsOfflineEditing.ProgressMode, int)
+    progress_updated = pyqtSignal(int)
 
     def convert_to_offline(
         self,
@@ -67,25 +67,27 @@ class BaseOffliner(QObject):
 
 
 class QgisCoreOffliner(BaseOffliner):
+    qgs_offline_editing: QgsOfflineEditing
+
     def __init__(self, *args, **kwargs) -> None:
         # We don't pass `QgsOfflineEditing` as a second argument to `dict.pop()`,
         # because it will create a useless instance, therefore we pass it as a second operand to `or`.
         offline_editing = kwargs.pop("offline_editing", None) or QgsOfflineEditing()
         super().__init__(*args, **kwargs)
-        self.offliner = offline_editing
+        self.qgs_offline_editing = offline_editing
 
         # Check https://api.qgis.org/api/3.14/classQgsOfflineEditing.html#a59d2ebed32704f655868951eba6ef52e for more documentation of these signals
-        # NOTE directly connecting the slot like `self.offliner.progressModeSet.connect(self.progressModeSet)` raises typing error
-        self.offliner.layerProgressUpdated.connect(
-            lambda progress, layer_idx: self.layerProgressUpdated.emit(
+        # NOTE directly connecting the slot like `self.offliner.progress_mode_set.connect(self.progress_mode_set)` raises typing error
+        self.qgs_offline_editing.layerProgressUpdated.connect(
+            lambda progress, layer_idx: self.layer_progress_updated.emit(
                 progress, layer_idx
             )
         )
-        self.offliner.progressModeSet.connect(
-            lambda mode, maximum: self.progressModeSet.emit(mode, maximum)
+        self.qgs_offline_editing.progressModeSet.connect(
+            lambda mode, maximum: self.progress_mode_set.emit(mode, maximum)
         )
-        self.offliner.progressUpdated.connect(
-            lambda progress: self.progressUpdated.emit(progress)
+        self.qgs_offline_editing.progressUpdated.connect(
+            lambda progress: self.progress_updated.emit(progress)
         )
 
     def convert_to_offline(
@@ -135,7 +137,7 @@ class QgisCoreOffliner(BaseOffliner):
         if exported_project_title:
             project.setTitle(exported_project_title)
 
-        is_success = self.offliner.convertToOfflineProject(
+        is_success = self.qgs_offline_editing.convertToOfflineProject(
             str(offline_db_path),
             str(offline_db_filename),
             layer_ids,
