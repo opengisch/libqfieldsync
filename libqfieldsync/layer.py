@@ -1308,27 +1308,14 @@ class LayerSource:
             suffix = uri_parts[1]
 
         if self.is_file:
-            if Qgis.QGIS_VERSION_INT > 32200:
-                # QGIS >= 3.22
-                files_to_copy = QgsFileUtils.sidecarFilesForPath(self.filename)
-                files_to_copy.add(self.filename)
-                for file_to_copy in files_to_copy:
-                    source_path, file_name = os.path.split(file_to_copy)
-                    dest_file = os.path.join(target_path, file_name)
-                    if keep_existent is False or not os.path.isfile(dest_file):
-                        shutil.copy(os.path.join(source_path, file_name), dest_file)
-            else:
-                # QGIS < 3.22
-                source_path, file_name = os.path.split(self.filename)
-                basename, extensions = get_file_extension_group(file_name)
-                for ext in extensions:
-                    dest_file = os.path.join(target_path, basename + ext)
-                    if os.path.exists(os.path.join(source_path, basename + ext)) and (
-                        keep_existent is False or not os.path.isfile(dest_file)
-                    ):
-                        shutil.copy(
-                            os.path.join(source_path, basename + ext), dest_file
-                        )
+            files_to_copy = QgsFileUtils.sidecarFilesForPath(self.filename)
+            files_to_copy.add(self.filename)
+
+            for file_to_copy in files_to_copy:
+                source_path, file_name = os.path.split(file_to_copy)
+                dest_file = os.path.join(target_path, file_name)
+                if keep_existent is False or not os.path.isfile(dest_file):
+                    shutil.copy(os.path.join(source_path, file_name), dest_file)
 
             source_path, file_name = os.path.split(self.filename)
             new_source = ""
