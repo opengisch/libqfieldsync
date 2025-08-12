@@ -17,14 +17,14 @@
  ***************************************************************************/
 """
 
-from typing import List
+from typing import ClassVar, Dict, List
 
 from qgis.core import QgsProject, QgsProjectBadLayerHandler
 from qgis.PyQt.QtXml import QDomNode
 
 
 class BadLayerHandler(QgsProjectBadLayerHandler):
-    invalid_layer_sources_by_id = {}
+    invalid_layer_sources_by_id: ClassVar[Dict[str, str]] = {}
 
     def handleBadLayers(self, layer_nodes: List[QDomNode]):
         super().handleBadLayers(layer_nodes)
