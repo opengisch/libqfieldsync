@@ -882,10 +882,7 @@ class LayerSource:
     @property
     def is_supported(self):
         # ecw raster
-        if self.layer.source().endswith("ecw"):
-            return False
-        else:
-            return True
+        return not self.layer.source().endswith("ecw")
 
     @property
     def can_lock_geometry(self):
@@ -1191,10 +1188,9 @@ class LayerSource:
 
     @property
     def is_remote_raster_layer(self) -> bool:
-        if self.layer.dataProvider() and self.layer.dataProvider().name() == "wms":
-            return True
-
-        return False
+        return bool(
+            self.layer.dataProvider() and self.layer.dataProvider().name() == "wms"
+        )
 
     @property
     def package_prevention_reasons(
