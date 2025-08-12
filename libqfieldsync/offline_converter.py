@@ -643,7 +643,6 @@ class OfflineConverter(QObject):
             bool: if basemap layer could be exported as mbtiles
 
         """
-
         alg = (
             QgsApplication.instance()
             .processingRegistry()

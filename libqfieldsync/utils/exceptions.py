@@ -28,7 +28,6 @@ class QFieldSyncError(Exception):
         :param message: a short message to be logged and used by str()
         :param long_message: a longer message only shown in the log
         """
-
         # Call the base class constructor with the parameters it needs
         super().__init__(message)
 
