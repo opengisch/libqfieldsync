@@ -4,7 +4,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Callable, Dict, List, Optional
 
-from qgis.core import Qgis, QgsMapLayer, QgsProject, QgsSettings
+from qgis.core import Qgis, QgsMapLayer, QgsProject
 from qgis.PyQt.QtCore import QObject
 
 from libqfieldsync.layer import LayerSource, SyncAction, UnsupportedPrimaryKeyError
@@ -183,14 +183,7 @@ class ProjectChecker:
         return checked_feedback
 
     def check_no_absolute_filepaths(self) -> Optional[FeedbackResult]:
-        if Qgis.QGIS_VERSION_INT >= 32200:
-            is_absolute = self.project.filePathStorage() == Qgis.FilePathType.Absolute
-        else:
-            is_absolute = (
-                QgsSettings().value("/qgis/defaultProjectPathsRelative") == "false"
-            )
-
-        if is_absolute:
+        if self.project.filePathStorage() == Qgis.FilePathType.Absolute:
             return FeedbackResult(
                 self.tr(
                     "QField does not support projects configured to use absolute paths. "
