@@ -225,7 +225,6 @@ class PythonMiniOffliner(BaseOffliner):
         self, layer: QgsVectorLayer, data_source: OgrDataset, offline_gpkg_path: str
     ) -> None:
         """Will create a new layer for ``layer`` in the GeoPackage specified as ``data_source`` which is stored at ``offline_gpkg_path``."""
-
         identifier = hashlib.sha256(
             layer.dataProvider().dataSourceUri().encode()
         ).hexdigest()
@@ -279,7 +278,6 @@ class PythonMiniOffliner(BaseOffliner):
         Will fill a copy of ``layer`` in the GeoPackage specified as ``data_source`` which is stored at ``offline_gpkg_path``.
         It will replace the dataProvider of the original layer.
         """
-
         identifier = hashlib.sha256(
             layer.dataProvider().dataSourceUri().encode()
         ).hexdigest()
