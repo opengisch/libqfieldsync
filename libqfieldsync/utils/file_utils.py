@@ -94,8 +94,7 @@ def get_project_in_folder(path: str) -> str:
     try:
         return get_children_with_extension(path, "qgs", count=1)[0]
     except QFieldSyncError:
-        message = f"No .qgs file found in folder {path}"
-        raise NoProjectFoundError(message)
+        raise NoProjectFoundError(f"No .qgs file found in folder {path}") from None
 
 
 def open_folder(path: Union[Path, str]) -> None:
