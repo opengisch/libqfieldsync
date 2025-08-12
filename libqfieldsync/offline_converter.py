@@ -563,7 +563,9 @@ class OfflineConverter(QObject):
             )
             self.total_progress_updated.emit(0, 0, self.trUtf8("Cancelled"))
         except Exception:
-            pass
+            logger.warning(
+                "Creating a basemap with QFieldSync requires the processing plugin to be enabled. Processing is not enabled on your system. Please go to Plugins > Manage and Install Plugins and enable processing."
+            )
 
         return False
 
