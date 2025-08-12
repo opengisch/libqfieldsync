@@ -110,7 +110,7 @@ class OfflineConverter(QObject):
         dirs_to_copy: Optional[Dict[str, bool]] = None,
         export_title: str = "",
     ):
-        super(OfflineConverter, self).__init__(parent=None)
+        super().__init__(parent=None)
         self.__max_task_progress = 0
         self.__convertor_progress = None  # for processing feedback
         self.__layer_data_by_id: Dict[str, LayerData] = {}
