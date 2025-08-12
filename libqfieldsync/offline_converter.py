@@ -18,11 +18,10 @@
 """
 
 import shutil
-import sys
 import tempfile
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, TypedDict, Union
 
 from qgis.core import (
     Qgis,
@@ -60,18 +59,13 @@ from .utils.xml import get_themapcanvas
 
 FID_NULL = -4294967296
 
-if sys.version_info >= (3, 8):
-    from typing import TypedDict
 
-    class LayerData(TypedDict):
-        id: str
-        name: str
-        source: str
-        type: int
-        fields: Optional[QgsFields]
-
-else:
-    LayerData = Dict
+class LayerData(TypedDict):
+    id: str
+    name: str
+    source: str
+    type: int
+    fields: Optional[QgsFields]
 
 
 class PackagingError(Exception):
