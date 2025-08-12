@@ -74,7 +74,7 @@ def get_file_extension_group(filename):
     return basename, [ext]
 
 
-class SyncAction(object):
+class SyncAction:
     """Enumeration of sync actions"""
 
     # Make an offline editing copy
@@ -100,7 +100,7 @@ class SyncAction(object):
     REMOVE = "remove"
 
 
-class LayerSource(object):
+class LayerSource:
     class AttachmentType(
         Enum
     ):  # Matches QGIS gui QgsExternalResourceWidget.DocumentViewerContent enum values
