@@ -3,7 +3,7 @@ import os
 import re
 import shutil
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import ClassVar, Dict, List, Optional
 
 from qgis.core import (
     Qgis,
@@ -121,7 +121,7 @@ class LayerSource:
         PackagePreventionReason.UNSUPPORTED_DATASOURCE,
     )
 
-    ATTACHMENT_EXPRESSIONS = {
+    ATTACHMENT_EXPRESSIONS: ClassVar[Dict[AttachmentType, str]] = {
         AttachmentType.FILE: "'files/{layername}_' || format_date(now(),'yyyyMMddhhmmsszzz') || '_{{filename}}'",
         AttachmentType.IMAGE: "'DCIM/{layername}_' || format_date(now(),'yyyyMMddhhmmsszzz') || '.{{extension}}'",
         AttachmentType.WEB: "",
