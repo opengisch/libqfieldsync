@@ -109,7 +109,6 @@ class OfflineConverterTest(unittest.TestCase):
             self.data_dir.joinpath("assets_project"),
             self.source_dir.joinpath("assets_project"),
         )
-        print("source dir " + str(self.source_dir))
 
         project = self.load_project(
             self.source_dir.joinpath("assets_project", "project.qgs")
