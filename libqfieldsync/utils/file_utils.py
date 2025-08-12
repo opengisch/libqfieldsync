@@ -232,6 +232,7 @@ def update_symbols_to_relative_embedded(
 ) -> None:
     """
     Update SVG or Raster symbols layer to relative path or embed it in the QGIS project.
+
     Args:
         symbol: The QGIS symbol (from a renderer).
         home_path: The root of QGIS Project home path.
