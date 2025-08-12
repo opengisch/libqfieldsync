@@ -56,7 +56,7 @@ class set_bad_layer_handler:  # noqa: N801
         # NOTE we should set the bad layer handler only when we need it.
         # Unfortunately we cannot due to a crash when calling `QgsProject.read()` when we already used this context manager.
         # The code below is used as documentation for future generations of engineers willing to fix this.
-        # self.project.setBadLayerHandler(bad_layer_handler)
+        # self.project.setBadLayerHandler(bad_layer_handler)  # noqa: ERA001
 
     def __exit__(self, exc_type, exc_value, traceback):
         # NOTE we should set the bad layer handler only when we need it.
@@ -64,7 +64,7 @@ class set_bad_layer_handler:  # noqa: N801
         # The code below is used as documentation for future generations of engineers willing to fix this.
 
         # global bad_layer_handler
-        # self.project.setBadLayerHandler(None)
+        # self.project.setBadLayerHandler(None)  # noqa: ERA001
         pass
 
     def __call__(self, func):
