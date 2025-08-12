@@ -645,6 +645,7 @@ class OfflineConverter(QObject):
 
         Returns:
             bool: if basemap layer could be exported as mbtiles
+
         """
 
         alg = (
@@ -752,6 +753,7 @@ class OfflineConverter(QObject):
 
         Args:
             revision (float): progress value of the tiles generation algorithm (between 0 and 100)
+
         """
         self.task_progress_updated.emit(int(revision), 100)
 
