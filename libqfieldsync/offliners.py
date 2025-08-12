@@ -302,8 +302,6 @@ class PythonMiniOffliner(BaseOffliner):
             )
 
         with edit(new_layer):
-            feature_request = QgsFeatureRequest()
-
             new_fields = new_layer.fields()
 
             for feature in layer.dataProvider().getFeatures(feature_request):
