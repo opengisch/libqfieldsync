@@ -60,6 +60,7 @@ file_extension_groups = [
 def get_file_extension_group(filename):
     """
     Return the basename and an extension group (if applicable)
+
     Examples:
          airports.shp -> 'airport', ['.shp', '.shx', '.dbf', '.sbx', '.sbn', '.shp.xml']
          forests.gpkg -> 'forests', ['.gpkg']
