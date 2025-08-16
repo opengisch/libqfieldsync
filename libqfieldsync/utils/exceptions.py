@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 /***************************************************************************
  QFieldSync
@@ -30,9 +28,8 @@ class QFieldSyncError(Exception):
         :param message: a short message to be logged and used by str()
         :param long_message: a longer message only shown in the log
         """
-
         # Call the base class constructor with the parameters it needs
-        super(QFieldSyncError, self).__init__(message)
+        super().__init__(message)
 
         self.message = message
         self.exception = exception
@@ -41,10 +38,10 @@ class QFieldSyncError(Exception):
         log_message = self.message
 
         if self.long_message is not None:
-            log_message = "\nDetails:\n %s" % self.long_message
+            log_message = f"\nDetails:\n {self.long_message}"
 
         if self.exception is not None:
-            log_message = "\nException:\n %s" % self.long_message
+            log_message = f"\nException:\n {self.long_message}"
 
         QgsMessageLog.logMessage(log_message, tag, Qgis.Critical)
 
@@ -52,4 +49,4 @@ class QFieldSyncError(Exception):
 class NoProjectFoundError(QFieldSyncError):
     def __init__(self, message, exception=None, long_message=None, tag="QFieldSync"):
         # Call the base class constructor with the parameters it needs
-        super(NoProjectFoundError, self).__init__(message, exception, long_message, tag)
+        super().__init__(message, exception, long_message, tag)

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 /***************************************************************************
  QFieldSync
@@ -20,11 +18,10 @@
 """
 
 import shutil
-import sys
 import tempfile
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, TypedDict, Union, cast
 
 from qgis.core import (
     Qgis,
@@ -62,25 +59,29 @@ from .utils.xml import get_themapcanvas
 
 FID_NULL = -4294967296
 
-if sys.version_info >= (3, 8):
-    from typing import TypedDict
 
-    class LayerData(TypedDict):
-        id: str
-        name: str
-        source: str
-        type: int
-        fields: Optional[QgsFields]
-
-else:
-    LayerData = Dict
+class LayerData(TypedDict):
+    id: str
+    name: str
+    source: str
+    type: int
+    fields: Optional[QgsFields]
 
 
-class PackagingCanceledException(Exception):
+class PackagingError(Exception):
+    pass
+
+
+class PackagingCanceledError(PackagingError):
     """Exception to be raised when offline converting is canceled"""
 
     def __init__(self, *args):
         super().__init__(QObject().tr("Packaging canceled by the user"), *args)
+
+
+class PackagingFailedError(PackagingError):
+    def __init__(self, *args):
+        super().__init__(*args)
 
 
 class ExportType(Enum):
@@ -89,7 +90,7 @@ class ExportType(Enum):
 
 
 class OfflineConverter(QObject):
-    progressStopped = pyqtSignal()
+    progress_stopped = pyqtSignal()
     warning = pyqtSignal(str, str)
     task_progress_updated = pyqtSignal(int, int)
     total_progress_updated = pyqtSignal(int, int, str)
@@ -99,7 +100,7 @@ class OfflineConverter(QObject):
 
     _is_canceled: bool = False
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         project: QgsProject,
         export_filename: str,
@@ -112,7 +113,7 @@ class OfflineConverter(QObject):
         dirs_to_copy: Optional[Dict[str, bool]] = None,
         export_title: str = "",
     ):
-        super(OfflineConverter, self).__init__(parent=None)
+        super().__init__(parent=None)
         self.__max_task_progress = 0
         self.__convertor_progress = None  # for processing feedback
         self.__layer_data_by_id: Dict[str, LayerData] = {}
@@ -122,7 +123,7 @@ class OfflineConverter(QObject):
         self.trUtf8 = self.tr
 
         if not export_filename:
-            raise Exception("Empty export filename provided!")
+            raise PackagingFailedError(self.tr("Empty export filename provided!"))
 
         self._export_filename = Path(export_filename)
         self._export_title = export_title
@@ -136,9 +137,11 @@ class OfflineConverter(QObject):
 
         self.offliner = offliner
 
-        self.offliner.layerProgressUpdated.connect(self._on_offline_editing_next_layer)
-        self.offliner.progressModeSet.connect(self._on_offline_editing_max_changed)
-        self.offliner.progressUpdated.connect(self._on_offline_editing_task_progress)
+        self.offliner.layer_progress_updated.connect(
+            self._on_offline_editing_next_layer
+        )
+        self.offliner.progress_mode_set.connect(self._on_offline_editing_max_changed)
+        self.offliner.progress_updated.connect(self._on_offline_editing_task_progress)
 
         self.project_configuration = ProjectConfiguration(project)
 
@@ -151,11 +154,8 @@ class OfflineConverter(QObject):
                 self.area_of_interest_crs.isValid()
             ), f"Invalid CRS specified for area of interest {area_of_interest_crs}"
 
-    # flake8: noqa: max-complexity: 33
     def convert(self, reload_original_project: bool = True) -> None:
-        """
-        Convert the project to a portable project.
-        """
+        """Convert the project to a portable project."""
         project = QgsProject.instance()
         self.original_filename = Path(project.fileName())
         self.backup_filename = make_temp_qgis_file(project)
@@ -172,7 +172,7 @@ class OfflineConverter(QObject):
 
             self.total_progress_updated.emit(100, 100, self.tr("Finished"))
 
-    def _get_additional_project_files(self, project: QgsProject) -> list[str]:
+    def _get_additional_project_files(self, project: QgsProject) -> List[str]:
         original_project_path = Path(self.original_filename).parent
         additional_project_files = []
 
@@ -191,13 +191,13 @@ class OfflineConverter(QObject):
                 additional_project_files.append(str(image_decoration_path))
 
         # Check for project plugin asset
-        plugin_file = Path("{}.qml".format(str(self.original_filename)[:-4]))
+        plugin_file = Path("{}.qml".format(str(self.original_filename)[:-4]))  # noqa: UP032
         if plugin_file.exists():
             additional_project_files.append(str(plugin_file))
 
         return additional_project_files
 
-    def _convert(self, project: QgsProject) -> None:
+    def _convert(self, project: QgsProject) -> None:  # noqa: PLR0912, PLR0915
         xml_elements_to_preserve = {}
         tmp_project_filename = ""
 
@@ -217,7 +217,7 @@ class OfflineConverter(QObject):
         read_flags = QgsProject.ReadFlags()
         read_flags |= QgsProject.FlagDontResolveLayers
         read_flags |= QgsProject.FlagDontLoadLayouts
-        if Qgis.versionInt() >= 32600:
+        if Qgis.versionInt() >= 32600:  # noqa: PLR2004
             read_flags |= QgsProject.FlagDontLoad3DViews
 
         # Make a new function object that we can connect and disconnect easily
@@ -244,7 +244,7 @@ class OfflineConverter(QObject):
 
         project_layers: List[QgsMapLayer] = list(project.mapLayers().values())
         offline_layers: List[QgsMapLayer] = []
-        copied_files = list()
+        copied_files = []
 
         if self.create_basemap and self.project_configuration.create_base_map:
             is_basemap_export_success = self._export_basemap()
@@ -269,12 +269,14 @@ class OfflineConverter(QObject):
                         logger.warning(
                             f'Layer "{layer.name()}" cannot be packaged and will be removed because "{reason}".'
                         )
+
                         project.removeMapLayer(layer)
+
                         break
-                    else:
-                        logger.warning(
-                            f'Layer "{layer.name()}" cannot be packaged due to "{reason}", skipping…'
-                        )
+
+                    logger.warning(
+                        f'Layer "{layer.name()}" cannot be packaged due to "{reason}", skipping…'
+                    )
 
                 # do not attempt to package the layer
                 continue
@@ -322,9 +324,7 @@ class OfflineConverter(QObject):
             if layer_action == SyncAction.OFFLINE:
                 offline_layers.append(layer)
                 self.__offline_layer_names.append(layer.name())
-            elif (
-                layer_action == SyncAction.COPY or layer_action == SyncAction.NO_ACTION
-            ):
+            elif layer_action in (SyncAction.COPY, SyncAction.NO_ACTION):
                 copied_files = layer_source.copy(
                     self._export_filename.parent,
                     copied_files,
@@ -396,7 +396,7 @@ class OfflineConverter(QObject):
             )
 
             if not is_success:
-                raise Exception(
+                raise PackagingFailedError(
                     self.tr(
                         "QGIS Offline editing error: failed to convert layers to offline layers"
                     )
@@ -426,9 +426,7 @@ class OfflineConverter(QObject):
     def remove_empty_groups_from_layer_tree_group(
         self, group: QgsLayerTreeGroup
     ) -> None:
-        """
-        Recursively removes any empty groups from the given layer tree group.
-        """
+        """Recursively removes any empty groups from the given layer tree group."""
         for child in group.children():
             if not isinstance(child, QgsLayerTreeGroup):
                 continue
@@ -442,12 +440,12 @@ class OfflineConverter(QObject):
     def post_process_offline_layers(self):
         project = QgsProject.instance()
 
-        if Qgis.QGIS_VERSION_INT >= 34000:
+        if Qgis.versionInt() >= 34000:  # noqa: PLR2004
             project.setFlag(Qgis.ProjectFlag.EvaluateDefaultValuesOnProviderSide, False)
         else:
             project.setEvaluateDefaultValues(False)
 
-        if Qgis.QGIS_VERSION_INT >= 32600:
+        if Qgis.versionInt() >= 32600:  # noqa: PLR2004
             project.setTransactionMode(Qgis.TransactionMode.Disabled)
         else:
             project.setAutoTransaction(False)
@@ -474,7 +472,8 @@ class OfflineConverter(QObject):
         remote_layer_id = e_layer.customProperty("QFieldSync/remoteLayerId")
         e_layer_source = LayerSource(e_layer)
         o_layer_data = self.__layer_data_by_id[remote_layer_id]
-        o_layer_fields: QgsFields = o_layer_data["fields"]  # type: ignore
+        # since we have vector layer, then the fields must be available
+        o_layer_fields: QgsFields = cast(QgsFields, o_layer_data["fields"])
         o_layer_field_names = o_layer_fields.names()
 
         for e_field_name in e_layer_source.visible_fields_names():
@@ -521,16 +520,17 @@ class OfflineConverter(QObject):
             return
 
         e_referenced_layer_id = None
-        for e_layer in project.mapLayers().values():
+        for layer in project.mapLayers().values():
             o_layer_data = self.__layer_data_by_id[o_referenced_layer_id]
 
-            if e_layer.customProperty("remoteSource") == o_layer_data["source"]:
+            if layer.customProperty("remoteSource") == o_layer_data["source"]:
                 #  First try strict matching: the offline layer should have a "remoteSource" property
-                e_referenced_layer_id = e_layer.id()
+                e_referenced_layer_id = layer.id()
                 break
-            elif e_layer.name() == o_layer_data["name"]:
+
+            if layer.name() == o_layer_data["name"]:
                 #  If that did not work, go with loose matching
-                e_referenced_layer_id = e_layer.id()
+                e_referenced_layer_id = layer.id()
                 break
 
         if not e_referenced_layer_id:
@@ -554,10 +554,6 @@ class OfflineConverter(QObject):
             # NOTE if qgis is built without GUI, there is no `qgis.utils`, since it depends on `qgis.gui`
             import qgis.utils
 
-            # TODO investigate why starPlugin fails in docker
-            # print(1111111111010301, qgis.utils.loadPlugin("processing"))
-            # print(1111111111010302, qgis.utils.startPlugin("processing"))
-
             if "processing" in qgis.utils.plugins:
                 return True
 
@@ -569,7 +565,9 @@ class OfflineConverter(QObject):
             )
             self.total_progress_updated.emit(0, 0, self.trUtf8("Cancelled"))
         except Exception:
-            pass
+            logger.warning(
+                "Creating a basemap with QFieldSync requires the processing plugin to be enabled. Processing is not enabled on your system. Please go to Plugins > Manage and Install Plugins and enable processing."
+            )
 
         return False
 
@@ -647,8 +645,8 @@ class OfflineConverter(QObject):
 
         Returns:
             bool: if basemap layer could be exported as mbtiles
-        """
 
+        """
         alg = (
             QgsApplication.instance()
             .processingRegistry()
@@ -754,6 +752,7 @@ class OfflineConverter(QObject):
 
         Args:
             revision (float): progress value of the tiles generation algorithm (between 0 and 100)
+
         """
         self.task_progress_updated.emit(int(revision), 100)
 
@@ -799,49 +798,4 @@ class OfflineConverter(QObject):
         """Checks if packaging has been and should be canceled."""
         QCoreApplication.processEvents()
         if self._is_canceled:
-            raise PackagingCanceledException()
-
-    def convertorProcessingProgress(self):
-        """
-        Will create a new progress object for processing to get feedback from the basemap
-        algorithm.
-        """
-
-        class ConverterProgress(QObject):
-            progress_updated = pyqtSignal(int, int)
-
-            def __init__(self):
-                QObject.__init__(self)
-
-            def error(self, msg):
-                pass
-
-            def setText(self, msg):
-                pass
-
-            def setPercentage(self, i):
-                self.progress_updated.emit(i, 100)
-                QCoreApplication.processEvents()
-
-            def setInfo(self, msg):
-                pass
-
-            def setCommand(self, msg):
-                pass
-
-            def setDebugInfo(self, msg):
-                pass
-
-            def setConsoleInfo(self, msg):
-                pass
-
-            def close(self):
-                pass
-
-        if not self.__convertor_progress:
-            self.__convertor_progress = ConverterProgress()
-            self.__convertor_progress.progress_updated.connect(
-                self.task_progress_updated
-            )
-
-        return self.__convertor_progress
+            raise PackagingCanceledError()

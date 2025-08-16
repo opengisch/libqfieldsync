@@ -1,7 +1,7 @@
 import json
 
 
-class ProjectProperties(object):
+class ProjectProperties:
     def __init__(self):
         raise RuntimeError("This object holds only project property static variables")
 
@@ -33,7 +33,7 @@ class ProjectProperties(object):
     STAMPING_IMAGE_DECORATION = "/stampingImageDecoration"
     STAMPING_DETAILS_TEMPLATE = "/stampingDetailsTemplate"
 
-    class BaseMapType(object):
+    class BaseMapType:
         def __init__(self):
             raise RuntimeError(
                 "This object holds only project property static variables"
@@ -42,7 +42,7 @@ class ProjectProperties(object):
         SINGLE_LAYER = "singleLayer"
         MAP_THEME = "mapTheme"
 
-    class GeofencingBehavior(object):
+    class GeofencingBehavior:
         def __init__(self):
             raise RuntimeError(
                 "This object holds only project property static variables"
@@ -53,10 +53,8 @@ class ProjectProperties(object):
         INFORM_ENTER_LEAVE_AREAS = 3
 
 
-class ProjectConfiguration(object):
-    """
-    Manages the QFieldSync specific configuration for a QGIS project.
-    """
+class ProjectConfiguration:
+    """Manages the QFieldSync specific configuration for a QGIS project."""
 
     def __init__(self, project):
         self.project = project
@@ -86,9 +84,9 @@ class ProjectConfiguration(object):
 
     @base_map_type.setter
     def base_map_type(self, value):
-        if (
-            value != ProjectProperties.BaseMapType.SINGLE_LAYER
-            and value != ProjectProperties.BaseMapType.MAP_THEME
+        if value not in (
+            ProjectProperties.BaseMapType.SINGLE_LAYER,
+            ProjectProperties.BaseMapType.MAP_THEME,
         ):
             raise ValueError("Only supported types can be set")
 

@@ -4,7 +4,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Callable, Dict, List, Optional
 
-from qgis.core import Qgis, QgsMapLayer, QgsProject, QgsSettings
+from qgis.core import Qgis, QgsMapLayer, QgsProject
 from qgis.PyQt.QtCore import QObject
 
 from libqfieldsync.layer import LayerSource, SyncAction, UnsupportedPrimaryKeyError
@@ -65,7 +65,7 @@ class ProjectChecker:
     tr = QObject().tr
 
     class CheckConfig(TypedDict):
-        type: Feedback.Level
+        level: Feedback.Level
         fn: Callable
         scope: Optional[ExportType]
 
@@ -73,69 +73,69 @@ class ProjectChecker:
         self.project = project
         self.project_checks: List[ProjectChecker.CheckConfig] = [
             {
-                "type": Feedback.Level.ERROR,
+                "level": Feedback.Level.ERROR,
                 "fn": self.check_no_absolute_filepaths,
                 "scope": None,
             },
             {
-                "type": Feedback.Level.ERROR,
+                "level": Feedback.Level.ERROR,
                 "fn": self.check_no_homepath,
                 "scope": None,
             },
             {
-                "type": Feedback.Level.ERROR,
+                "level": Feedback.Level.ERROR,
                 "fn": self.check_files_have_unsupported_characters,
                 "scope": None,
             },
             {
-                "type": Feedback.Level.WARNING,
+                "level": Feedback.Level.WARNING,
                 "fn": self.check_project_is_dirty,
                 "scope": ExportType.Cloud,
             },
             {
-                "type": Feedback.Level.ERROR,
+                "level": Feedback.Level.ERROR,
                 "fn": self.check_project_layers_sources_actions,
                 "scope": ExportType.Cable,
             },
         ]
         self.layer_checks: List[ProjectChecker.CheckConfig] = [
             {
-                "type": Feedback.Level.WARNING,
+                "level": Feedback.Level.WARNING,
                 "fn": self.check_layer_has_utf8_datasources,
                 "scope": None,
             },
             {
-                "type": Feedback.Level.WARNING,
+                "level": Feedback.Level.WARNING,
                 "fn": self.check_layer_has_ascii_filename,
                 "scope": None,
             },
             {
-                "type": Feedback.Level.WARNING,
+                "level": Feedback.Level.WARNING,
                 "fn": self.check_external_layers,
                 "scope": None,
             },
             {
-                "type": Feedback.Level.WARNING,
+                "level": Feedback.Level.WARNING,
                 "fn": self.check_layer_primary_key,
                 "scope": ExportType.Cloud,
             },
             {
-                "type": Feedback.Level.WARNING,
+                "level": Feedback.Level.WARNING,
                 "fn": self.check_layer_memory,
                 "scope": None,
             },
             {
-                "type": Feedback.Level.WARNING,
+                "level": Feedback.Level.WARNING,
                 "fn": self.check_layer_configured,
                 "scope": None,
             },
             {
-                "type": Feedback.Level.WARNING,
+                "level": Feedback.Level.WARNING,
                 "fn": self.check_layer_package_prevention,
                 "scope": None,
             },
             {
-                "type": Feedback.Level.WARNING,
+                "level": Feedback.Level.WARNING,
                 "fn": self.check_layer_has_experimental_cloud_support,
                 "scope": ExportType.Cloud,
             },
@@ -150,7 +150,7 @@ class ProjectChecker:
 
             feedback_result = check["fn"]()
             if feedback_result:
-                checked_feedback.add(Feedback(check["type"], feedback_result))
+                checked_feedback.add(Feedback(check["level"], feedback_result))
 
         for layer in self.project.mapLayers().values():
             layer_source = LayerSource(layer)
@@ -177,20 +177,13 @@ class ProjectChecker:
                 feedback_result = check["fn"](layer_source)
                 if feedback_result:
                     checked_feedback.add(
-                        Feedback(check["type"], feedback_result, layer)
+                        Feedback(check["level"], feedback_result, layer)
                     )
 
         return checked_feedback
 
     def check_no_absolute_filepaths(self) -> Optional[FeedbackResult]:
-        if Qgis.QGIS_VERSION_INT >= 32200:
-            is_absolute = self.project.filePathStorage() == Qgis.FilePathType.Absolute
-        else:
-            is_absolute = (
-                QgsSettings().value("/qgis/defaultProjectPathsRelative") == "false"
-            )
-
-        if is_absolute:
+        if self.project.filePathStorage() == Qgis.FilePathType.Absolute:
             return FeedbackResult(
                 self.tr(
                     "QField does not support projects configured to use absolute paths. "
@@ -353,7 +346,7 @@ class ProjectChecker:
                     "The layer will be packaged **as a read-only layer on QFieldCloud**. "
                     "Geopackages are [the recommended data format for QFieldCloud](https://docs.qfield.org/get-started/tutorials/get-started-qfc/#configure-your-project-layers-for-qfield). "
                 )
-                return FeedbackResult(f"{str(err)} {suffix}")
+                return FeedbackResult(f"{err!s} {suffix}")
 
         return None
 
@@ -451,7 +444,7 @@ class ProjectChecker:
 
         return None
 
-    def check_layer_has_experimental_cloud_support(
+    def check_layer_has_experimental_cloud_support(  # noqa: PLR0911
         self, layer_source: LayerSource
     ) -> Optional[FeedbackResult]:
         """Check if layer has experimental cloud support"""
@@ -492,7 +485,7 @@ class ProjectChecker:
 
     def check_project_layers_sources_actions(self) -> Optional[FeedbackResult]:
         """Check if layers from the same GeoPackage have offline and copy actions."""
-        layer_sources_by_filename: dict[str, list[LayerSource]] = defaultdict(list)
+        layer_sources_by_filename: Dict[str, List[LayerSource]] = defaultdict(list)
 
         for project_layer in self.project.mapLayers().values():
             layer_source = LayerSource(project_layer)

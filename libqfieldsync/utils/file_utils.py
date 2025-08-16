@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 /***************************************************************************
  QFieldSync
@@ -96,8 +94,7 @@ def get_project_in_folder(path: str) -> str:
     try:
         return get_children_with_extension(path, "qgs", count=1)[0]
     except QFieldSyncError:
-        message = "No .qgs file found in folder {}".format(path)
-        raise NoProjectFoundError(message)
+        raise NoProjectFoundError(f"No .qgs file found in folder {path}") from None
 
 
 def open_folder(path: Union[Path, str]) -> None:
@@ -108,7 +105,7 @@ def open_folder(path: Union[Path, str]) -> None:
     """
     path = Path(path)
     if platform.system() == "Windows":
-        subprocess.Popen(r'explorer /select,"{}"'.format(path))
+        subprocess.Popen(rf'explorer /select,"{path}"')
     elif platform.system() == "Darwin":
         subprocess.Popen(["open", "-R", path])
     else:
@@ -123,7 +120,9 @@ def import_file_checksum(path: str) -> Optional[str]:
     if os.path.exists(path):
         with open(path, "rb") as f:
             file_data = f.read()
-            md5sum = hashlib.md5(file_data).hexdigest()
+            # TODO @suricactus: Python 3.9, pass `usedforsecurity=False`
+            # https://app.clickup.com/t/2192114/QF-6481
+            md5sum = hashlib.md5(file_data).hexdigest()  # noqa: S324
 
     return md5sum
 
@@ -204,9 +203,7 @@ def isascii(filename: str) -> bool:
 
 
 def is_valid_filename(filename: str) -> bool:
-    """
-    Check if the filename is valid.
-    """
+    """Check if the filename is valid."""
     pattern = re.compile(
         r'^(?!.*[<>:"/\\|?*])'
         r"(?!(?:COM[0-9]|CON|LPT[0-9]|NUL|PRN|AUX|com[0-9]|con|lpt[0-9]|nul|prn|aux)$)"
@@ -218,9 +215,7 @@ def is_valid_filename(filename: str) -> bool:
 
 
 def is_valid_filepath(path: str) -> bool:
-    """
-    Check if the entire path is valid by validating each part of the path.
-    """
+    """Check if the entire path is valid by validating each part of the path."""
     path_obj = Path(path)
     for part in path_obj.parts:
         if not is_valid_filename(part):
@@ -234,10 +229,12 @@ def update_symbols_to_relative_embedded(
 ) -> None:
     """
     Update SVG or Raster symbols layer to relative path or embed it in the QGIS project.
+
     Args:
         symbol: The QGIS symbol (from a renderer).
         home_path: The root of QGIS Project home path.
         destination_path: The target directory where the exported project will be saved.
+
     """
     if symbol is None:
         return
@@ -274,7 +271,7 @@ def update_symbols_to_relative_embedded(
             symbol_layer.setPath(f"base64:{encoded_data}")
 
 
-def set_relative_embed_layer_symbols_on_project(
+def set_relative_embed_layer_symbols_on_project(  # noqa: PLR0912
     layer: QgsVectorLayer, project_home: Path, export_project_path: Path
 ) -> None:
     """
@@ -287,9 +284,9 @@ def set_relative_embed_layer_symbols_on_project(
         layer: The QgsVectorLayer to update.  The layer is a point layer.
         project_home: The root of QGIS Project home path.
         export_project_path: The target directory for the exported offline QGIS project.
-    """
 
-    if Qgis.QGIS_VERSION_INT >= 33000:
+    """
+    if Qgis.versionInt() >= 33000:  # noqa: PLR2004
         point_geometry = Qgis.GeometryType.Point
     else:
         from qgis.core import QgsWkbTypes

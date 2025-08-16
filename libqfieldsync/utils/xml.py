@@ -23,7 +23,8 @@ from qgis.PyQt.QtXml import QDomDocument, QDomElement
 
 
 def get_themapcanvas(doc: QDomDocument) -> Optional[QDomElement]:
-    """Find the "themapcanvas" DOM element in the QGIS project file.
+    """
+    Find the "themapcanvas" DOM element in the QGIS project file.
 
     NOTE if no QgsGui available, QgsProject::write() will discard the "themapcanvas" element.
 
@@ -32,6 +33,7 @@ def get_themapcanvas(doc: QDomDocument) -> Optional[QDomElement]:
 
     Returns:
         Optional[QDomElement]: the "themapcanvas" element
+
     """
     nodes = doc.elementsByTagName("mapcanvas")
 

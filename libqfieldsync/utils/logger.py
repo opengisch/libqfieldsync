@@ -4,7 +4,7 @@ from qgis.core import Qgis, QgsMessageLog
 from qgis.PyQt.QtCore import QObject, pyqtSignal
 
 
-def addLoggingLevel(level_name, levelno, method_name=None):
+def add_logging_level(level_name, levelno, method_name=None):
     """
     Comprehensively adds a new logging level to the `logging` module and the
     currently configured logging class.
@@ -19,9 +19,9 @@ def addLoggingLevel(level_name, levelno, method_name=None):
     raise an `AttributeError` if the level name is already an attribute of the
     `logging` module or if the method name is already present
 
-    Example
+    Example:
     -------
-    >>> addLoggingLevel('TRACE', logging.DEBUG - 5)
+    >>> add_logging_level('TRACE', logging.DEBUG - 5)
     >>> logging.getLogger(__name__).setLevel("TRACE")
     >>> logging.getLogger(__name__).trace('that worked')
     >>> logging.trace('so did this')
@@ -29,6 +29,7 @@ def addLoggingLevel(level_name, levelno, method_name=None):
     5
 
     Shamelessly adapted from: https://stackoverflow.com/a/35804945
+
     """
     if not method_name:
         method_name = level_name.lower()
@@ -37,35 +38,35 @@ def addLoggingLevel(level_name, levelno, method_name=None):
         return
 
     if hasattr(logging.getLoggerClass(), method_name):
-        raise AttributeError("{} already defined in logger class".format(method_name))
+        raise AttributeError(f"{method_name} already defined in logger class")
 
     # This method was inspired by the answers to Stack Overflow post
     # http://stackoverflow.com/q/2183233/2988730, especially
     # http://stackoverflow.com/a/13638084/2988730
-    def logForLevel(self, message, *args, **kwargs):
+    def log_for_level(self, message, *args, **kwargs):
         if self.isEnabledFor(levelno):
             self._log(levelno, message, args, **kwargs)
 
     logging.addLevelName(levelno, level_name)
     setattr(logging, level_name, levelno)
-    setattr(logging.getLoggerClass(), method_name, logForLevel)
+    setattr(logging.getLoggerClass(), method_name, log_for_level)
 
 
 # add QGIS success log level
-addLoggingLevel("SUCCESS", logging.DEBUG - 5)
+add_logging_level("SUCCESS", logging.DEBUG - 5)
 
-if Qgis.QGIS_VERSION_INT >= 32000:
+if Qgis.versionInt() >= 32000:  # noqa: PLR2004
     LogNoLevel = Qgis.MessageLevel.NoLevel
 else:
     LogNoLevel = getattr(Qgis.MessageLevel, "None")
 
-_pythonLevelToQgisLogLevel = {
+PYTHON_LOG_LEVEL_TO_QGIS_LOG_LEVEL = {
     logging.CRITICAL: Qgis.MessageLevel.Critical,
     logging.ERROR: Qgis.MessageLevel.Critical,
     logging.WARNING: Qgis.MessageLevel.Warning,
     logging.INFO: Qgis.MessageLevel.Info,
     logging.DEBUG: Qgis.MessageLevel.Info,
-    logging.SUCCESS: Qgis.MessageLevel.Success,  # type: ignore
+    logging.SUCCESS: Qgis.MessageLevel.Success,  # type: ignore[attr-defined]
     logging.NOTSET: LogNoLevel,
 }
 
@@ -85,7 +86,7 @@ class QgisLogHandler(logging.Handler):
         super().__init__(*args, **kwargs)
 
     def _get_qgis_log_level(self, record: logging.LogRecord) -> int:
-        return _pythonLevelToQgisLogLevel.get(record.levelno, LogNoLevel)
+        return PYTHON_LOG_LEVEL_TO_QGIS_LOG_LEVEL.get(record.levelno, LogNoLevel)
 
     def emit(self, record):
         try:

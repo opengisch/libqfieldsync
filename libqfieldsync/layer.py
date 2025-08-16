@@ -3,7 +3,7 @@ import os
 import re
 import shutil
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import ClassVar, Dict, List, Optional
 
 from qgis.core import (
     Qgis,
@@ -18,6 +18,7 @@ from qgis.core import (
     QgsProviderRegistry,
     QgsReadWriteContext,
     QgsVectorFileWriter,
+    QgsVectorLayer,
 )
 from qgis.PyQt.QtCore import QCoreApplication
 from qgis.PyQt.QtXml import QDomDocument
@@ -60,9 +61,11 @@ file_extension_groups = [
 def get_file_extension_group(filename):
     """
     Return the basename and an extension group (if applicable)
+
     Examples:
          airports.shp -> 'airport', ['.shp', '.shx', '.dbf', '.sbx', '.sbn', '.shp.xml']
          forests.gpkg -> 'forests', ['.gpkg']
+
     """
     for group in file_extension_groups:
         for extension in group:
@@ -72,10 +75,8 @@ def get_file_extension_group(filename):
     return basename, [ext]
 
 
-class SyncAction(object):
-    """
-    Enumeration of sync actions
-    """
+class SyncAction:
+    """Enumeration of sync actions"""
 
     # Make an offline editing copy
     def __init__(self):
@@ -100,7 +101,7 @@ class SyncAction(object):
     REMOVE = "remove"
 
 
-class LayerSource(object):
+class LayerSource:
     class AttachmentType(
         Enum
     ):  # Matches QGIS gui QgsExternalResourceWidget.DocumentViewerContent enum values
@@ -121,7 +122,7 @@ class LayerSource(object):
         PackagePreventionReason.UNSUPPORTED_DATASOURCE,
     )
 
-    ATTACHMENT_EXPRESSIONS = {
+    ATTACHMENT_EXPRESSIONS: ClassVar[Dict[AttachmentType, str]] = {
         AttachmentType.FILE: "'files/{layername}_' || format_date(now(),'yyyyMMddhhmmsszzz') || '_{{filename}}'",
         AttachmentType.IMAGE: "'DCIM/{layername}_' || format_date(now(),'yyyyMMddhhmmsszzz') || '.{{extension}}'",
         AttachmentType.WEB: "",
@@ -298,7 +299,7 @@ class LayerSource(object):
             "QFieldSync/tracking_measurement_type", 0
         )
 
-    def apply(self):
+    def apply(self):  # noqa: PLR0912, PLR0915
         attachment_naming_json = json.dumps(self._attachment_naming)
         # compatibility with QFieldSync <4.3 and QField <2.7
         photo_naming_json = json.dumps(self._photo_naming)
@@ -660,9 +661,7 @@ class LayerSource(object):
         if ews.type() != "ExternalResource":
             return None
 
-        resource_type = (
-            ews.config()["DocumentViewer"] if "DocumentViewer" in ews.config() else 0
-        )
+        resource_type = ews.config().get("DocumentViewer", 0)
         return self.get_attachment_type_by_int_value(resource_type)
 
     def get_attachment_fields(self) -> Dict[str, AttachmentType]:
@@ -759,7 +758,7 @@ class LayerSource(object):
 
     @property
     def available_actions(self):
-        actions = list()
+        actions = []
 
         if self.is_virtual:
             actions.append(
@@ -880,7 +879,7 @@ class LayerSource(object):
                 if action == SyncAction.NO_ACTION:
                     return idx, action
             else:
-                if (
+                if (  # noqa: SIM114
                     (self.is_file and not self.is_localized_path)
                     or self.layer.type() != QgsMapLayer.VectorLayer
                 ) and action == SyncAction.NO_ACTION:
@@ -893,10 +892,7 @@ class LayerSource(object):
     @property
     def is_supported(self):
         # ecw raster
-        if self.layer.source().endswith("ecw"):
-            return False
-        else:
-            return True
+        return not self.layer.source().endswith("ecw")
 
     @property
     def can_lock_geometry(self):
@@ -1168,7 +1164,8 @@ class LayerSource(object):
 
     @property
     def filename(self) -> str:
-        """Returns the filename of the file if the layer is file based. E.g. GPKG, CSV, but not PostGIS, WFS
+        """
+        Returns the filename of the file if the layer is file based. E.g. GPKG, CSV, but not PostGIS, WFS
 
         Note: This may return garbage path, e.g. on online layers such as PostGIS or WFS. Always check with os.path.isfile(),
         as Path.is_file() raises an exception prior to Python 3.8
@@ -1209,10 +1206,9 @@ class LayerSource(object):
 
     @property
     def is_remote_raster_layer(self) -> bool:
-        if self.layer.dataProvider() and self.layer.dataProvider().name() == "wms":
-            return True
-
-        return False
+        return bool(
+            self.layer.dataProvider() and self.layer.dataProvider().name() == "wms"
+        )
 
     @property
     def package_prevention_reasons(
@@ -1305,7 +1301,7 @@ class LayerSource(object):
         """
         if not self.is_file:
             # Copy will also be called on non-file layers like WMS. In this case, just do nothing.
-            return
+            return None
 
         suffix = ""
         uri_parts = self.layer.source().split("|", 1)
@@ -1313,27 +1309,14 @@ class LayerSource(object):
             suffix = uri_parts[1]
 
         if self.is_file:
-            if Qgis.QGIS_VERSION_INT > 32200:
-                # QGIS >= 3.22
-                files_to_copy = QgsFileUtils.sidecarFilesForPath(self.filename)
-                files_to_copy.add(self.filename)
-                for file_to_copy in files_to_copy:
-                    source_path, file_name = os.path.split(file_to_copy)
-                    dest_file = os.path.join(target_path, file_name)
-                    if keep_existent is False or not os.path.isfile(dest_file):
-                        shutil.copy(os.path.join(source_path, file_name), dest_file)
-            else:
-                # QGIS < 3.22
-                source_path, file_name = os.path.split(self.filename)
-                basename, extensions = get_file_extension_group(file_name)
-                for ext in extensions:
-                    dest_file = os.path.join(target_path, basename + ext)
-                    if os.path.exists(os.path.join(source_path, basename + ext)) and (
-                        keep_existent is False or not os.path.isfile(dest_file)
-                    ):
-                        shutil.copy(
-                            os.path.join(source_path, basename + ext), dest_file
-                        )
+            files_to_copy = QgsFileUtils.sidecarFilesForPath(self.filename)
+            files_to_copy.add(self.filename)
+
+            for file_to_copy in files_to_copy:
+                source_path, file_name = os.path.split(file_to_copy)
+                dest_file = os.path.join(target_path, file_name)
+                if keep_existent is False or not os.path.isfile(dest_file):
+                    shutil.copy(os.path.join(source_path, file_name), dest_file)
 
             source_path, file_name = os.path.split(self.filename)
             new_source = ""
@@ -1359,12 +1342,12 @@ class LayerSource(object):
                 else:
                     new_source = os.path.join(target_path, file_name)
                     if suffix != "":
-                        new_source = "{}|{}".format(new_source, suffix)
+                        new_source = "{}|{}".format(new_source, suffix)  # noqa: UP032
 
             self._change_data_source(new_source)
         return copied_files
 
-    def convert_to_gpkg(self, target_path):
+    def convert_to_gpkg(self, target_path):  # noqa: PLR0912, PLR0915
         """
         Convert a layer to geopackage in the target path and adjust its datasource. If
         a layer is already a geopackage, the dataset will merely be copied to the target
@@ -1374,9 +1357,10 @@ class LayerSource(object):
         :param target_path: A path to a folder into which the data will be copied
         :param keep_existent: if True and target file already exists, keep it as it is
         """
+        if self.layer.type() != QgsMapLayer.VectorLayer or not self.layer.isValid():
+            return None
 
-        if not self.layer.type() == QgsMapLayer.VectorLayer or not self.layer.isValid():
-            return
+        assert isinstance(self.layer, QgsVectorLayer)
 
         file_path = self.filename
         suffix = ""
@@ -1404,29 +1388,30 @@ class LayerSource(object):
             if new_source == "":
                 new_source = os.path.join(target_path, file_name)
                 if suffix != "":
-                    new_source = "{}|{}".format(new_source, suffix)
+                    new_source = "{}|{}".format(new_source, suffix)  # noqa: UP032
 
         layer_subset_string = self.layer.subsetString()
         if new_source == "":
-            pattern = re.compile(r"[\W_]+")  # NOQA
+            pattern = re.compile(r"[\W_]+")
             cleaned_name = pattern.sub("", self.layer.name())
-            dest_file = os.path.join(target_path, "{}.gpkg".format(cleaned_name))
+            dest_file = os.path.join(target_path, f"{cleaned_name}.gpkg")
             suffix = 0
             while os.path.isfile(dest_file):
                 suffix += 1
-                dest_file = os.path.join(
-                    target_path, "{}_{}.gpkg".format(cleaned_name, suffix)
-                )
+                dest_file = os.path.join(target_path, f"{cleaned_name}_{suffix}.gpkg")
 
             # clone vector layer and strip it of filter, joins, and virtual fields
             source_layer = self.layer.clone()
+
+            assert source_layer is not None
+
             source_layer.setSubsetString("")
             source_layer_joins = source_layer.vectorJoins()
             for join in source_layer_joins:
                 source_layer.removeJoin(join.joinLayerId())
             fields = source_layer.fields()
             virtual_field_count = 0
-            for i in range(0, len(fields)):
+            for i in range(len(fields)):
                 if fields.fieldOrigin(i) == QgsFields.OriginExpression:
                     source_layer.removeExpressionField(i - virtual_field_count)
                     virtual_field_count += 1
@@ -1434,7 +1419,7 @@ class LayerSource(object):
             options = QgsVectorFileWriter.SaveVectorOptions()
             options.fileEncoding = "UTF-8"
             options.driverName = "GPKG"
-            if Qgis.QGIS_VERSION_INT > 32000:
+            if Qgis.versionInt() > 32000:  # noqa: PLR2004
                 (
                     error,
                     error_msg,
@@ -1451,7 +1436,7 @@ class LayerSource(object):
                     source_layer, dest_file, QgsCoordinateTransformContext(), options
                 )
             if error != QgsVectorFileWriter.NoError:
-                return
+                return None
             if returned_dest_file:
                 new_source = returned_dest_file
             else:
@@ -1464,9 +1449,7 @@ class LayerSource(object):
         return dest_file
 
     def _change_data_source(self, new_data_source, new_provider=None):
-        """
-        Changes the datasource string of the layer
-        """
+        """Changes the datasource string of the layer"""
         context = QgsReadWriteContext()
         document = QDomDocument("style")
         map_layers_element = document.createElement("maplayers")

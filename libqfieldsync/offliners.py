@@ -2,7 +2,7 @@ import hashlib
 from collections import defaultdict
 from enum import Enum
 from pathlib import Path
-from typing import List, NamedTuple, NewType, Optional
+from typing import Dict, List, NamedTuple, NewType, Optional
 
 from osgeo import gdal, ogr, osr
 from qgis.core import (
@@ -26,11 +26,12 @@ from .utils.logger import logger
 
 # In GDAL 3.10.0 the return value of `ogr.CreateDataSource` changed from `ogr.DataSource` to `gdal.Dataset`.
 if gdal.VersionInfo() > "3010000":
-    OgrDataset = NewType("OgrDataset", gdal.Dataset)  # type: ignore
+    OgrDataset = NewType("OgrDataset", gdal.Dataset)  # type: ignore[valid-newtype]
 else:
-    OgrDataset = NewType("OgrDataset", ogr.DataSource)  # type: ignore
+    OgrDataset = NewType("OgrDataset", ogr.DataSource)  # type: ignore[valid-newtype, misc, no-redef]
 
 FID_NULL = -4294967296
+MAX_SUPPORTED_FID_FIELDS = 1000
 
 CUSTOM_PROPERTY_IS_OFFLINE_EDITABLE = "isOfflineEditable"
 CUSTOM_PROPERTY_REMOTE_SOURCE = "remoteSource"
@@ -49,9 +50,9 @@ class OfflinerType(str, Enum):
 
 class BaseOffliner(QObject):
     warning = pyqtSignal(str, str)
-    layerProgressUpdated = pyqtSignal(int, int)
-    progressModeSet = pyqtSignal(QgsOfflineEditing.ProgressMode, int)
-    progressUpdated = pyqtSignal(int)
+    layer_progress_updated = pyqtSignal(int, int)
+    progress_mode_set = pyqtSignal(QgsOfflineEditing.ProgressMode, int)
+    progress_updated = pyqtSignal(int)
 
     def convert_to_offline(
         self,
@@ -74,17 +75,17 @@ class QgisCoreOffliner(BaseOffliner):
         self.offliner = offline_editing
 
         # Check https://api.qgis.org/api/3.14/classQgsOfflineEditing.html#a59d2ebed32704f655868951eba6ef52e for more documentation of these signals
-        # NOTE directly connecting the slot like `self.offliner.progressModeSet.connect(self.progressModeSet)` raises typing error
-        self.offliner.layerProgressUpdated.connect(
-            lambda progress, layer_idx: self.layerProgressUpdated.emit(
+        # NOTE directly connecting the slot like `self.offliner.progress_mode_set.connect(self.progress_mode_set)` raises typing error
+        self.offliner.layer_progress_updated.connect(
+            lambda progress, layer_idx: self.layer_progress_updated.emit(
                 progress, layer_idx
             )
         )
-        self.offliner.progressModeSet.connect(
-            lambda mode, maximum: self.progressModeSet.emit(mode, maximum)
+        self.offliner.progress_mode_set.connect(
+            lambda mode, maximum: self.progress_mode_set.emit(mode, maximum)
         )
-        self.offliner.progressUpdated.connect(
-            lambda progress: self.progressUpdated.emit(progress)
+        self.offliner.progress_updated.connect(
+            lambda progress: self.progress_updated.emit(progress)
         )
 
     def convert_to_offline(
@@ -103,7 +104,7 @@ class QgisCoreOffliner(BaseOffliner):
         if bbox and bbox.isFinite():
             only_selected = True
             for layer in layers:
-                if Qgis.QGIS_VERSION_INT >= 33000:
+                if Qgis.versionInt() >= 33000:  # noqa: PLR2004
                     no_geometry_types = [
                         Qgis.GeometryType.Null,
                         Qgis.GeometryType.Unknown,
@@ -149,6 +150,10 @@ class QgisCoreOffliner(BaseOffliner):
 
 
 class PythonMiniOffliner(BaseOffliner):
+    class LayerInfo(NamedTuple):
+        layer: QgsVectorLayer
+        subset_string: str
+
     def convert_to_offline(
         self,
         offline_db_filename: str,
@@ -165,29 +170,27 @@ class PythonMiniOffliner(BaseOffliner):
         return True
 
     def ogr_field_type(self, field: QgsField) -> ogr.FieldDefn:
-        """
-        Converts a QGIS field type to a matching OGR field type
-        """
+        """Converts a QGIS field type to a matching OGR field type"""
         ogr_sub_type = ogr.OFSTNone
 
-        type = field.type()
+        field_type = field.type()
 
-        if type == QVariant.Int:
+        if field_type == QVariant.Int:
             ogr_type = ogr.OFTInteger
-        elif type == QVariant.LongLong:
+        elif field_type == QVariant.LongLong:
             ogr_type = ogr.OFTInteger64
-        elif type == QVariant.Double:
+        elif field_type == QVariant.Double:
             ogr_type = ogr.OFTReal
-        elif type == QVariant.Time:
+        elif field_type == QVariant.Time:
             ogr_type = ogr.OFTTime
-        elif type == QVariant.Date:
+        elif field_type == QVariant.Date:
             ogr_type = ogr.OFTDate
-        elif type == QVariant.DateTime:
+        elif field_type == QVariant.DateTime:
             ogr_type = ogr.OFTDateTime
-        elif type == QVariant.Bool:
+        elif field_type == QVariant.Bool:
             ogr_type = ogr.OFTInteger
             ogr_sub_type = ogr.OFSTBoolean
-        elif type == QVariant.StringList or type == QVariant.List:
+        elif field_type in (QVariant.StringList, QVariant.List):
             ogr_type = ogr.OFTString
             ogr_sub_type = ogr.OFSTJSON
         else:
@@ -224,12 +227,12 @@ class PythonMiniOffliner(BaseOffliner):
         return data
 
     def create_layer(
-        self, layer: QgsVectorLayer, data_source: OgrDataset, offline_gpkg_path: str
+        self,
+        layer: QgsVectorLayer,
+        data_source: OgrDataset,
+        _offline_gpkg_path: str,
     ) -> None:
-        """
-        Will create a new layer for ``layer`` in the GeoPackage specified as ``data_source`` which is stored at ``offline_gpkg_path``.
-        """
-
+        """Will create a new layer for ``layer`` in the GeoPackage specified as ``data_source`` which is stored at ``offline_gpkg_path``."""
         identifier = hashlib.sha256(
             layer.dataProvider().dataSourceUri().encode()
         ).hexdigest()
@@ -245,7 +248,7 @@ class PythonMiniOffliner(BaseOffliner):
         while layer.dataProvider().fields().lookupField(fid) >= 0:
             fid = f"fid_{counter}"
             counter += 1
-            if counter == 10000:
+            if counter == MAX_SUPPORTED_FID_FIELDS:
                 raise RuntimeError(
                     f"Cannot determine usable FID field name for GPKG {layer.name()}"
                 )
@@ -275,14 +278,16 @@ class PythonMiniOffliner(BaseOffliner):
     def convert_to_offline_layer(
         self,
         layer: QgsVectorLayer,
-        data_source: OgrDataset,
+        _data_source: OgrDataset,
         offline_gpkg_path: str,
-        feature_request: QgsFeatureRequest = QgsFeatureRequest(),
+        feature_request: Optional[QgsFeatureRequest] = None,
     ) -> str:
         """
         Will fill a copy of ``layer`` in the GeoPackage specified as ``data_source`` which is stored at ``offline_gpkg_path``.
         It will replace the dataProvider of the original layer.
         """
+        if not feature_request:
+            feature_request = QgsFeatureRequest()
 
         identifier = hashlib.sha256(
             layer.dataProvider().dataSourceUri().encode()
@@ -302,18 +307,16 @@ class PythonMiniOffliner(BaseOffliner):
             )
 
         with edit(new_layer):
-            feature_request = QgsFeatureRequest()
-
             new_fields = new_layer.fields()
 
             for feature in layer.dataProvider().getFeatures(feature_request):
                 # Prepend an empty attribute for the new FID
-                attrs = [None] + feature.attributes()
+                attrs = [None, *feature.attributes()]
 
                 # Fixup list and json attributes
                 for i in range(new_layer.fields().count()):
-                    type = new_layer.fields().at(i).type()
-                    if type == QVariant.StringList or type == QVariant.List:
+                    field_type = new_layer.fields().at(i).type()
+                    if field_type in (QVariant.StringList, QVariant.List):
                         attrs[i] = QgsJsonUtils.encodeValue(attrs[i])
 
                 feature.setFields(new_fields)
@@ -369,7 +372,8 @@ class PythonMiniOffliner(BaseOffliner):
         bbox: Optional[QgsRectangle],
         exported_project_title: str = "",
     ) -> None:
-        """Converts the currently loaded QgsProject to an offline project.
+        """
+        Converts the currently loaded QgsProject to an offline project.
         Offline layers are written to ``offline_gpkg_path``. Only valid vector layers are written.
         If ``layer_ids`` is specified, only layers present in this list are written.
         If ``bbox`` is specified, only features within this ``bbox`` are written.
@@ -382,53 +386,23 @@ class PythonMiniOffliner(BaseOffliner):
         """
         project = QgsProject.instance()
 
+        assert project
+
         driver = ogr.GetDriverByName("GPKG")
         data_source = driver.CreateDataSource(offline_gpkg_path)
+        datasource_mapping = self._get_datasource_mapping(project, offline_layers)
 
-        class LayerInfo(NamedTuple):
-            layer: QgsVectorLayer
-            subset_string: str
-
-        # A dict that maps data sources (tables) to a list of layers connecting them
-        datasource_mapping = defaultdict(list)
-        for layer in project.mapLayers().values():
-            if layer.type() != QgsMapLayer.VectorLayer:
-                logger.info(f"Skipping layer {layer.name()} :: not a vector layer")
-                continue
-
-            if not layer.isValid():
-                reason = ""
-                if layer.dataProvider():
-                    reason = layer.dataProvider().error()
-                logger.info(f"Skipping layer {layer.name()} :: invalid ({reason})")
-                continue
-
-            if offline_layers is not None and layer not in offline_layers:
-                logger.info(
-                    f"Skipping layer {layer.name()} :: not configured as offline layer"
-                )
-                continue
-
-            subset_string = layer.subsetString()
-            layer.setSubsetString("")
-
-            datasource_hash = hashlib.sha256(
-                layer.dataProvider().dataSourceUri().encode()
-            ).hexdigest()
-
-            datasource_mapping[datasource_hash].append(LayerInfo(layer, subset_string))
-
-        for datasource_hash, layer_infos in datasource_mapping.items():
+        for layer_infos in datasource_mapping.values():
             layer_to_offline = layer_infos[0].layer
             self.create_layer(layer_to_offline, data_source, offline_gpkg_path)
 
-        for datasource_hash, layer_infos in datasource_mapping.items():
+        for layer_infos in datasource_mapping.values():
             request = QgsFeatureRequest()
             # All layers for given `datasource_hash` are pointing to the very same file/datasource.
             # Here we get the first layer for convenience, but it doesn't really matter.
             layer_to_offline = layer_infos[0].layer
 
-            if Qgis.QGIS_VERSION_INT >= 33000:
+            if Qgis.versionInt() >= 33000:  # noqa: PLR2004
                 no_geometry_types = [
                     Qgis.GeometryType.Null,
                     Qgis.GeometryType.Unknown,
@@ -478,3 +452,46 @@ class PythonMiniOffliner(BaseOffliner):
             PROJECT_ENTRY_KEY_OFFLINE_DB_PATH,
             project.writePath(offline_gpkg_path),
         )
+
+    def _get_datasource_mapping(
+        self,
+        project: QgsProject,
+        offline_layers: Optional[List[QgsMapLayer]],
+    ) -> Dict[str, List[LayerInfo]]:
+        """
+        Create a dict of data sources (tables/files) to a list of layers that consume data from them.
+
+        For example `data.geojson` can be referred by multiple layers in QGIS, but the data source is still the same.
+        """
+        # A dict that maps data sources (tables) to a list of layers connecting them
+        datasource_mapping = defaultdict(list)
+        for layer in project.mapLayers().values():
+            if layer.type() != QgsMapLayer.VectorLayer:
+                logger.info(f"Skipping layer {layer.name()} :: not a vector layer")
+                continue
+
+            if not layer.isValid():
+                reason = ""
+                if layer.dataProvider():
+                    reason = layer.dataProvider().error()
+                logger.info(f"Skipping layer {layer.name()} :: invalid ({reason})")
+                continue
+
+            if offline_layers is not None and layer not in offline_layers:
+                logger.info(
+                    f"Skipping layer {layer.name()} :: not configured as offline layer"
+                )
+                continue
+
+            subset_string = layer.subsetString()
+            layer.setSubsetString("")
+
+            datasource_hash = hashlib.sha256(
+                layer.dataProvider().dataSourceUri().encode()
+            ).hexdigest()
+
+            datasource_mapping[datasource_hash].append(
+                PythonMiniOffliner.LayerInfo(layer, subset_string)
+            )
+
+        return datasource_mapping
