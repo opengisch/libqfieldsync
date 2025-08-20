@@ -97,6 +97,11 @@ class ProjectChecker:
                 "fn": self.check_project_layers_sources_actions,
                 "scope": ExportType.Cable,
             },
+            {
+                "type": Feedback.Level.WARNING,
+                "fn": self.check_for_conflicting_base_filenames,
+                "scope": ExportType.Cloud,
+            },
         ]
         self.layer_checks: List[ProjectChecker.CheckConfig] = [
             {
@@ -288,6 +293,36 @@ class ProjectChecker:
             )
         else:
             return None
+
+    def check_for_conflicting_base_filenames(self) -> Optional[FeedbackResult]:
+        conflicting_files: List[Path] = []
+
+        project_file_path = Path(self.project.fileName())
+        project_home_path = project_file_path.parent
+        project_base_name = project_file_path.stem
+
+        for item in project_home_path.rglob("*"):
+            if (
+                item.is_file()
+                and item != project_file_path
+                and item.stem == project_base_name
+                and not item.name.endswith("~")
+                and ".qfieldsync" not in item.relative_to(project_home_path).parts
+            ):
+                conflicting_files.append(item)
+
+        if conflicting_files:
+            return FeedbackResult(
+                self.tr(
+                    'The project "{}" shares its base file name ({}) with the following files, which might cause issues: {}.'
+                ).format(
+                    project_base_name,
+                    project_file_path.name,
+                    ", ".join([f'"{path}"' for path in conflicting_files]),
+                )
+            )
+
+        return None
 
     def check_layer_has_utf8_datasources(
         self, layer_source: LayerSource
