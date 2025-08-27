@@ -20,7 +20,7 @@ from qgis.core import (
     QgsVectorLayer,
     edit,
 )
-from qgis.PyQt.QtCore import QFileInfo, QObject, QVariant, pyqtSignal
+from qgis.PyQt.QtCore import QFileInfo, QMetaType, QObject, pyqtSignal
 
 from .utils.logger import logger
 
@@ -177,22 +177,22 @@ class PythonMiniOffliner(BaseOffliner):
 
         field_type = field.type()
 
-        if field_type == QVariant.Int:
+        if field_type == QMetaType.Type.Int:
             ogr_type = ogr.OFTInteger
-        elif field_type == QVariant.LongLong:
+        elif field_type == QMetaType.Type.LongLong:
             ogr_type = ogr.OFTInteger64
-        elif field_type == QVariant.Double:
+        elif field_type == QMetaType.Type.Double:
             ogr_type = ogr.OFTReal
-        elif field_type == QVariant.Time:
+        elif field_type == QMetaType.Type.QTime:
             ogr_type = ogr.OFTTime
-        elif field_type == QVariant.Date:
+        elif field_type == QMetaType.Type.QDate:
             ogr_type = ogr.OFTDate
-        elif field_type == QVariant.DateTime:
+        elif field_type == QMetaType.Type.QDateTime:
             ogr_type = ogr.OFTDateTime
-        elif field_type == QVariant.Bool:
+        elif field_type == QMetaType.Type.Bool:
             ogr_type = ogr.OFTInteger
             ogr_sub_type = ogr.OFSTBoolean
-        elif field_type in (QVariant.StringList, QVariant.List):
+        elif field_type in (QMetaType.Type.QStringList, QMetaType.Type.QVariantList):
             ogr_type = ogr.OFTString
             ogr_sub_type = ogr.OFSTJSON
         else:
@@ -318,7 +318,7 @@ class PythonMiniOffliner(BaseOffliner):
                 # Fixup list and json attributes
                 for i in range(new_layer.fields().count()):
                     field_type = new_layer.fields().at(i).type()
-                    if field_type in (QVariant.StringList, QVariant.List):
+                    if field_type in (QMetaType.Type.QStringList, QMetaType.Type.QVariantList):
                         attrs[i] = QgsJsonUtils.encodeValue(attrs[i])
 
                 feature.setFields(new_fields)
