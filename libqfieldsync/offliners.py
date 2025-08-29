@@ -318,7 +318,10 @@ class PythonMiniOffliner(BaseOffliner):
                 # Fixup list and json attributes
                 for i in range(new_layer.fields().count()):
                     field_type = new_layer.fields().at(i).type()
-                    if field_type in (QMetaType.Type.QStringList, QMetaType.Type.QVariantList):
+                    if field_type in (
+                        QMetaType.Type.QStringList,
+                        QMetaType.Type.QVariantList,
+                    ):
                         attrs[i] = QgsJsonUtils.encodeValue(attrs[i])
 
                 feature.setFields(new_fields)
