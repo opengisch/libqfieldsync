@@ -30,7 +30,10 @@ class Feedback:
         WARNING = "WARNING"
 
     def __init__(
-        self, level: Level, feedback_result: FeedbackResult, layer: QgsMapLayer = None
+        self,
+        level: Level,
+        feedback_result: FeedbackResult,
+        layer: Optional[QgsMapLayer] = None,
     ) -> None:
         self.level = level
         self.message = feedback_result.message

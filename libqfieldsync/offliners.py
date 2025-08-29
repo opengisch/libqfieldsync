@@ -98,6 +98,9 @@ class QgisCoreOffliner(BaseOffliner):
         exported_project_title: str = "",
     ) -> bool:
         project = QgsProject.instance()
+
+        assert project
+
         offline_db_path = Path(offline_db_filename).parent
         layer_ids = [layer.id() for layer in layers]
 
