@@ -150,9 +150,9 @@ class OfflineConverter(QObject):
             or self.project_configuration.create_base_map
         ):
             assert self.area_of_interest.isValid()[0]
-            assert (
-                self.area_of_interest_crs.isValid()
-            ), f"Invalid CRS specified for area of interest {area_of_interest_crs}"
+            assert self.area_of_interest_crs.isValid(), (
+                f"Invalid CRS specified for area of interest {area_of_interest_crs}"
+            )
 
     def convert(self, reload_original_project: bool = True) -> None:
         """Convert the project to a portable project."""
@@ -473,7 +473,7 @@ class OfflineConverter(QObject):
         e_layer_source = LayerSource(e_layer)
         o_layer_data = self.__layer_data_by_id[remote_layer_id]
         # since we have vector layer, then the fields must be available
-        o_layer_fields: QgsFields = cast(QgsFields, o_layer_data["fields"])
+        o_layer_fields: QgsFields = cast("QgsFields", o_layer_data["fields"])
         o_layer_field_names = o_layer_fields.names()
 
         for e_field_name in e_layer_source.visible_fields_names():

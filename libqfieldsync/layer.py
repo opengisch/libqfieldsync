@@ -27,12 +27,10 @@ from .utils.file_utils import slugify
 from .utils.logger import logger
 
 
-class ExpectedVectorLayerError(Exception):
-    ...
+class ExpectedVectorLayerError(Exception): ...
 
 
-class UnsupportedPrimaryKeyError(Exception):
-    ...
+class UnsupportedPrimaryKeyError(Exception): ...
 
 
 # When copying files, if any of the extension in any of the groups is found,
