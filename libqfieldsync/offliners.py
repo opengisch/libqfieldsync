@@ -112,7 +112,7 @@ class QgisCoreOffliner(BaseOffliner):
                         Qgis.GeometryType.Unknown,
                     ]
                 else:
-                    from qgis.core import QgsWkbTypes
+                    from qgis.core import QgsWkbTypes  # noqa: PLC0415
 
                     no_geometry_types = [
                         QgsWkbTypes.GeometryType.NullGeometry,
@@ -413,7 +413,7 @@ class PythonMiniOffliner(BaseOffliner):
                     Qgis.GeometryType.Unknown,
                 ]
             else:
-                from qgis.core import QgsWkbTypes
+                from qgis.core import QgsWkbTypes  # noqa: PLC0415
 
                 no_geometry_types = [
                     QgsWkbTypes.GeometryType.NullGeometry,
