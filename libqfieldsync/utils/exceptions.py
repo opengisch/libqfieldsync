@@ -23,7 +23,7 @@ from qgis.core import Qgis, QgsMessageLog
 class QFieldSyncError(Exception):
     def __init__(self, message, exception=None, long_message=None, tag="QFieldSync"):
         """
-        an Exception that automatically logs the error to the QgsMessageLog
+        An Exception that automatically logs the error to the QgsMessageLog
         :param exception:
         :param message: a short message to be logged and used by str()
         :param long_message: a longer message only shown in the log
