@@ -66,6 +66,9 @@ ignore = [
     "COM812",
     # https://docs.astral.sh/ruff/rules/blind-except/
     "BLE001",
+    # https://docs.astral.sh/ruff/rules/single-line-implicit-string-concatenation/
+    # NOTE: The following rule "ISC001" may cause conflicts when used with the formatter.
+    "ISC001",
     # https://docs.astral.sh/ruff/rules/future-rewritable-type-annotation/
     "FA100",
     # https://docs.astral.sh/ruff/rules/#flake8-use-pathlib-pth
