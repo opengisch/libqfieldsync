@@ -690,9 +690,9 @@ class OfflineConverter(QObject):
                 themes_data[theme_name] = (layers, visibility)
 
             # create a temp file to store current QGIS project
-            temp_file = tempfile.NamedTemporaryFile(suffix=".qgz", delete=False)
-            temp_path = temp_file.name
-            temp_file.close()
+            with tempfile.NamedTemporaryFile(suffix=".qgz", delete=False) as temp_file:
+                temp_path = temp_file.name
+
             current_project.write(temp_path)
 
             cloned_project.read(temp_path)
