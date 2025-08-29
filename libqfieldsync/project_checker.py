@@ -101,7 +101,7 @@ class ProjectChecker:
                 "scope": ExportType.Cable,
             },
             {
-                "type": Feedback.Level.WARNING,
+                "level": Feedback.Level.WARNING,
                 "fn": self.check_for_conflicting_base_filenames,
                 "scope": ExportType.Cloud,
             },
