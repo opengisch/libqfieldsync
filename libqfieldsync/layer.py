@@ -6,7 +6,6 @@ from enum import Enum
 from typing import ClassVar, Dict, List, Optional
 
 from qgis.core import (
-    Qgis,
     QgsAttributeEditorField,
     QgsCoordinateTransformContext,
     QgsDataSourceUri,
@@ -407,7 +406,11 @@ class LayerSource:
             != self.feature_deletion_locked_expression
         )
         has_changed |= (
-            bool(self.layer.customProperty("QFieldSync/allow_value_relation_feature_addition"))
+            bool(
+                self.layer.customProperty(
+                    "QFieldSync/allow_value_relation_feature_addition"
+                )
+            )
             != self.allow_value_relation_feature_addition
         )
         has_changed |= (
@@ -561,9 +564,13 @@ class LayerSource:
         )
 
         if self.allow_value_relation_feature_addition:
-            self.layer.setCustomProperty("QFieldSync/allow_value_relation_feature_addition", True)
+            self.layer.setCustomProperty(
+                "QFieldSync/allow_value_relation_feature_addition", True
+            )
         else:
-            self.layer.removeCustomProperty("QFieldSync/allow_value_relation_feature_addition")
+            self.layer.removeCustomProperty(
+                "QFieldSync/allow_value_relation_feature_addition"
+            )
 
         if self.tracking_session_active:
             self.layer.setCustomProperty("QFieldSync/tracking_session_active", True)
@@ -1027,8 +1034,12 @@ class LayerSource:
         return bool(self._allow_value_relation_feature_addition)
 
     @allow_value_relation_feature_addition.setter
-    def allow_value_relation_feature_addition(self, allow_value_relation_feature_addition):
-        self._allow_value_relation_feature_addition = allow_value_relation_feature_addition
+    def allow_value_relation_feature_addition(
+        self, allow_value_relation_feature_addition
+    ):
+        self._allow_value_relation_feature_addition = (
+            allow_value_relation_feature_addition
+        )
 
     @property
     def tracking_session_active(self):
@@ -1419,22 +1430,15 @@ class LayerSource:
             options = QgsVectorFileWriter.SaveVectorOptions()
             options.fileEncoding = "UTF-8"
             options.driverName = "GPKG"
-            if Qgis.versionInt() > 32000:  # noqa: PLR2004
-                (
-                    error,
-                    error_msg,
-                    returned_dest_file,
-                    returned_dest_layer,
-                ) = QgsVectorFileWriter.writeAsVectorFormatV3(
-                    source_layer, dest_file, QgsCoordinateTransformContext(), options
-                )
-            else:
-                (
-                    error,
-                    returned_dest_file,
-                ) = QgsVectorFileWriter.writeAsVectorFormatV2(
-                    source_layer, dest_file, QgsCoordinateTransformContext(), options
-                )
+            (
+                error,
+                _error_msg,
+                returned_dest_file,
+                _returned_dest_layer,
+            ) = QgsVectorFileWriter.writeAsVectorFormatV3(
+                source_layer, dest_file, QgsCoordinateTransformContext(), options
+            )
+
             if error != QgsVectorFileWriter.NoError:
                 return None
             if returned_dest_file:
