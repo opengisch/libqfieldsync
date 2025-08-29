@@ -552,7 +552,7 @@ class OfflineConverter(QObject):
     def _export_basemap_requirements_check(self) -> bool:
         try:
             # NOTE if qgis is built without GUI, there is no `qgis.utils`, since it depends on `qgis.gui`
-            import qgis.utils
+            import qgis.utils  # noqa: PLC0415
 
             if "processing" in qgis.utils.plugins:
                 return True

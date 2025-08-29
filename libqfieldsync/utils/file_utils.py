@@ -289,7 +289,7 @@ def set_relative_embed_layer_symbols_on_project(  # noqa: PLR0912
     if Qgis.versionInt() >= 33000:  # noqa: PLR2004
         point_geometry = Qgis.GeometryType.Point
     else:
-        from qgis.core import QgsWkbTypes
+        from qgis.core import QgsWkbTypes  # noqa: PLC0415
 
         point_geometry = QgsWkbTypes.GeometryType.PointGeometry
 
