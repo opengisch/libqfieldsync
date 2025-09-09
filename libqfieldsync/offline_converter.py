@@ -108,11 +108,17 @@ class OfflineConverter(QObject):
         area_of_interest_crs: Union[str, QgsCoordinateReferenceSystem],
         attachment_dirs: List[str],
         offliner: BaseOffliner,
-        export_type: ExportType = ExportType.Cable,
+        export_type: Optional[ExportType] = None,
         create_basemap: bool = True,
         dirs_to_copy: Optional[Dict[str, bool]] = None,
         export_title: str = "",
-    ):
+    ) -> None:
+        # NOTE: while it will be much more readable to pass `export_type` parameter to have a default value of `ExportType.Cable`,
+        # we cannot reference an Enum as a default value in a QGIS plugin, as when the file reloaded (e.g. enable/disable the plugin, Plugin reloader),
+        # the enum will have a different address and comparisons will fail.
+        if export_type is None:
+            export_type = ExportType.Cable
+
         super().__init__(parent=None)
         self.__max_task_progress = 0
         self.__convertor_progress = None  # for processing feedback
