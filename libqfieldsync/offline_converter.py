@@ -17,6 +17,7 @@
  ***************************************************************************/
 """
 
+import re
 import shutil
 import tempfile
 from enum import Enum
@@ -361,11 +362,35 @@ class OfflineConverter(QObject):
             project_path = Path(project.fileName()).parent
             for additional_project_file in additional_project_files:
                 additional_project_file_path = Path(additional_project_file)
-                relative_path = additional_project_file_path.relative_to(project_path)
+                additional_project_file_name = additional_project_file_path.name
+
+                additional_project_file_relative_path = (
+                    additional_project_file_path.relative_to(project_path)
+                )
+
                 destination_file = self._export_filename.parent.joinpath(
-                    relative_path
+                    additional_project_file_relative_path
                 ).resolve()
                 destination_file.parent.mkdir(parents=True, exist_ok=True)
+
+                if (
+                    str(additional_project_file_path)
+                    == f"{str(self.original_filename)[:-4]}.qml"
+                ):
+                    destination_file = destination_file.parent.joinpath(
+                        f"{str(export_project_filename.name)[:-4]}.qml"
+                    )
+
+                elif additional_project_file_name.endswith(".qm"):
+                    match = re.match(
+                        rf"^{re.escape(str(self.original_filename)[:-4])}(_[A-Za-z][A-Za-z]\.qm)$",
+                        str(additional_project_file_path),
+                    )
+                    if match:
+                        destination_file = destination_file.parent.joinpath(
+                            f"{str(export_project_filename.name)[:-4]}{match.group(1)}"
+                        )
+
                 shutil.copy(additional_project_file, str(destination_file))
 
         # save the offline project twice so that the offline plugin can "know" that it's a relative path
