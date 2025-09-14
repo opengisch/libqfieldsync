@@ -20,6 +20,7 @@
 import shutil
 import tempfile
 from enum import Enum
+from glob import glob
 from pathlib import Path
 from typing import Dict, List, Optional, TypedDict, Union, cast
 
@@ -200,6 +201,12 @@ class OfflineConverter(QObject):
         plugin_file = Path("{}.qml".format(str(self.original_filename)[:-4]))  # noqa: UP032
         if plugin_file.exists():
             additional_project_files.append(str(plugin_file))
+
+        # Check for project translations asset
+        for translation_file in glob(
+            f"{str(self.original_filename)[:-4]}_[A-Za-z][A-Za-z].qm"
+        ):
+            additional_project_files.append(str(translation_file))
 
         return additional_project_files
 
