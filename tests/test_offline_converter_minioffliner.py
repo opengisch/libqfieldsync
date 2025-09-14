@@ -149,7 +149,9 @@ class OfflineConverterTest(unittest.TestCase):
         self.assertTrue(
             self.target_dir.joinpath("assets", "qfield_for_qgis.png").exists()
         )
-        self.assertTrue(self.target_dir.joinpath("project.qml").exists())
+        self.assertTrue(self.target_dir.joinpath("project_qfield.qml").exists())
+        self.assertTrue(self.target_dir.joinpath("project_qfield_fr.qm").exists())
+        self.assertTrue(self.target_dir.joinpath("project_qfield_de.qm").exists())
 
     def test_primary_keys_custom_property(self):
         shutil.copytree(
