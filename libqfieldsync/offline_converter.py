@@ -363,7 +363,6 @@ class OfflineConverter(QObject):
             for additional_project_file in additional_project_files:
                 additional_project_file_path = Path(additional_project_file)
                 additional_project_file_name = additional_project_file_path.name
-
                 additional_project_file_relative_path = (
                     additional_project_file_path.relative_to(project_path)
                 )
@@ -373,22 +372,33 @@ class OfflineConverter(QObject):
                 ).resolve()
                 destination_file.parent.mkdir(parents=True, exist_ok=True)
 
+                # Project plugins and translation files require for their file name
+                # to match that of their associated project file (e.g myproject.qgs,
+                # myproject_bg.qm for a translation file and myproject.qml for a
+                # project plugin). We must therefore adapt these file names to match
+                # the generated project file name
+                original_project_filename_without_extension = str(
+                    self.original_filename
+                )[:-4]
+                export_project_filename_without_extension = str(
+                    export_project_filename.name
+                )[:-4]
                 if (
                     str(additional_project_file_path)
-                    == f"{str(self.original_filename)[:-4]}.qml"
+                    == f"{original_project_filename_without_extension}.qml"
                 ):
                     destination_file = destination_file.parent.joinpath(
-                        f"{str(export_project_filename.name)[:-4]}.qml"
+                        f"{export_project_filename_without_extension}.qml"
                     )
 
                 elif additional_project_file_name.endswith(".qm"):
                     match = re.match(
-                        rf"^{re.escape(str(self.original_filename)[:-4])}(_[A-Za-z][A-Za-z]\.qm)$",
+                        rf"^{re.escape(original_project_filename_without_extension)}(_[A-Za-z]{{2}}\.qm)$",
                         str(additional_project_file_path),
                     )
                     if match:
                         destination_file = destination_file.parent.joinpath(
-                            f"{str(export_project_filename.name)[:-4]}{match.group(1)}"
+                            f"{export_project_filename_without_extension}{match.group(1)}"
                         )
 
                 shutil.copy(additional_project_file, str(destination_file))
