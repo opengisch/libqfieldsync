@@ -19,6 +19,8 @@ class ProjectProperties:
     AREA_OF_INTEREST = "/areaOfInterest"
     AREA_OF_INTEREST_CRS = "/areaOfInterestCrs"
     DIGITIZING_LOGS_LAYER = "/digitizingLogsLayer"
+    INITIAL_FOCUSED_LAYER = "/initialFocusedLayer"
+    INITIAL_MAP_MODE = "/initialMapMode"
     MAXIMUM_IMAGE_WIDTH_HEIGHT = "/maximumImageWidthHeight"
     FORCE_AUTO_PUSH = "/forceAutoPush"
     FORCE_AUTO_PUSH_INTERVAL_MINS = "/forceAutoPushIntervalMins"
@@ -126,6 +128,30 @@ class ProjectConfiguration:
         self.project.writeEntry(
             "qfieldsync", ProjectProperties.DIGITIZING_LOGS_LAYER, value
         )
+
+    @property
+    def initial_focused_layer(self):
+        initial_focused_layer, _ = self.project.readEntry(
+            "qfieldsync", ProjectProperties.INITIAL_FOCUSED_LAYER
+        )
+        return initial_focused_layer
+
+    @initial_focused_layer.setter
+    def initial_focused_layer(self, value):
+        self.project.writeEntry(
+            "qfieldsync", ProjectProperties.INITIAL_FOCUSED_LAYER, value
+        )
+
+    @property
+    def initial_map_mode(self):
+        initial_map_mode, _ = self.project.readEntry(
+            "qfieldsync", ProjectProperties.INITIAL_MAP_MODE
+        )
+        return initial_map_mode
+
+    @initial_map_mode.setter
+    def initial_map_mode(self, value):
+        self.project.writeEntry("qfieldsync", ProjectProperties.INITIAL_MAP_MODE, value)
 
     @property
     def geofencing_layer(self):
