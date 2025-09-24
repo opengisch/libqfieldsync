@@ -19,7 +19,7 @@ class ProjectProperties:
     AREA_OF_INTEREST = "/areaOfInterest"
     AREA_OF_INTEREST_CRS = "/areaOfInterestCrs"
     DIGITIZING_LOGS_LAYER = "/digitizingLogsLayer"
-    INITIAL_FOCUSED_LAYER = "/initialFocusedLayer"
+    INITIAL_ACTIVE_LAYER = "/initialActiveLayer"
     INITIAL_MAP_MODE = "/initialMapMode"
     MAXIMUM_IMAGE_WIDTH_HEIGHT = "/maximumImageWidthHeight"
     FORCE_AUTO_PUSH = "/forceAutoPush"
@@ -130,16 +130,16 @@ class ProjectConfiguration:
         )
 
     @property
-    def initial_focused_layer(self):
-        initial_focused_layer, _ = self.project.readEntry(
-            "qfieldsync", ProjectProperties.INITIAL_FOCUSED_LAYER
+    def initial_active_layer(self):
+        initial_active_layer, _ = self.project.readEntry(
+            "qfieldsync", ProjectProperties.INITIAL_ACTIVE_LAYER
         )
-        return initial_focused_layer
+        return initial_active_layer
 
-    @initial_focused_layer.setter
-    def initial_focused_layer(self, value):
+    @initial_active_layer.setter
+    def initial_active_layer(self, value):
         self.project.writeEntry(
-            "qfieldsync", ProjectProperties.INITIAL_FOCUSED_LAYER, value
+            "qfieldsync", ProjectProperties.INITIAL_ACTIVE_LAYER, value
         )
 
     @property
