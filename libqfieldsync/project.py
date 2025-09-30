@@ -54,6 +54,15 @@ class ProjectProperties:
         ALERT_OUTSIDE_AREAS = 2
         INFORM_ENTER_LEAVE_AREAS = 3
 
+    class InitialMapMode:
+        def __init__(self):
+            raise RuntimeError(
+                "This object holds only project property static variables"
+            )
+
+        BROWSE = "browse"
+        DIGITIZE = "digitize"
+
 
 class ProjectConfiguration:
     """Manages the QFieldSync specific configuration for a QGIS project."""
@@ -147,7 +156,12 @@ class ProjectConfiguration:
         initial_map_mode, _ = self.project.readEntry(
             "qfieldsync", ProjectProperties.INITIAL_MAP_MODE
         )
-        return initial_map_mode
+        if initial_map_mode in (
+            ProjectProperties.InitialMapMode.BROWSE,
+            ProjectProperties.InitialMapMode.DIGITIZE,
+        ):
+            return initial_map_mode
+        return ProjectProperties.InitialMapMode.BROWSE
 
     @initial_map_mode.setter
     def initial_map_mode(self, value):
