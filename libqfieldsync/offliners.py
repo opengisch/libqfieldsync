@@ -1,4 +1,5 @@
 import hashlib
+import os
 from collections import defaultdict
 from enum import Enum
 from pathlib import Path
@@ -9,6 +10,7 @@ from qgis.core import (
     Qgis,
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
+    QgsDataSourceUri,
     QgsFeatureRequest,
     QgsField,
     QgsFieldConstraints,
@@ -41,6 +43,8 @@ CUSTOM_PROPERTY_ORIGINAL_LAYERID = "remoteLayerId"
 CUSTOM_PROPERTY_LAYERNAME_SUFFIX = "layerNameSuffix"
 PROJECT_ENTRY_SCOPE_OFFLINE = "OfflineEditingPlugin"
 PROJECT_ENTRY_KEY_OFFLINE_DB_PATH = "/OfflineDbPath"
+
+QFC_PG_EFFECTIVE_USER = os.getenv("QFC_PG_EFFECTIVE_USER")
 
 
 class OfflinerType(str, Enum):
@@ -490,6 +494,17 @@ class PythonMiniOffliner(BaseOffliner):
                     f"Skipping layer {layer.name()} :: not configured as offline layer"
                 )
                 continue
+
+            # check if a PostGIS layer's session_role override is requested.
+            if layer.providerType() == "postgres" and QFC_PG_EFFECTIVE_USER:
+                logger.info(
+                    f"Adjusting pg layer {layer.name()} with session_role={QFC_PG_EFFECTIVE_USER}"
+                )
+
+                uri = QgsDataSourceUri(layer.dataProvider().dataSourceUri())
+                uri.setParam("session_role", QFC_PG_EFFECTIVE_USER)
+                layer.setDataSource(uri.uri(), layer.name(), "postgres")
+                layer.reload()
 
             subset_string = layer.subsetString()
             layer.setSubsetString("")
