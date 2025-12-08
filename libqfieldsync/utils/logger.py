@@ -1,7 +1,10 @@
 import logging
+import os
 
 from qgis.core import Qgis, QgsMessageLog
 from qgis.PyQt.QtCore import QObject, pyqtSignal
+
+IS_WITHIN_QFC_WORKER = os.getenv("IS_WITHIN_QFC_WORKER", "0") == "1"
 
 
 def add_logging_level(level_name, levelno, method_name=None):
@@ -90,7 +93,12 @@ class QgisLogHandler(logging.Handler):
             msg = self.format(record)
             qgis_log_level = self._get_qgis_log_level(record)
 
-            QgsMessageLog.logMessage(msg, self.source, qgis_log_level)
+            if IS_WITHIN_QFC_WORKER:
+                # In QFieldCloud worker context, we avoid using `QgsMessageLog` as it causes way too much noise,
+                # as the libqfieldsync logs are properly handled by the worker logging system.
+                pass
+            else:
+                QgsMessageLog.logMessage(msg, self.source, qgis_log_level)
 
             self.qgis_log_observer.emit(self.source, msg)
         except RecursionError:  # See issue 36272
