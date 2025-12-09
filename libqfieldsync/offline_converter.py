@@ -17,9 +17,11 @@
  ***************************************************************************/
 """
 
+import re
 import shutil
 import tempfile
 from enum import Enum
+from glob import glob
 from pathlib import Path
 from typing import Dict, List, Optional, TypedDict, Union, cast
 
@@ -201,6 +203,12 @@ class OfflineConverter(QObject):
         if plugin_file.exists():
             additional_project_files.append(str(plugin_file))
 
+        # Check for project translations asset
+        for translation_file in glob(
+            f"{str(self.original_filename)[:-4]}_[A-Za-z][A-Za-z].qm"
+        ):
+            additional_project_files.append(str(translation_file))
+
         return additional_project_files
 
     def _convert(self, project: QgsProject) -> None:  # noqa: PLR0912, PLR0915
@@ -354,11 +362,45 @@ class OfflineConverter(QObject):
             project_path = Path(project.fileName()).parent
             for additional_project_file in additional_project_files:
                 additional_project_file_path = Path(additional_project_file)
-                relative_path = additional_project_file_path.relative_to(project_path)
+                additional_project_file_name = additional_project_file_path.name
+                additional_project_file_relative_path = (
+                    additional_project_file_path.relative_to(project_path)
+                )
+
                 destination_file = self._export_filename.parent.joinpath(
-                    relative_path
+                    additional_project_file_relative_path
                 ).resolve()
                 destination_file.parent.mkdir(parents=True, exist_ok=True)
+
+                # Project plugins and translation files require for their file name
+                # to match that of their associated project file (e.g myproject.qgs,
+                # myproject_bg.qm for a translation file and myproject.qml for a
+                # project plugin). We must therefore adapt these file names to match
+                # the generated project file name
+                original_project_filename_without_extension = str(
+                    self.original_filename
+                )[:-4]
+                export_project_filename_without_extension = str(
+                    export_project_filename.name
+                )[:-4]
+                if (
+                    str(additional_project_file_path)
+                    == f"{original_project_filename_without_extension}.qml"
+                ):
+                    destination_file = destination_file.parent.joinpath(
+                        f"{export_project_filename_without_extension}.qml"
+                    )
+
+                elif additional_project_file_name.endswith(".qm"):
+                    match = re.match(
+                        rf"^{re.escape(original_project_filename_without_extension)}(_[A-Za-z]{{2}}\.qm)$",
+                        str(additional_project_file_path),
+                    )
+                    if match:
+                        destination_file = destination_file.parent.joinpath(
+                            f"{export_project_filename_without_extension}{match.group(1)}"
+                        )
+
                 shutil.copy(additional_project_file, str(destination_file))
 
         # save the offline project twice so that the offline plugin can "know" that it's a relative path
