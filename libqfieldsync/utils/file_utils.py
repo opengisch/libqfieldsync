@@ -18,6 +18,7 @@
 """
 
 import base64
+import glob
 import hashlib
 import os
 import platform
@@ -340,3 +341,76 @@ def set_relative_embed_layer_symbols_on_project(  # noqa: PLR0912
                 renderer.updateCategorySymbol(index, symbol)
 
     layer.setRenderer(renderer)
+
+
+def get_project_like_files(
+    project_filename: Union[str, Path], glob_pattern: str
+) -> List[str]:
+    """
+    Get the list of files with names similar to given project name and glob pattern.
+
+    Args:
+        project_filename: The original filename of the project.
+        glob_pattern: The glob pattern to search for similar files. Note that the pattern does not support regex such as `[a-z]{2}`.
+
+    """
+    project_filename = Path(project_filename)
+    project_like_files = []
+
+    assert project_filename.suffix in (".qgs", ".qgz")
+
+    escaped_stem_name = glob.escape(project_filename.stem)
+
+    # Check for project translations asset with two-letter language code
+    for project_like_file in project_filename.parent.glob(
+        f"{escaped_stem_name}{glob_pattern}",
+        # root_dir=,
+    ):
+        project_like_files.append(str(project_like_file))
+
+    return project_like_files
+
+
+def copy_additional_project_files(
+    source_project_filename: Union[str, Path],
+    export_project_filename: Union[str, Path],
+    additional_project_files: List[str],
+):
+    source_project_filename = Path(source_project_filename)
+    export_project_filename = Path(export_project_filename)
+
+    for additional_project_file in additional_project_files:
+        additional_project_file_path = Path(additional_project_file)
+        additional_project_file_name = additional_project_file_path.name
+        additional_project_file_relative_path = (
+            additional_project_file_path.relative_to(source_project_filename.parent)
+        )
+
+        destination_file = export_project_filename.parent.joinpath(
+            additional_project_file_relative_path
+        ).resolve()
+        destination_file.parent.mkdir(parents=True, exist_ok=True)
+
+        # Project plugins and translation files require for their file name
+        # to match that of their associated project file (e.g myproject.qgs,
+        # myproject_bg.qm for a translation file and myproject.qml for a
+        # project plugin). We must therefore adapt these file names to match
+        # the generated project file name
+        original_project_stem_name = source_project_filename.stem
+        export_project_stem_name = export_project_filename.stem
+        if str(additional_project_file_path) == f"{original_project_stem_name}.qml":
+            destination_file = destination_file.parent.joinpath(
+                f"{export_project_stem_name}.qml"
+            )
+
+        elif additional_project_file_name.endswith(".qm"):
+            match = re.match(
+                rf"^{re.escape(original_project_stem_name)}(_[A-Za-z]{{2}}\.qm)$",
+                str(additional_project_file_path),
+            )
+            if match:
+                destination_file = destination_file.parent.joinpath(
+                    f"{export_project_stem_name}{match.group(1)}"
+                )
+
+        shutil.copy(additional_project_file, str(destination_file))

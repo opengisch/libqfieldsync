@@ -17,7 +17,6 @@
  ***************************************************************************/
 """
 
-import shutil
 import tempfile
 from enum import Enum
 from pathlib import Path
@@ -50,7 +49,9 @@ from .layer import LayerSource, SyncAction
 from .offliners import BaseOffliner
 from .project import ProjectConfiguration, ProjectProperties
 from .utils.file_utils import (
+    copy_additional_project_files,
     copy_attachments,
+    get_project_like_files,
     set_relative_embed_layer_symbols_on_project,
 )
 from .utils.logger import logger
@@ -196,10 +197,14 @@ class OfflineConverter(QObject):
             ):
                 additional_project_files.append(str(image_decoration_path))
 
-        # Check for project plugin asset
-        plugin_file = Path("{}.qml".format(str(self.original_filename)[:-4]))  # noqa: UP032
-        if plugin_file.exists():
-            additional_project_files.append(str(plugin_file))
+        # Get project plugin asset
+        additional_project_files += get_project_like_files(
+            self.original_filename, ".qml"
+        )
+        # Get project translations assets
+        additional_project_files += get_project_like_files(
+            self.original_filename, "_[A-Za-z][A-Za-z].qm"
+        )
 
         return additional_project_files
 
@@ -351,15 +356,11 @@ class OfflineConverter(QObject):
 
         # copy additional project files (e.g. layout images, symbology images, etc)
         if additional_project_files:
-            project_path = Path(project.fileName()).parent
-            for additional_project_file in additional_project_files:
-                additional_project_file_path = Path(additional_project_file)
-                relative_path = additional_project_file_path.relative_to(project_path)
-                destination_file = self._export_filename.parent.joinpath(
-                    relative_path
-                ).resolve()
-                destination_file.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy(additional_project_file, str(destination_file))
+            copy_additional_project_files(
+                project.fileName(),
+                self._export_filename,
+                additional_project_files,
+            )
 
         # save the offline project twice so that the offline plugin can "know" that it's a relative path
         QgsProject.instance().write(str(export_project_filename))
