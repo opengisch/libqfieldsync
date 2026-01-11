@@ -6,10 +6,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
 
       - name: Install pipenv
         run: pip install pipenv
@@ -46,7 +46,7 @@ jobs:
           retention-days: 7
 
   test:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         qgis_version: [release-3_22, release-3_28, final-3_36_1]
@@ -54,7 +54,7 @@ jobs:
       QGIS_TEST_VERSION: ${{ matrix.qgis_version }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           submodules: recursive
 
@@ -65,12 +65,12 @@ jobs:
       runs-on: ubuntu-latest
       steps:
         - name: Checkout
-          uses: actions/checkout@v4
+          uses: actions/checkout@v6
           with:
             submodules: recursive
 
         - name: Setup Python
-          uses: actions/setup-python@v5
+          uses: actions/setup-python@v6
 
         - name: Install toolchain
           run: pip install build
