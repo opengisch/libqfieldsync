@@ -43,7 +43,7 @@ class QFieldSyncError(Exception):
         if self.exception is not None:
             log_message = f"\nException:\n {self.long_message}"
 
-        QgsMessageLog.logMessage(log_message, tag, Qgis.Critical)
+        QgsMessageLog.logMessage(log_message, tag, Qgis.MessageLevel.Critical)
 
 
 class NoProjectFoundError(QFieldSyncError):

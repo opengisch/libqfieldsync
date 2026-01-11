@@ -655,7 +655,7 @@ class LayerSource:
         self._cloud_action = action
 
     def get_attachment_field_type(self, field_name: str) -> Optional[AttachmentType]:
-        if self.layer.type() != QgsMapLayer.VectorLayer:
+        if self.layer.type() != QgsMapLayer.LayerType.VectorLayer:
             raise ExpectedVectorLayerError(
                 f'Cannot get attachment field types for non-vector layer "{self.layer.name()}"!'
             )
@@ -670,7 +670,7 @@ class LayerSource:
         return self.get_attachment_type_by_int_value(resource_type)
 
     def get_attachment_fields(self) -> Dict[str, AttachmentType]:
-        if self.layer.type() != QgsMapLayer.VectorLayer:
+        if self.layer.type() != QgsMapLayer.LayerType.VectorLayer:
             return {}
 
         attachment_fields = {}
@@ -798,7 +798,7 @@ class LayerSource:
                 )
             )
 
-        if self.layer.type() == QgsMapLayer.VectorLayer:
+        if self.layer.type() == QgsMapLayer.LayerType.VectorLayer:
             actions.append(
                 (
                     SyncAction.OFFLINE,
@@ -837,7 +837,7 @@ class LayerSource:
 
             return actions
 
-        if self.layer.type() == QgsMapLayer.VectorLayer:
+        if self.layer.type() == QgsMapLayer.LayerType.VectorLayer:
             # all vector layers can be converted for offline editting
             actions.append(
                 (
@@ -886,7 +886,7 @@ class LayerSource:
             else:
                 if (  # noqa: SIM114
                     (self.is_file and not self.is_localized_path)
-                    or self.layer.type() != QgsMapLayer.VectorLayer
+                    or self.layer.type() != QgsMapLayer.LayerType.VectorLayer
                 ) and action == SyncAction.NO_ACTION:
                     return idx, action
                 elif action == SyncAction.OFFLINE:
@@ -901,7 +901,7 @@ class LayerSource:
 
     @property
     def can_lock_geometry(self):
-        return self.layer.type() == QgsMapLayer.VectorLayer
+        return self.layer.type() == QgsMapLayer.LayerType.VectorLayer
 
     @property
     def value_map_button_interface_threshold(self):
@@ -1182,7 +1182,7 @@ class LayerSource:
         metadata = self.metadata
         filename = ""
 
-        if self.layer.type() == QgsMapLayer.VectorTileLayer:
+        if self.layer.type() == QgsMapLayer.LayerType.VectorTileLayer:
             uri = QgsDataSourceUri()
             uri.setEncodedUri(self.layer.source())
             return uri.param("url")
@@ -1255,7 +1255,7 @@ class LayerSource:
     def get_pk_attr_name(self) -> str:
         pk_attr_name: str = ""
 
-        if self.layer.type() != QgsMapLayer.VectorLayer:
+        if self.layer.type() != QgsMapLayer.LayerType.VectorLayer:
             raise ExpectedVectorLayerError()
 
         pk_indexes = self.layer.primaryKeyAttributes()
@@ -1344,7 +1344,7 @@ class LayerSource:
                     uri.setDatabase(os.path.join(target_path, file_name))
                     uri.setTable(metadata["layerName"])
                     new_source = uri.uri()
-                elif self.layer.type() == QgsMapLayer.VectorTileLayer:
+                elif self.layer.type() == QgsMapLayer.LayerType.VectorTileLayer:
                     uri = QgsDataSourceUri()
                     uri.setEncodedUri(self.layer.source())
                     uri.setParam("url", os.path.join(target_path, file_name))
@@ -1366,7 +1366,10 @@ class LayerSource:
         :param target_path: A path to a folder into which the data will be copied
         :param keep_existent: if True and target file already exists, keep it as it is
         """
-        if self.layer.type() != QgsMapLayer.VectorLayer or not self.layer.isValid():
+        if (
+            self.layer.type() != QgsMapLayer.LayerType.VectorLayer
+            or not self.layer.isValid()
+        ):
             return None
 
         assert isinstance(self.layer, QgsVectorLayer)
@@ -1421,7 +1424,7 @@ class LayerSource:
             fields = source_layer.fields()
             virtual_field_count = 0
             for i in range(len(fields)):
-                if fields.fieldOrigin(i) == QgsFields.OriginExpression:
+                if fields.fieldOrigin(i) == QgsFields.FieldOrigin.OriginExpression:
                     source_layer.removeExpressionField(i - virtual_field_count)
                     virtual_field_count += 1
 
@@ -1437,7 +1440,7 @@ class LayerSource:
                 source_layer, dest_file, QgsCoordinateTransformContext(), options
             )
 
-            if error != QgsVectorFileWriter.NoError:
+            if error != QgsVectorFileWriter.WriterError.NoError:
                 return None
             if returned_dest_file:
                 new_source = returned_dest_file

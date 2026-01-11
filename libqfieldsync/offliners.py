@@ -150,7 +150,7 @@ class QgisCoreOffliner(BaseOffliner):
             layer_ids,
             only_selected,
             # containerType - GPKG or SpatiaLite
-            containerType=QgsOfflineEditing.GPKG,
+            containerType=QgsOfflineEditing.ContainerType.GPKG,
             # layerNameSuffix - by default " (offlined)" is added as suffix
             layerNameSuffix=None,
         )
@@ -219,7 +219,7 @@ class PythonMiniOffliner(BaseOffliner):
     ) -> osr.SpatialReference:
         """Converts a QGIS CRS to an OGR CRS."""
         auth_id = crs.authid()
-        srs_wkt = crs.toWkt(QgsCoordinateReferenceSystem.WKT_PREFERRED_GDAL)
+        srs_wkt = crs.toWkt(QgsCoordinateReferenceSystem.WktVariant.WKT_PREFERRED_GDAL)
         ogr_srs = osr.SpatialReference()
 
         if auth_id:
@@ -365,16 +365,16 @@ class PythonMiniOffliner(BaseOffliner):
                 # restore unique value constraints coming from original data provider
                 if (
                     field.constraints().constraints()
-                    & QgsFieldConstraints.ConstraintUnique
+                    & QgsFieldConstraints.Constraint.ConstraintUnique
                 ):
                     layer.setFieldConstraint(
-                        index, QgsFieldConstraints.ConstraintUnique
+                        index, QgsFieldConstraints.Constraint.ConstraintUnique
                     )
 
                 # remove any undesired not null constraints coming from original data provider
                 if field.name() in not_null_field_names:
                     layer.removeFieldConstraint(
-                        index, QgsFieldConstraints.ConstraintNotNull
+                        index, QgsFieldConstraints.Constraint.ConstraintNotNull
                     )
 
     def _convert_to_offline_project(
@@ -478,7 +478,7 @@ class PythonMiniOffliner(BaseOffliner):
         # A dict that maps data sources (tables) to a list of layers connecting them
         datasource_mapping = defaultdict(list)
         for layer in project.mapLayers().values():
-            if layer.type() != QgsMapLayer.VectorLayer:
+            if layer.type() != QgsMapLayer.LayerType.VectorLayer:
                 logger.info(f"Skipping layer {layer.name()} :: not a vector layer")
                 continue
 
