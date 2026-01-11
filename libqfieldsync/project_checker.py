@@ -326,7 +326,7 @@ class ProjectChecker:
         layer = layer_source.layer
 
         if (
-            layer.type() == QgsMapLayer.VectorLayer
+            layer.type() == QgsMapLayer.LayerType.VectorLayer
             and layer.dataProvider()
             and layer.dataProvider().encoding() != "UTF-8"
             # some providers return empty string as encoding, just ignore them
@@ -365,7 +365,7 @@ class ProjectChecker:
 
         layer = layer_source.layer
 
-        if layer.type() != QgsMapLayer.VectorLayer:
+        if layer.type() != QgsMapLayer.LayerType.VectorLayer:
             return None
 
         # when the layer is configured as "no_action" and it is an "online" layer, then QFieldCloud is not responsible for the PKs,

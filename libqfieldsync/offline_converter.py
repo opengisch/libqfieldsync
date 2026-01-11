@@ -221,10 +221,10 @@ class OfflineConverter(QObject):
 
         # Set flags that usually significantly speed-up project file read
         read_flags = QgsProject.ReadFlags()
-        read_flags |= QgsProject.FlagDontResolveLayers
-        read_flags |= QgsProject.FlagDontLoadLayouts
+        read_flags |= QgsProject.ReadFlag.FlagDontResolveLayers
+        read_flags |= QgsProject.ReadFlag.FlagDontLoadLayouts
         if Qgis.versionInt() >= 32600:  # noqa: PLR2004
-            read_flags |= QgsProject.FlagDontLoad3DViews
+            read_flags |= QgsProject.ReadFlag.FlagDontLoad3DViews
 
         # Make a new function object that we can connect and disconnect easily
         on_original_project_read = self._on_original_project_read_wrapper(
@@ -301,7 +301,7 @@ class OfflineConverter(QObject):
                 else layer_source.cloud_action
             )
 
-            if layer.isValid() and layer.type() == QgsMapLayer.VectorLayer:
+            if layer.isValid() and layer.type() == QgsMapLayer.LayerType.VectorLayer:
                 if layer_source.pk_attr_name:
                     # NOTE even though `QFieldSync/sourceDataPrimaryKeys` is in plural, we never supported composite (multi-column) PKs and always stored a single value
                     layer.setCustomProperty(
@@ -458,7 +458,7 @@ class OfflineConverter(QObject):
 
         # check if value relations point to offline layers and adjust if necessary
         for e_layer in project.mapLayers().values():
-            if e_layer.type() == QgsMapLayer.VectorLayer:
+            if e_layer.type() == QgsMapLayer.LayerType.VectorLayer:
                 remote_layer_id = e_layer.customProperty("QFieldSync/remoteLayerId")
                 if (
                     not remote_layer_id
