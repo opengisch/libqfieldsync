@@ -221,10 +221,13 @@ class OfflineConverter(QObject):
 
         # Set flags that usually significantly speed-up project file read
         read_flags = QgsProject.ReadFlags()
-        read_flags |= QgsProject.ReadFlag.FlagDontResolveLayers
-        read_flags |= QgsProject.ReadFlag.FlagDontLoadLayouts
         if Qgis.versionInt() >= 32600:  # noqa: PLR2004
-            read_flags |= QgsProject.ReadFlag.FlagDontLoad3DViews
+            read_flags |= Qgis.ProjectReadFlag.DontResolveLayers
+            read_flags |= Qgis.ProjectReadFlag.DontLoadLayouts
+            read_flags |= Qgis.ProjectReadFlag.DontLoad3DViews
+        else:
+            read_flags |= QgsProject.ReadFlag.FlagDontResolveLayers
+            read_flags |= QgsProject.ReadFlag.FlagDontLoadLayouts
 
         # Make a new function object that we can connect and disconnect easily
         on_original_project_read = self._on_original_project_read_wrapper(
