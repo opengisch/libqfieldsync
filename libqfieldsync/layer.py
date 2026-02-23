@@ -1206,6 +1206,7 @@ class LayerSource:
                 source.startswith("localized:")
                 or source.startswith("file:localized:")
                 or "url=file:localized:" in source
+                or "url=localized:" in source
             )
 
         path_resolver = self.project.pathResolver()
