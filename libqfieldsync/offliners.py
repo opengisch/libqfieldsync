@@ -403,12 +403,13 @@ class PythonMiniOffliner(BaseOffliner):
         driver = ogr.GetDriverByName("GPKG")
         data_source = driver.CreateDataSource(offline_gpkg_path)
         datasource_mapping = self._get_datasource_mapping(project, offline_layers)
+        filters_mapping = self._get_filters_mapping(datasource_mapping)
 
         for layer_infos in datasource_mapping.values():
             layer_to_offline = layer_infos[0].layer
             self.create_layer(layer_to_offline, data_source, offline_gpkg_path)
 
-        for layer_infos in datasource_mapping.values():
+        for datasource_hash, layer_infos in datasource_mapping.items():
             request = QgsFeatureRequest()
             # All layers for given `datasource_hash` are pointing to the very same file/datasource.
             # Here we get the first layer for convenience, but it doesn't really matter.
@@ -439,6 +440,9 @@ class PythonMiniOffliner(BaseOffliner):
                 layer_bbox = tr.transform(bbox)
                 request.setFilterRect(layer_bbox)
 
+            if filters_mapping[datasource_hash]:
+                request.setFilterExpression(filters_mapping[datasource_hash])
+
             source = self.convert_to_offline_layer(
                 layer_to_offline, data_source, offline_gpkg_path, request
             )
@@ -464,6 +468,26 @@ class PythonMiniOffliner(BaseOffliner):
             PROJECT_ENTRY_KEY_OFFLINE_DB_PATH,
             project.writePath(offline_gpkg_path),
         )
+
+    def _get_filters_mapping(
+        self, datasource_mapping: Dict[str, List[LayerInfo]]
+    ) -> Dict[str, str]:
+        """Get mapping of filter strings to be applied for each datasource. If no filters to be applied, the value will be an empty string."""
+        filters_by_datasource = {}
+
+        for datasource_hash, layer_infos in datasource_mapping.items():
+            filters = []
+            for layer_info in layer_infos:
+                if layer_info.subset_string.strip():
+                    filters.append(f"({layer_info.subset_string})")
+                else:
+                    # if there is no subset string, we don't need to apply any filter, as it means "all features"
+                    filters = []
+                    break
+
+            filters_by_datasource[datasource_hash] = " OR ".join(filters)
+
+        return filters_by_datasource
 
     def _get_datasource_mapping(
         self,
