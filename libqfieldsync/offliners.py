@@ -5,6 +5,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Dict, List, NamedTuple, NewType, Optional
 
+import qgis.core
 from osgeo import gdal, ogr, osr
 from qgis.core import (
     Qgis,
@@ -136,8 +137,14 @@ class QgisCoreOffliner(BaseOffliner):
                     layer.removeSelection()
                 else:
                     tr = QgsCoordinateTransform(project.crs(), layer.crs(), project)
-                    layer_bbox = tr.transform(bbox)
-                    layer.selectByRect(layer_bbox)
+
+                    try:
+                        layer_bbox = tr.transform(bbox)
+                        layer.selectByRect(layer_bbox)
+                    except qgis.core.QgsCsException as err:
+                        logger.warning(
+                            f"Failed to transform project CRS {project.crs().authid()} bbox to layer {layer.name()} CRS {layer.crs().authid()} bbox within `QgisCoreOffliner`: {err}. All features will be offlined for this layer."
+                        )
 
                     # If the selection by BBOX did not select anything, make sure we fool `QgsOfflineEditing` something is selected.
                     # Otherwise when `layer.selectedFeatureIds().isEmpty()`, `QgsOfflineEditing` dumps all features.
@@ -442,8 +449,14 @@ class PythonMiniOffliner(BaseOffliner):
                 tr = QgsCoordinateTransform(
                     project.crs(), layer_to_offline.crs(), project
                 )
-                layer_bbox = tr.transform(bbox)
-                request.setFilterRect(layer_bbox)
+
+                try:
+                    layer_bbox = tr.transform(bbox)
+                    request.setFilterRect(layer_bbox)
+                except qgis.core.QgsCsException as err:
+                    logger.warning(
+                        f"Failed to transform project CRS {project.crs().authid()} bbox to layer {layer_to_offline.name()} CRS {layer_to_offline.crs().authid()} bbox within `PythonMiniOffliner`: {err}. All features will be offlined for this layer."
+                    )
 
             if filters_mapping[datasource_hash]:
                 request.setFilterExpression(filters_mapping[datasource_hash])
