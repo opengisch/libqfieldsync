@@ -113,6 +113,11 @@ class QgisCoreOffliner(BaseOffliner):
         if bbox and bbox.isFinite():
             only_selected = True
             for layer in layers:
+                if layer.type() != QgsMapLayer.LayerType.VectorLayer:
+                    continue
+
+                assert isinstance(layer, QgsVectorLayer)
+
                 if Qgis.versionInt() >= 33000:  # noqa: PLR2004
                     no_geometry_types = [
                         Qgis.GeometryType.Null,
