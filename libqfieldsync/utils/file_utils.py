@@ -115,11 +115,13 @@ def open_folder(path: Union[Path, str]) -> None:
 
 def import_file_checksum(path: str) -> Optional[str]:
     md5sum = None
-    path = os.path.join(path, "data.gpkg")
-    if not os.path.exists(path):
-        path = os.path.join(path, "data.sqlite")
-    if os.path.exists(path):
-        with open(path, "rb") as f:
+
+    file_path = os.path.join(path, "data.gpkg")
+    if not os.path.exists(file_path):
+        file_path = os.path.join(path, "data.sqlite")
+
+    if os.path.exists(file_path):
+        with open(file_path, "rb") as f:
             file_data = f.read()
             # TODO @suricactus: Python 3.9, pass `usedforsecurity=False`
             # https://app.clickup.com/t/2192114/QF-6481
