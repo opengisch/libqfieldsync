@@ -5,12 +5,12 @@ from enum import Enum
 from pathlib import Path
 from typing import Dict, List, NamedTuple, NewType, Optional
 
-import qgis.core
 from osgeo import gdal, ogr, osr
 from qgis.core import (
     Qgis,
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
+    QgsCsException,  # type: ignore[import]
     QgsDataSourceUri,
     QgsFeatureRequest,
     QgsField,
@@ -141,7 +141,7 @@ class QgisCoreOffliner(BaseOffliner):
                     try:
                         layer_bbox = tr.transform(bbox)
                         layer.selectByRect(layer_bbox)
-                    except qgis.core.QgsCsException as err:
+                    except QgsCsException as err:
                         logger.warning(
                             f"Failed to transform project CRS {project.crs().authid()} bbox to layer {layer.name()} CRS {layer.crs().authid()} bbox within `QgisCoreOffliner`: {err}. All features will be offlined for this layer."
                         )
@@ -453,7 +453,7 @@ class PythonMiniOffliner(BaseOffliner):
                 try:
                     layer_bbox = tr.transform(bbox)
                     request.setFilterRect(layer_bbox)
-                except qgis.core.QgsCsException as err:
+                except QgsCsException as err:
                     logger.warning(
                         f"Failed to transform project CRS {project.crs().authid()} bbox to layer {layer_to_offline.name()} CRS {layer_to_offline.crs().authid()} bbox within `PythonMiniOffliner`: {err}. All features will be offlined for this layer."
                     )
