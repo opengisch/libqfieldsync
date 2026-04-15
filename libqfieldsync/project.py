@@ -34,6 +34,7 @@ class ProjectProperties:
     STAMPING_HORIZONTAL_ALIGNMENT = "/stampingHorizontalAlignment"
     STAMPING_IMAGE_DECORATION = "/stampingImageDecoration"
     STAMPING_DETAILS_TEMPLATE = "/stampingDetailsTemplate"
+    FEATURE_FORM_WIZARD_MODE_ENABLED = "/featureFormWizardModeEnabled"
 
     class BaseMapType:
         def __init__(self):
@@ -268,6 +269,19 @@ class ProjectConfiguration:
     @force_stamping.setter
     def force_stamping(self, value):
         self.project.writeEntry("qfieldsync", ProjectProperties.FORCE_STAMPING, value)
+
+    @property
+    def feature_form_wizard_mode_enabled(self):
+        feature_form_wizard_mode_enabled, _ = self.project.readBoolEntry(
+            "qfieldsync", ProjectProperties.FEATURE_FORM_WIZARD_MODE_ENABLED, False
+        )
+        return feature_form_wizard_mode_enabled
+
+    @feature_form_wizard_mode_enabled.setter
+    def feature_form_wizard_mode_enabled(self, value):
+        self.project.writeEntry(
+            "qfieldsync", ProjectProperties.FEATURE_FORM_WIZARD_MODE_ENABLED, value
+        )
 
     @property
     def map_themes_active_layer(self):
