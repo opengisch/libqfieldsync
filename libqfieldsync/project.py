@@ -34,7 +34,24 @@ class ProjectProperties:
     STAMPING_HORIZONTAL_ALIGNMENT = "/stampingHorizontalAlignment"
     STAMPING_IMAGE_DECORATION = "/stampingImageDecoration"
     STAMPING_DETAILS_TEMPLATE = "/stampingDetailsTemplate"
+    LOCATION_ARROW_FILL_COLOR = "/locationArrowFillColor"
+    LOCATION_ARROW_OUTLINE_COLOR = "/locationArrowOutlineColor"
+    LOCATION_ARROW_SIZE = "/locationArrowSize"
+    COORDINATE_CURSOR_FILL_COLOR = "/coordinateCursorFillColor"
+    COORDINATE_CURSOR_OUTLINE_COLOR = "/coordinateCursorOutlineColor"
+    COORDINATE_CURSOR_SIZE = "/coordinateCursorSize"
     FEATURE_FORM_WIZARD_MODE_ENABLED = "/featureFormWizardModeEnabled"
+
+    class NavigationSize:
+        def __init__(self):
+            raise RuntimeError(
+                "This object holds only project property static variables"
+            )
+
+        TINY = "tiny"
+        NORMAL = "normal"
+        BIG = "big"
+        BIGGEST = "biggest"
 
     class BaseMapType:
         def __init__(self):
@@ -467,4 +484,86 @@ class ProjectConfiguration:
     def area_of_interest_crs(self, value):
         self.project.writeEntry(
             "qfieldsync", ProjectProperties.AREA_OF_INTEREST_CRS, value
+        )
+
+    @property
+    def location_arrow_fill_color(self):
+        color, _ = self.project.readEntry(
+            "qfieldsync", ProjectProperties.LOCATION_ARROW_FILL_COLOR, ""
+        )
+        return color
+
+    @location_arrow_fill_color.setter
+    def location_arrow_fill_color(self, value):
+        self.project.writeEntry(
+            "qfieldsync", ProjectProperties.LOCATION_ARROW_FILL_COLOR, value
+        )
+
+    @property
+    def location_arrow_outline_color(self):
+        color, _ = self.project.readEntry(
+            "qfieldsync", ProjectProperties.LOCATION_ARROW_OUTLINE_COLOR, ""
+        )
+        return color
+
+    @location_arrow_outline_color.setter
+    def location_arrow_outline_color(self, value):
+        self.project.writeEntry(
+            "qfieldsync", ProjectProperties.LOCATION_ARROW_OUTLINE_COLOR, value
+        )
+
+    @property
+    def location_arrow_size(self):
+        size, _ = self.project.readEntry(
+            "qfieldsync",
+            ProjectProperties.LOCATION_ARROW_SIZE,
+            ProjectProperties.NavigationSize.NORMAL,
+        )
+        return size
+
+    @location_arrow_size.setter
+    def location_arrow_size(self, value):
+        self.project.writeEntry(
+            "qfieldsync", ProjectProperties.LOCATION_ARROW_SIZE, value
+        )
+
+    @property
+    def coordinate_cursor_fill_color(self):
+        color, _ = self.project.readEntry(
+            "qfieldsync", ProjectProperties.COORDINATE_CURSOR_FILL_COLOR, ""
+        )
+        return color
+
+    @coordinate_cursor_fill_color.setter
+    def coordinate_cursor_fill_color(self, value):
+        self.project.writeEntry(
+            "qfieldsync", ProjectProperties.COORDINATE_CURSOR_FILL_COLOR, value
+        )
+
+    @property
+    def coordinate_cursor_outline_color(self):
+        color, _ = self.project.readEntry(
+            "qfieldsync", ProjectProperties.COORDINATE_CURSOR_OUTLINE_COLOR, ""
+        )
+        return color
+
+    @coordinate_cursor_outline_color.setter
+    def coordinate_cursor_outline_color(self, value):
+        self.project.writeEntry(
+            "qfieldsync", ProjectProperties.COORDINATE_CURSOR_OUTLINE_COLOR, value
+        )
+
+    @property
+    def coordinate_cursor_size(self):
+        size, _ = self.project.readEntry(
+            "qfieldsync",
+            ProjectProperties.COORDINATE_CURSOR_SIZE,
+            ProjectProperties.NavigationSize.NORMAL,
+        )
+        return size
+
+    @coordinate_cursor_size.setter
+    def coordinate_cursor_size(self, value):
+        self.project.writeEntry(
+            "qfieldsync", ProjectProperties.COORDINATE_CURSOR_SIZE, value
         )
