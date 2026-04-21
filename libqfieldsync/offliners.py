@@ -477,8 +477,6 @@ class PythonMiniOffliner(BaseOffliner):
             if not project_title:
                 project_title = QFileInfo(project.fileName()).baseName()
 
-            project_title += f"{project_title} (offline)"
-
         project.setTitle(project_title)
 
         project.writeEntry(
