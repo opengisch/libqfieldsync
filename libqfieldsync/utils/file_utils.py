@@ -56,7 +56,7 @@ def fileparts(filename: str, extension_dot: bool = True) -> Tuple[str, str, str]
 
 
 def get_children_with_extension(
-    parent: str, specified_ext: str, count: int = 1
+    parent: str, specified_ext: Union[str, List[str]], count: int = 1
 ) -> List[str]:
     if not os.path.isdir(parent):
         raise QFieldSyncError(
@@ -65,11 +65,16 @@ def get_children_with_extension(
             ).format(parent)
         )
 
+    if isinstance(specified_ext, str):
+        specified_ext = [specified_ext]
+
     res = []
-    extension_dot = specified_ext.startswith(".")
+    extension_dot = False
+    if specified_ext:
+        extension_dot = specified_ext[0].startswith(".")
     for filename in os.listdir(parent):
         _, _, ext = fileparts(filename, extension_dot=extension_dot)
-        if ext == specified_ext:
+        if ext in specified_ext:
             res.append(os.path.join(parent, filename))
     if len(res) != count:
         raise QFieldSyncError(
@@ -78,7 +83,7 @@ def get_children_with_extension(
                 "Expected {expected_count} children with extension {file_extension} under {parent}, got {real_count}",
             ).format(
                 expected_count=count,
-                file_extension=specified_ext,
+                file_extension=", ".join(specified_ext),
                 parent=parent,
                 real_count=len(res),
             )
@@ -93,9 +98,9 @@ def get_full_parent_path(filename: str) -> str:
 
 def get_project_in_folder(path: str) -> str:
     try:
-        return get_children_with_extension(path, "qgs", count=1)[0]
+        return get_children_with_extension(path, ["qgz", "qgs"], count=1)[0]
     except QFieldSyncError:
-        raise NoProjectFoundError(f"No .qgs file found in folder {path}") from None
+        raise NoProjectFoundError(f"No .qgs/.qgz file found in folder {path}") from None
 
 
 def open_folder(path: Union[Path, str]) -> None:
