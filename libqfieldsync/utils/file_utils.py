@@ -71,7 +71,7 @@ def get_children_with_extension(
     res = []
     extension_dot = False
     if specified_ext:
-        specified_ext[0].startswith(".")
+        extension_dot = specified_ext[0].startswith(".")
     for filename in os.listdir(parent):
         _, _, ext = fileparts(filename, extension_dot=extension_dot)
         if ext in specified_ext:
