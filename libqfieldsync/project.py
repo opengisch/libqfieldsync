@@ -42,7 +42,7 @@ class ProjectProperties:
     COORDINATE_CURSOR_SIZE = "/coordinateCursorSize"
     FEATURE_FORM_WIZARD_MODE_ENABLED = "/featureFormWizardModeEnabled"
 
-    class NavigationSize:
+    class QFieldItemSize:
         def __init__(self):
             raise RuntimeError(
                 "This object holds only project property static variables"
@@ -517,7 +517,7 @@ class ProjectConfiguration:
         size, _ = self.project.readEntry(
             "qfieldsync",
             ProjectProperties.LOCATION_ARROW_SIZE,
-            ProjectProperties.NavigationSize.NORMAL,
+            ProjectProperties.QFieldItemSize.NORMAL,
         )
         return size
 
@@ -558,7 +558,7 @@ class ProjectConfiguration:
         size, _ = self.project.readEntry(
             "qfieldsync",
             ProjectProperties.COORDINATE_CURSOR_SIZE,
-            ProjectProperties.NavigationSize.NORMAL,
+            ProjectProperties.QFieldItemSize.NORMAL,
         )
         return size
 
