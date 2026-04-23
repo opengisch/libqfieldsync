@@ -47,7 +47,7 @@ from qgis.PyQt.QtCore import QCoreApplication, QObject, pyqtSignal
 
 from .layer import LayerSource, SyncAction
 from .offliners import BaseOffliner
-from .project import ProjectConfiguration, ProjectProperties
+from .project import BaseMapType, ProjectConfig
 from .utils.file_utils import (
     copy_additional_project_files,
     copy_attachments,
@@ -149,11 +149,11 @@ class OfflineConverter(QObject):
         self.offliner.progress_mode_set.connect(self._on_offline_editing_max_changed)
         self.offliner.progress_updated.connect(self._on_offline_editing_task_progress)
 
-        self.project_configuration = ProjectConfiguration(project)
+        self._project_config = ProjectConfig(project)
 
         if (
-            self.project_configuration.offline_copy_only_aoi
-            or self.project_configuration.create_base_map
+            self._project_config.offline_copy_only_aoi
+            or self._project_config.create_base_map
         ):
             assert self.area_of_interest.isValid()[0]
             assert self.area_of_interest_crs.isValid(), (
@@ -259,7 +259,7 @@ class OfflineConverter(QObject):
         offline_layers: list[QgsMapLayer] = []
         copied_files = []
 
-        if self.create_basemap and self.project_configuration.create_base_map:
+        if self.create_basemap and self._project_config.create_base_map:
             is_basemap_export_success = self._export_basemap()
 
             if not is_basemap_export_success and not self._is_canceled:
@@ -356,7 +356,7 @@ class OfflineConverter(QObject):
         export_project_filename = self._export_filename
 
         # save the original project path
-        self.project_configuration.original_project_path = str(self.original_filename)
+        self._project_config.original_project_path = str(self.original_filename)
 
         self._check_canceled()
 
@@ -392,7 +392,7 @@ class OfflineConverter(QObject):
 
         if offline_layers:
             bbox = None
-            if self.project_configuration.offline_copy_only_aoi:
+            if self._project_config.offline_copy_only_aoi:
                 bbox = QgsCoordinateTransform(
                     QgsCoordinateReferenceSystem(self.area_of_interest_crs),
                     QgsProject.instance().crs(),
@@ -601,9 +601,9 @@ class OfflineConverter(QObject):
             return False
 
         extent = basemap_extent
-        base_map_type = self.project_configuration.base_map_type
-        if base_map_type == ProjectProperties.BaseMapType.SINGLE_LAYER:
-            if not self.project_configuration.base_map_layer.strip():
+        base_map_type = self._project_config.base_map_type
+        if base_map_type == BaseMapType.SINGLE_LAYER:
+            if not self._project_config.base_map_layer.strip():
                 self.warning.emit(
                     self.tr("Failed to create basemap"),
                     self.tr(
@@ -612,14 +612,14 @@ class OfflineConverter(QObject):
                 )
                 return False
 
-            basemap_layer = project.mapLayer(self.project_configuration.base_map_layer)
+            basemap_layer = project.mapLayer(self._project_config.base_map_layer)
 
             if not basemap_layer:
                 self.warning.emit(
                     self.tr("Failed to create basemap"),
                     self.tr(
                         'Cannot find the configured base layer with id "{}". Please check the project configuration.'
-                    ).format(self.project_configuration.base_map_layer),
+                    ).format(self._project_config.base_map_layer),
                 )
                 return False
 
@@ -629,15 +629,15 @@ class OfflineConverter(QObject):
                 project.crs(),
                 project,
             ).transformBoundingBox(basemap_extent)
-        elif base_map_type == ProjectProperties.BaseMapType.MAP_THEME:
+        elif base_map_type == BaseMapType.MAP_THEME:
             if not project.mapThemeCollection().hasMapTheme(
-                self.project_configuration.base_map_theme
+                self._project_config.base_map_theme
             ):
                 self.warning.emit(
                     self.tr("Failed to create basemap"),
                     self.tr(
                         'Cannot find the configured base theme with name "{}". Please check the project configuration.'
-                    ).format(self.project_configuration.base_map_theme),
+                    ).format(self._project_config.base_map_theme),
                 )
                 return False
 
@@ -646,7 +646,7 @@ class OfflineConverter(QObject):
         return exported_mbtiles
 
     def _export_basemap_as_mbtiles(
-        self, extent: QgsRectangle, base_map_type: ProjectProperties.BaseMapType
+        self, extent: QgsRectangle, base_map_type: BaseMapType
     ) -> bool:
         """
         Exports a basemap to mbtiles format.
@@ -654,7 +654,7 @@ class OfflineConverter(QObject):
 
         Args:
             extent (QgsRectangle): extent of the area of interest
-            base_map_type (ProjectProperties.BaseMapType): basemap type (layer or theme)
+            base_map_type (BaseMapType): basemap type (layer or theme)
 
         Returns:
             bool: if basemap layer could be exported as mbtiles
@@ -670,9 +670,9 @@ class OfflineConverter(QObject):
 
         params = {
             "EXTENT": extent,
-            "ZOOM_MIN": self.project_configuration.base_map_tiles_min_zoom_level,
-            "ZOOM_MAX": self.project_configuration.base_map_tiles_max_zoom_level,
-            "TILE_SIZE": self.project_configuration.base_map_tile_size,
+            "ZOOM_MIN": self._project_config.base_map_tiles_min_zoom_level,
+            "ZOOM_MAX": self._project_config.base_map_tiles_max_zoom_level,
+            "TILE_SIZE": self._project_config.base_map_tile_size,
             "OUTPUT_FILE": str(basemap_export_path),
         }
 
@@ -683,17 +683,17 @@ class OfflineConverter(QObject):
         )
         cloned_project.setCrs(current_project.crs())
 
-        if base_map_type == ProjectProperties.BaseMapType.SINGLE_LAYER:
+        if base_map_type == BaseMapType.SINGLE_LAYER:
             # the `native:tilesxyzmbtiles` alg does not have any LAYERS param
             # so just add basemap layer to the cloned project
             basemap_layer = current_project.mapLayer(
-                self.project_configuration.base_map_layer
+                self._project_config.base_map_layer
             )
             # here we use a cloned version of the raster layer, otherwise QGIS might crash
             clone_layer = basemap_layer.clone()
             cloned_project.addMapLayer(clone_layer)
 
-        elif base_map_type == ProjectProperties.BaseMapType.MAP_THEME:
+        elif base_map_type == BaseMapType.MAP_THEME:
             # clone and recreate the current QGIS project, and recreate original themes
             current_themes = QgsMapThemeCollection(current_project)
             themes_data = {}
@@ -717,7 +717,7 @@ class OfflineConverter(QObject):
             layer_tree_root = cloned_project.layerTreeRoot()
             layer_tree_model = QgsLayerTreeModel(layer_tree_root)
             cloned_project.mapThemeCollection().applyTheme(
-                self.project_configuration.base_map_theme,
+                self._project_config.base_map_theme,
                 layer_tree_root,
                 layer_tree_model,
             )
@@ -746,7 +746,7 @@ class OfflineConverter(QObject):
 
             new_layer = QgsRasterLayer(results["OUTPUT_FILE"], self.tr("Basemap"))
 
-            self.project_configuration.project.addMapLayer(new_layer, False)
+            self._project_config.project.addMapLayer(new_layer, False)
 
             layer_tree = QgsProject.instance().layerTreeRoot()
             layer_tree.insertLayer(len(layer_tree.children()), new_layer)

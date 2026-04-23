@@ -104,6 +104,10 @@ max-complexity = 30
 # E501 reports lines that exceed the length of 120.
 max-line-length = 120
 
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["D", "ANN", "PLR", "SLF", "ARG001", "PGH003", "INP001"]
+"__init__.py" = ["F401"]
+
 [tool.setuptools]
 packages = ["libqfieldsync", "libqfieldsync.utils"]
 

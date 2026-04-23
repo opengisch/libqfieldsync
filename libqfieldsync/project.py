@@ -1,570 +1,83 @@
-import json
+from enum import Enum
+
+from qgis.core import QgsProject
+
+from libqfieldsync.utils.config_utils import Field, pfield
 
 
-class ProjectProperties:
-    def __init__(self):
-        raise RuntimeError("This object holds only project property static variables")
-
-    BASE_MAP_TYPE = "/baseMapType"
-    CREATE_BASE_MAP = "/createBaseMap"
-    BASE_MAP_THEME = "/baseMapTheme"
-    BASE_MAP_LAYER = "/baseMapLayer"
-    BASE_MAP_TILE_SIZE = "/baseMapTileSize"
-    BASE_MAP_TILES_MIN_ZOOM_LEVEL = "/baseMapTilesMinZoomLevel"
-    BASE_MAP_TILES_MAX_ZOOM_LEVEL = "/baseMapTilesMaxZoomLevel"
-    OFFLINE_COPY_ONLY_AOI = "/offlineCopyOnlyAoi"
-    ORIGINAL_PROJECT_PATH = "/originalProjectPath"
-    IMPORTED_FILES_CHECKSUMS = "/importedFilesChecksums"
-    LAYER_ACTION_PREFERENCE = "/layerActionPreference"
-    AREA_OF_INTEREST = "/areaOfInterest"
-    AREA_OF_INTEREST_CRS = "/areaOfInterestCrs"
-    DIGITIZING_LOGS_LAYER = "/digitizingLogsLayer"
-    INITIAL_ACTIVE_LAYER = "/initialActiveLayer"
-    INITIAL_MAP_MODE = "/initialMapMode"
-    MAXIMUM_IMAGE_WIDTH_HEIGHT = "/maximumImageWidthHeight"
-    FORCE_AUTO_PUSH = "/forceAutoPush"
-    FORCE_AUTO_PUSH_INTERVAL_MINS = "/forceAutoPushIntervalMins"
-    GEOFENCING_IS_ACTIVE = "/geofencingIsActive"
-    GEOFENCING_LAYER = "/geofencingLayer"
-    GEOFENCING_BEHAVIOR = "/geofencingBehavior"
-    GEOFENCING_SHOULD_PREVENT_DIGITIZING = "/geofencingShouldPreventDigitizing"
-    MAP_THEMES_ACTIVE_LAYER = "/mapThemesActiveLayers"
-    FORCE_STAMPING = "/forceStamping"
-    STAMPING_FONT_STYLE = "/stampingFontStyle"
-    STAMPING_HORIZONTAL_ALIGNMENT = "/stampingHorizontalAlignment"
-    STAMPING_IMAGE_DECORATION = "/stampingImageDecoration"
-    STAMPING_DETAILS_TEMPLATE = "/stampingDetailsTemplate"
-    LOCATION_ARROW_FILL_COLOR = "/locationArrowFillColor"
-    LOCATION_ARROW_OUTLINE_COLOR = "/locationArrowOutlineColor"
-    LOCATION_ARROW_SIZE = "/locationArrowSize"
-    COORDINATE_CURSOR_FILL_COLOR = "/coordinateCursorFillColor"
-    COORDINATE_CURSOR_OUTLINE_COLOR = "/coordinateCursorOutlineColor"
-    COORDINATE_CURSOR_SIZE = "/coordinateCursorSize"
-    FEATURE_FORM_WIZARD_MODE_ENABLED = "/featureFormWizardModeEnabled"
-
-    class QFieldItemSize:
-        def __init__(self):
-            raise RuntimeError(
-                "This object holds only project property static variables"
-            )
-
-        TINY = "tiny"
-        NORMAL = "normal"
-        BIG = "big"
-        BIGGEST = "biggest"
-
-    class BaseMapType:
-        def __init__(self):
-            raise RuntimeError(
-                "This object holds only project property static variables"
-            )
-
-        SINGLE_LAYER = "singleLayer"
-        MAP_THEME = "mapTheme"
-
-    class GeofencingBehavior:
-        def __init__(self):
-            raise RuntimeError(
-                "This object holds only project property static variables"
-            )
-
-        ALERT_INSIDE_AREAS = 1
-        ALERT_OUTSIDE_AREAS = 2
-        INFORM_ENTER_LEAVE_AREAS = 3
-
-    class InitialMapMode:
-        def __init__(self):
-            raise RuntimeError(
-                "This object holds only project property static variables"
-            )
-
-        BROWSE = "browse"
-        DIGITIZE = "digitize"
+class QFieldItemSize(str, Enum):
+    TINY = "tiny"
+    NORMAL = "normal"
+    BIG = "big"
+    BIGGEST = "biggest"
 
 
-class ProjectConfiguration:
-    """Manages the QFieldSync specific configuration for a QGIS project."""
+class BaseMapType(str, Enum):
+    SINGLE_LAYER = "singleLayer"
+    MAP_THEME = "mapTheme"
 
-    def __init__(self, project):
+
+class GeofencingBehavior(Enum):
+    ALERT_INSIDE_AREAS = 1
+    ALERT_OUTSIDE_AREAS = 2
+    INFORM_ENTER_LEAVE_AREAS = 3
+
+
+class InitialMapMode(str, Enum):
+    BROWSE = "browse"
+    DIGITIZE = "digitize"
+
+
+class ProjectConfig:
+    def __init__(self, project: QgsProject) -> None:
         self.project = project
-
-    @property
-    def create_base_map(self):
-        create_base_map, _ = self.project.readBoolEntry(
-            "qfieldsync", ProjectProperties.CREATE_BASE_MAP, False
-        )
-        return create_base_map
-
-    @create_base_map.setter
-    def create_base_map(self, value):
-        self.project.writeEntry("qfieldsync", ProjectProperties.CREATE_BASE_MAP, value)
-
-    @property
-    def base_map_type(self):
-        base_map_type, _ = self.project.readEntry(
-            "qfieldsync",
-            ProjectProperties.BASE_MAP_TYPE,
-            ProjectProperties.BaseMapType.SINGLE_LAYER,
-        )
-        if base_map_type != ProjectProperties.BaseMapType.SINGLE_LAYER:
-            return ProjectProperties.BaseMapType.MAP_THEME
-        else:
-            return ProjectProperties.BaseMapType.SINGLE_LAYER
-
-    @base_map_type.setter
-    def base_map_type(self, value):
-        if value not in (
-            ProjectProperties.BaseMapType.SINGLE_LAYER,
-            ProjectProperties.BaseMapType.MAP_THEME,
-        ):
-            raise ValueError("Only supported types can be set")
-
-        self.project.writeEntry("qfieldsync", ProjectProperties.BASE_MAP_TYPE, value)
-
-    @property
-    def base_map_theme(self):
-        base_map_theme, _ = self.project.readEntry(
-            "qfieldsync", ProjectProperties.BASE_MAP_THEME
-        )
-        return base_map_theme
-
-    @base_map_theme.setter
-    def base_map_theme(self, value):
-        self.project.writeEntry("qfieldsync", ProjectProperties.BASE_MAP_THEME, value)
-
-    @property
-    def base_map_layer(self):
-        base_map_layer, _ = self.project.readEntry(
-            "qfieldsync", ProjectProperties.BASE_MAP_LAYER
-        )
-        return base_map_layer
-
-    @base_map_layer.setter
-    def base_map_layer(self, value):
-        self.project.writeEntry("qfieldsync", ProjectProperties.BASE_MAP_LAYER, value)
-
-    @property
-    def digitizing_logs_layer(self):
-        digitizing_logs_layer, _ = self.project.readEntry(
-            "qfieldsync", ProjectProperties.DIGITIZING_LOGS_LAYER
-        )
-        return digitizing_logs_layer
-
-    @digitizing_logs_layer.setter
-    def digitizing_logs_layer(self, value):
-        self.project.writeEntry(
-            "qfieldsync", ProjectProperties.DIGITIZING_LOGS_LAYER, value
-        )
-
-    @property
-    def initial_active_layer(self):
-        initial_active_layer, _ = self.project.readEntry(
-            "qfieldsync", ProjectProperties.INITIAL_ACTIVE_LAYER
-        )
-        return initial_active_layer
-
-    @initial_active_layer.setter
-    def initial_active_layer(self, value):
-        self.project.writeEntry(
-            "qfieldsync", ProjectProperties.INITIAL_ACTIVE_LAYER, value
-        )
-
-    @property
-    def initial_map_mode(self):
-        initial_map_mode, _ = self.project.readEntry(
-            "qfieldsync", ProjectProperties.INITIAL_MAP_MODE
-        )
-        if initial_map_mode in (
-            ProjectProperties.InitialMapMode.BROWSE,
-            ProjectProperties.InitialMapMode.DIGITIZE,
-        ):
-            return initial_map_mode
-
-        return ProjectProperties.InitialMapMode.BROWSE
-
-    @initial_map_mode.setter
-    def initial_map_mode(self, value):
-        self.project.writeEntry("qfieldsync", ProjectProperties.INITIAL_MAP_MODE, value)
-
-    @property
-    def geofencing_layer(self):
-        geofencing_layer, _ = self.project.readEntry(
-            "qfieldsync", ProjectProperties.GEOFENCING_LAYER
-        )
-        return geofencing_layer
-
-    @geofencing_layer.setter
-    def geofencing_layer(self, value):
-        self.project.writeEntry("qfieldsync", ProjectProperties.GEOFENCING_LAYER, value)
-
-    @property
-    def geofencing_behavior(self):
-        geofencing_behavior, _ = self.project.readNumEntry(
-            "qfieldsync",
-            ProjectProperties.GEOFENCING_BEHAVIOR,
-            ProjectProperties.GeofencingBehavior.ALERT_INSIDE_AREAS,
-        )
-        return geofencing_behavior
-
-    @geofencing_behavior.setter
-    def geofencing_behavior(self, value):
-        self.project.writeEntry(
-            "qfieldsync", ProjectProperties.GEOFENCING_BEHAVIOR, value
-        )
-
-    @property
-    def geofencing_should_prevent_digitizing(self):
-        geofencing_should_prevent_digitizing, _ = self.project.readBoolEntry(
-            "qfieldsync", ProjectProperties.GEOFENCING_SHOULD_PREVENT_DIGITIZING, False
-        )
-        return geofencing_should_prevent_digitizing
-
-    @geofencing_should_prevent_digitizing.setter
-    def geofencing_should_prevent_digitizing(self, value):
-        self.project.writeEntry(
-            "qfieldsync", ProjectProperties.GEOFENCING_SHOULD_PREVENT_DIGITIZING, value
-        )
-
-    @property
-    def stamping_font_style(self):
-        stamping_font_style, _ = self.project.readEntry(
-            "qfieldsync", ProjectProperties.STAMPING_FONT_STYLE
-        )
-        return stamping_font_style
-
-    @stamping_font_style.setter
-    def stamping_font_style(self, value):
-        self.project.writeEntry(
-            "qfieldsync", ProjectProperties.STAMPING_FONT_STYLE, value
-        )
-
-    @property
-    def stamping_horizontal_alignment(self):
-        stamping_horizontal_alignment, _ = self.project.readNumEntry(
-            "qfieldsync", ProjectProperties.STAMPING_HORIZONTAL_ALIGNMENT
-        )
-        return stamping_horizontal_alignment
-
-    @stamping_horizontal_alignment.setter
-    def stamping_horizontal_alignment(self, value):
-        self.project.writeEntry(
-            "qfieldsync", ProjectProperties.STAMPING_HORIZONTAL_ALIGNMENT, value
-        )
-
-    @property
-    def stamping_image_decoration(self):
-        stamping_image_decoration, _ = self.project.readEntry(
-            "qfieldsync", ProjectProperties.STAMPING_IMAGE_DECORATION
-        )
-        return stamping_image_decoration
-
-    @stamping_image_decoration.setter
-    def stamping_image_decoration(self, value):
-        self.project.writeEntry(
-            "qfieldsync", ProjectProperties.STAMPING_IMAGE_DECORATION, value
-        )
-
-    @property
-    def stamping_details_template(self):
-        stamping_details_template, _ = self.project.readEntry(
-            "qfieldsync", ProjectProperties.STAMPING_DETAILS_TEMPLATE
-        )
-        return stamping_details_template
-
-    @stamping_details_template.setter
-    def stamping_details_template(self, value):
-        self.project.writeEntry(
-            "qfieldsync", ProjectProperties.STAMPING_DETAILS_TEMPLATE, value
-        )
-
-    @property
-    def force_stamping(self):
-        force_stamping, _ = self.project.readBoolEntry(
-            "qfieldsync", ProjectProperties.FORCE_STAMPING, False
-        )
-        return force_stamping
-
-    @force_stamping.setter
-    def force_stamping(self, value):
-        self.project.writeEntry("qfieldsync", ProjectProperties.FORCE_STAMPING, value)
-
-    @property
-    def feature_form_wizard_mode_enabled(self):
-        feature_form_wizard_mode_enabled, _ = self.project.readBoolEntry(
-            "qfieldsync", ProjectProperties.FEATURE_FORM_WIZARD_MODE_ENABLED, False
-        )
-        return feature_form_wizard_mode_enabled
-
-    @feature_form_wizard_mode_enabled.setter
-    def feature_form_wizard_mode_enabled(self, value):
-        self.project.writeEntry(
-            "qfieldsync", ProjectProperties.FEATURE_FORM_WIZARD_MODE_ENABLED, value
-        )
-
-    @property
-    def map_themes_active_layer(self):
-        entries_json, _ = self.project.readEntry(
-            "qfieldsync", ProjectProperties.MAP_THEMES_ACTIVE_LAYER
-        )
-
-        try:
-            entries = json.loads(entries_json)
-        except Exception:
-            entries = {}
-
-        return entries
-
-    @map_themes_active_layer.setter
-    def map_themes_active_layer(self, value):
-        self.project.writeEntry(
-            "qfieldsync",
-            ProjectProperties.MAP_THEMES_ACTIVE_LAYER,
-            json.dumps(value),
-        )
-
-    @property
-    def geofencing_is_active(self):
-        geofencing_is_active, _ = self.project.readBoolEntry(
-            "qfieldsync", ProjectProperties.GEOFENCING_IS_ACTIVE, False
-        )
-        return geofencing_is_active
-
-    @geofencing_is_active.setter
-    def geofencing_is_active(self, value):
-        self.project.writeEntry(
-            "qfieldsync", ProjectProperties.GEOFENCING_IS_ACTIVE, value
-        )
-
-    @property
-    def maximum_image_width_height(self):
-        maximum_image_width_height, _ = self.project.readNumEntry(
-            "qfieldsync", ProjectProperties.MAXIMUM_IMAGE_WIDTH_HEIGHT, 0
-        )
-        return maximum_image_width_height
-
-    @maximum_image_width_height.setter
-    def maximum_image_width_height(self, value):
-        self.project.writeEntry(
-            "qfieldsync", ProjectProperties.MAXIMUM_IMAGE_WIDTH_HEIGHT, value
-        )
-
-    @property
-    def force_auto_push(self):
-        force_auto_push, _ = self.project.readBoolEntry(
-            "qfieldsync", ProjectProperties.FORCE_AUTO_PUSH, False
-        )
-        return force_auto_push
-
-    @force_auto_push.setter
-    def force_auto_push(self, value):
-        self.project.writeEntry("qfieldsync", ProjectProperties.FORCE_AUTO_PUSH, value)
-
-    @property
-    def force_auto_push_interval_mins(self):
-        force_auto_push_interval_mins, _ = self.project.readNumEntry(
-            "qfieldsync", ProjectProperties.FORCE_AUTO_PUSH_INTERVAL_MINS, 30
-        )
-        return force_auto_push_interval_mins
-
-    @force_auto_push_interval_mins.setter
-    def force_auto_push_interval_mins(self, value):
-        self.project.writeEntry(
-            "qfieldsync", ProjectProperties.FORCE_AUTO_PUSH_INTERVAL_MINS, value
-        )
-
-    @property
-    def base_map_tile_size(self):
-        base_map_tile_size, _ = self.project.readNumEntry(
-            "qfieldsync", ProjectProperties.BASE_MAP_TILE_SIZE, 1024
-        )
-        return base_map_tile_size
-
-    @base_map_tile_size.setter
-    def base_map_tile_size(self, value):
-        self.project.writeEntry(
-            "qfieldsync", ProjectProperties.BASE_MAP_TILE_SIZE, value
-        )
-
-    @property
-    def base_map_tiles_min_zoom_level(self) -> int:
-        base_map_tiles_min_zoom_level, _ = self.project.readNumEntry(
-            "qfieldsync", ProjectProperties.BASE_MAP_TILES_MIN_ZOOM_LEVEL, 14
-        )
-        return base_map_tiles_min_zoom_level
-
-    @base_map_tiles_min_zoom_level.setter
-    def base_map_tiles_min_zoom_level(self, value: int):
-        self.project.writeEntry(
-            "qfieldsync", ProjectProperties.BASE_MAP_TILES_MIN_ZOOM_LEVEL, value
-        )
-
-    @property
-    def base_map_tiles_max_zoom_level(self) -> int:
-        base_map_tiles_max_zoom_level, _ = self.project.readNumEntry(
-            "qfieldsync", ProjectProperties.BASE_MAP_TILES_MAX_ZOOM_LEVEL, 14
-        )
-        return base_map_tiles_max_zoom_level
-
-    @base_map_tiles_max_zoom_level.setter
-    def base_map_tiles_max_zoom_level(self, value):
-        self.project.writeEntry(
-            "qfieldsync", ProjectProperties.BASE_MAP_TILES_MAX_ZOOM_LEVEL, value
-        )
-
-    @property
-    def offline_copy_only_aoi(self):
-        offline_copy_only_aoi, _ = self.project.readBoolEntry(
-            "qfieldsync", ProjectProperties.OFFLINE_COPY_ONLY_AOI
-        )
-        return offline_copy_only_aoi
-
-    @offline_copy_only_aoi.setter
-    def offline_copy_only_aoi(self, value):
-        self.project.writeEntry(
-            "qfieldsync", ProjectProperties.OFFLINE_COPY_ONLY_AOI, value
-        )
-
-    @property
-    def original_project_path(self):
-        original_project_path, _ = self.project.readEntry(
-            "qfieldsync", ProjectProperties.ORIGINAL_PROJECT_PATH
-        )
-        return original_project_path
-
-    @original_project_path.setter
-    def original_project_path(self, value):
-        self.project.writeEntry(
-            "qfieldsync", ProjectProperties.ORIGINAL_PROJECT_PATH, value
-        )
-
-    @property
-    def imported_files_checksums(self):
-        imported_files_checksums, _ = self.project.readListEntry(
-            "qfieldsync", ProjectProperties.IMPORTED_FILES_CHECKSUMS
-        )
-        return imported_files_checksums
-
-    @imported_files_checksums.setter
-    def imported_files_checksums(self, value):
-        self.project.writeEntry(
-            "qfieldsync", ProjectProperties.IMPORTED_FILES_CHECKSUMS, value
-        )
-
-    @property
-    def layer_action_preference(self):
-        layer_action_preference, _ = self.project.readEntry(
-            "qfieldsync", ProjectProperties.LAYER_ACTION_PREFERENCE
-        )
-        return layer_action_preference
-
-    @layer_action_preference.setter
-    def layer_action_preference(self, value):
-        self.project.writeEntry(
-            "qfieldsync", ProjectProperties.LAYER_ACTION_PREFERENCE, value
-        )
-
-    @property
-    def area_of_interest(self):
-        area_of_interest, _ = self.project.readEntry(
-            "qfieldsync", ProjectProperties.AREA_OF_INTEREST
-        )
-        return area_of_interest
-
-    @area_of_interest.setter
-    def area_of_interest(self, value):
-        self.project.writeEntry("qfieldsync", ProjectProperties.AREA_OF_INTEREST, value)
-
-    @property
-    def area_of_interest_crs(self):
-        area_of_interest_crs, _ = self.project.readEntry(
-            "qfieldsync", ProjectProperties.AREA_OF_INTEREST_CRS
-        )
-        return area_of_interest_crs
-
-    @area_of_interest_crs.setter
-    def area_of_interest_crs(self, value):
-        self.project.writeEntry(
-            "qfieldsync", ProjectProperties.AREA_OF_INTEREST_CRS, value
-        )
-
-    @property
-    def location_arrow_fill_color(self):
-        color, _ = self.project.readEntry(
-            "qfieldsync", ProjectProperties.LOCATION_ARROW_FILL_COLOR, ""
-        )
-        return color
-
-    @location_arrow_fill_color.setter
-    def location_arrow_fill_color(self, value):
-        self.project.writeEntry(
-            "qfieldsync", ProjectProperties.LOCATION_ARROW_FILL_COLOR, value
-        )
-
-    @property
-    def location_arrow_outline_color(self):
-        color, _ = self.project.readEntry(
-            "qfieldsync", ProjectProperties.LOCATION_ARROW_OUTLINE_COLOR, ""
-        )
-        return color
-
-    @location_arrow_outline_color.setter
-    def location_arrow_outline_color(self, value):
-        self.project.writeEntry(
-            "qfieldsync", ProjectProperties.LOCATION_ARROW_OUTLINE_COLOR, value
-        )
-
-    @property
-    def location_arrow_size(self):
-        size, _ = self.project.readEntry(
-            "qfieldsync",
-            ProjectProperties.LOCATION_ARROW_SIZE,
-            ProjectProperties.QFieldItemSize.NORMAL,
-        )
-        return size
-
-    @location_arrow_size.setter
-    def location_arrow_size(self, value):
-        self.project.writeEntry(
-            "qfieldsync", ProjectProperties.LOCATION_ARROW_SIZE, value
-        )
-
-    @property
-    def coordinate_cursor_fill_color(self):
-        color, _ = self.project.readEntry(
-            "qfieldsync", ProjectProperties.COORDINATE_CURSOR_FILL_COLOR, ""
-        )
-        return color
-
-    @coordinate_cursor_fill_color.setter
-    def coordinate_cursor_fill_color(self, value):
-        self.project.writeEntry(
-            "qfieldsync", ProjectProperties.COORDINATE_CURSOR_FILL_COLOR, value
-        )
-
-    @property
-    def coordinate_cursor_outline_color(self):
-        color, _ = self.project.readEntry(
-            "qfieldsync", ProjectProperties.COORDINATE_CURSOR_OUTLINE_COLOR, ""
-        )
-        return color
-
-    @coordinate_cursor_outline_color.setter
-    def coordinate_cursor_outline_color(self, value):
-        self.project.writeEntry(
-            "qfieldsync", ProjectProperties.COORDINATE_CURSOR_OUTLINE_COLOR, value
-        )
-
-    @property
-    def coordinate_cursor_size(self):
-        size, _ = self.project.readEntry(
-            "qfieldsync",
-            ProjectProperties.COORDINATE_CURSOR_SIZE,
-            ProjectProperties.QFieldItemSize.NORMAL,
-        )
-        return size
-
-    @coordinate_cursor_size.setter
-    def coordinate_cursor_size(self, value):
-        self.project.writeEntry(
-            "qfieldsync", ProjectProperties.COORDINATE_CURSOR_SIZE, value
-        )
+        self.prefix = "qfieldsync"
+
+    create_base_map = pfield(bool, "/createBaseMap", False)
+    base_map_type = pfield(BaseMapType, "/baseMapType", BaseMapType.SINGLE_LAYER)
+    base_map_theme = pfield(str, "/baseMapTheme")
+    base_map_layer = pfield(str, "/baseMapLayer")
+    digitizing_logs_layer = pfield(str, "/digitizingLogsLayer")
+    initial_active_layer = pfield(str, "/initialActiveLayer")
+    initial_map_mode = pfield(InitialMapMode, "/initialMapMode", InitialMapMode.BROWSE)
+    geofencing_layer = pfield(str, "/geofencingLayer")
+    geofencing_behavior = pfield(
+        GeofencingBehavior, "/geofencingBehavior", GeofencingBehavior.ALERT_INSIDE_AREAS
+    )
+    geofencing_should_prevent_digitizing = pfield(
+        bool, "/geofencingShouldPreventDigitizing", False
+    )
+    stamping_font_style = pfield(str, "/stampingFontStyle")
+    stamping_horizontal_alignment = pfield(int, "/stampingHorizontalAlignment")
+    stamping_image_decoration = pfield(str, "/stampingImageDecoration")
+    stamping_details_template = pfield(str, "/stampingDetailsTemplate")
+    force_stamping = pfield(bool, "/forceStamping", False)
+    map_themes_active_layer = pfield(dict, "/mapThemesActiveLayers", dict)
+    geofencing_is_active = pfield(bool, "/geofencingIsActive", False)
+    maximum_image_width_height = pfield(int, "/maximumImageWidthHeight", 0)
+    force_auto_push = pfield(bool, "/forceAutoPush", False)
+    force_auto_push_interval_mins = pfield(int, "/forceAutoPushIntervalMins", 30)
+    base_map_tile_size = pfield(int, "/baseMapTileSize", 1024)
+    base_map_tiles_min_zoom_level = pfield(int, "/baseMapTilesMinZoomLevel", 14)
+    base_map_tiles_max_zoom_level = pfield(int, "/baseMapTilesMaxZoomLevel", 14)
+    offline_copy_only_aoi = pfield(bool, "/offlineCopyOnlyAoi", False)
+    original_project_path = pfield(str, "/originalProjectPath", "")
+    imported_files_checksums: Field["list[str]"] = pfield(
+        list, "/importedFilesChecksums", list
+    )
+    layer_action_preference = pfield(str, "/layerActionPreference")
+    area_of_interest = pfield(str, "/areaOfInterest")
+    area_of_interest_crs = pfield(str, "/areaOfInterestCrs")
+    feature_form_wizard_mode_enabled = pfield(
+        bool, "/featureFormWizardModeEnabled", False
+    )
+    location_arrow_fill_color = pfield(str, "/locationArrowFillColor")
+    location_arrow_outline_color = pfield(str, "/locationArrowOutlineColor")
+    location_arrow_size = pfield(
+        QFieldItemSize, "/locationArrowSize", QFieldItemSize.NORMAL
+    )
+    coordinate_cursor_fill_color = pfield(str, "/coordinateCursorFillColor")
+    coordinate_cursor_outline_color = pfield(str, "/coordinateCursorOutlineColor")
+    coordinate_cursor_size = pfield(
+        QFieldItemSize, "/coordinateCursorSize", QFieldItemSize.NORMAL
+    )

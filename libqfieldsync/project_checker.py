@@ -7,7 +7,7 @@ from qgis.core import Qgis, QgsMapLayer, QgsProject
 from qgis.PyQt.QtCore import QObject
 
 from libqfieldsync.layer import LayerSource, SyncAction, UnsupportedPrimaryKeyError
-from libqfieldsync.project import ProjectConfiguration, ProjectProperties
+from libqfieldsync.project import BaseMapType, ProjectConfig
 from libqfieldsync.utils.file_utils import is_valid_filepath, isascii
 
 from .offline_converter import ExportType
@@ -216,17 +216,17 @@ class ProjectChecker:
             return None
 
     def check_basemap_configuration(self) -> Optional[FeedbackResult]:
-        project_configuration = ProjectConfiguration(self.project)
+        project_config = ProjectConfig(self.project)
 
-        if not project_configuration.create_base_map:
+        if not project_config.create_base_map:
             return None
 
-        base_map_type = project_configuration.base_map_type
+        base_map_type = project_config.base_map_type
 
-        if base_map_type == ProjectProperties.BaseMapType.SINGLE_LAYER:
-            basemap_layer = self.project.mapLayer(project_configuration.base_map_layer)
+        if base_map_type == BaseMapType.SINGLE_LAYER:
+            basemap_layer = self.project.mapLayer(project_config.base_map_layer)
 
-            if not project_configuration.base_map_layer.strip():
+            if not project_config.base_map_layer.strip():
                 return FeedbackResult(
                     self.tr(
                         "No basemap layer selected. "
@@ -238,18 +238,18 @@ class ProjectChecker:
                     self.tr(
                         'Cannot find the configured base layer with id "{}". '
                         'Please change this configuration in "Project -> Properties... -> QField" first.'
-                    ).format(project_configuration.base_map_layer),
+                    ).format(project_config.base_map_layer),
                 )
 
-        elif base_map_type == ProjectProperties.BaseMapType.MAP_THEME:
+        elif base_map_type == BaseMapType.MAP_THEME:
             if not self.project.mapThemeCollection().hasMapTheme(
-                project_configuration.base_map_theme
+                project_config.base_map_theme
             ):
                 return FeedbackResult(
                     self.tr(
                         'Cannot find the configured base theme with name "{}".'
                         'Please change this configuration in "Project -> Properties... -> QField" first.'
-                    ).format(project_configuration.base_map_theme),
+                    ).format(project_config.base_map_theme),
                 )
 
         return None
