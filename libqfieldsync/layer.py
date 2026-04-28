@@ -68,6 +68,7 @@ def get_file_extension_group(filename):
         for extension in group:
             if filename.endswith(extension):
                 return filename[: -len(extension)], group
+
     basename, ext = os.path.splitext(filename)
     return basename, [ext]
 
@@ -260,6 +261,7 @@ class LayerSource:
             self._feature_deletion_locked_expression = self.layer.customProperty(
                 "QFieldSync/feature_deletion_locked_expression", ""
             )
+
         self._allow_value_relation_feature_addition = self.layer.customProperty(
             "QFieldSync/allow_value_relation_feature_addition", False
         )
@@ -500,6 +502,7 @@ class LayerSource:
             self.layer.setCustomProperty("QFieldSync/is_feature_addition_locked", True)
         else:
             self.layer.removeCustomProperty("QFieldSync/is_feature_addition_locked")
+
         if self.is_feature_addition_locked_expression_active:
             self.layer.setCustomProperty(
                 "QFieldSync/is_feature_addition_locked_expression_active", True
@@ -508,6 +511,7 @@ class LayerSource:
             self.layer.removeCustomProperty(
                 "QFieldSync/is_feature_addition_locked_expression_active"
             )
+
         self.layer.setCustomProperty(
             "QFieldSync/feature_addition_locked_expression",
             self.feature_addition_locked_expression,
@@ -516,6 +520,7 @@ class LayerSource:
             self.layer.setCustomProperty("QFieldSync/is_attribute_editing_locked", True)
         else:
             self.layer.removeCustomProperty("QFieldSync/is_attribute_editing_locked")
+
         if self.is_attribute_editing_locked_expression_active:
             self.layer.setCustomProperty(
                 "QFieldSync/is_attribute_editing_locked_expression_active", True
@@ -524,6 +529,7 @@ class LayerSource:
             self.layer.removeCustomProperty(
                 "QFieldSync/is_attribute_editing_locked_expression_active"
             )
+
         self.layer.setCustomProperty(
             "QFieldSync/attribute_editing_locked_expression",
             self.attribute_editing_locked_expression,
@@ -532,6 +538,7 @@ class LayerSource:
             self.layer.setCustomProperty("QFieldSync/is_geometry_editing_locked", True)
         else:
             self.layer.removeCustomProperty("QFieldSync/is_geometry_editing_locked")
+
         if self.is_geometry_editing_locked_expression_active:
             self.layer.setCustomProperty(
                 "QFieldSync/is_geometry_editing_locked_expression_active", True
@@ -540,6 +547,7 @@ class LayerSource:
             self.layer.removeCustomProperty(
                 "QFieldSync/is_geometry_editing_locked_expression_active"
             )
+
         self.layer.setCustomProperty(
             "QFieldSync/geometry_editing_locked_expression",
             self.geometry_editing_locked_expression,
@@ -548,6 +556,7 @@ class LayerSource:
             self.layer.setCustomProperty("QFieldSync/is_feature_deletion_locked", True)
         else:
             self.layer.removeCustomProperty("QFieldSync/is_feature_deletion_locked")
+
         if self.is_feature_deletion_locked_expression_active:
             self.layer.setCustomProperty(
                 "QFieldSync/is_feature_deletion_locked_expression_active", True
@@ -556,6 +565,7 @@ class LayerSource:
             self.layer.removeCustomProperty(
                 "QFieldSync/is_feature_deletion_locked_expression_active"
             )
+
         self.layer.setCustomProperty(
             "QFieldSync/feature_deletion_locked_expression",
             self.feature_deletion_locked_expression,
@@ -574,6 +584,7 @@ class LayerSource:
             self.layer.setCustomProperty("QFieldSync/tracking_session_active", True)
         else:
             self.layer.removeCustomProperty("QFieldSync/tracking_session_active")
+
         if self.tracking_time_requirement_active:
             self.layer.setCustomProperty(
                 "QFieldSync/tracking_time_requirement_active", True
@@ -582,6 +593,7 @@ class LayerSource:
             self.layer.removeCustomProperty(
                 "QFieldSync/tracking_time_requirement_active"
             )
+
         self.layer.setCustomProperty(
             "QFieldSync/tracking_time_requirement_interval_seconds",
             self.tracking_time_requirement_interval_seconds,
@@ -594,6 +606,7 @@ class LayerSource:
             self.layer.removeCustomProperty(
                 "QFieldSync/tracking_distance_requirement_active"
             )
+
         self.layer.setCustomProperty(
             "QFieldSync/tracking_distance_requirement_minimum_meters",
             self.tracking_distance_requirement_minimum_meters,
@@ -606,6 +619,7 @@ class LayerSource:
             self.layer.removeCustomProperty(
                 "QFieldSync/tracking_sensor_data_requirement_active"
             )
+
         if self.tracking_all_requirements_active:
             self.layer.setCustomProperty(
                 "QFieldSync/tracking_all_requirements_active", True
@@ -614,6 +628,7 @@ class LayerSource:
             self.layer.removeCustomProperty(
                 "QFieldSync/tracking_all_requirements_active"
             )
+
         if self.tracking_erroneous_distance_safeguard_active:
             self.layer.setCustomProperty(
                 "QFieldSync/tracking_erroneous_distance_safeguard_active", True
@@ -622,6 +637,7 @@ class LayerSource:
             self.layer.removeCustomProperty(
                 "QFieldSync/tracking_erroneous_distance_safeguard_active"
             )
+
         self.layer.setCustomProperty(
             "QFieldSync/tracking_erroneous_distance_safeguard_maximum_meters",
             self.tracking_erroneous_distance_safeguard_maximum_meters,
@@ -1149,6 +1165,7 @@ class LayerSource:
             return QCoreApplication.translate(
                 "DataSourceWarning", "ECW layers are not supported by QField."
             )
+
         return None
 
     @property
@@ -1355,6 +1372,7 @@ class LayerSource:
                         new_source = "{}|{}".format(new_source, suffix)  # noqa: UP032
 
             self._change_data_source(new_source)
+
         return copied_files
 
     def convert_to_gpkg(self, target_path):  # noqa: PLR0912, PLR0915
@@ -1422,6 +1440,7 @@ class LayerSource:
             source_layer_joins = source_layer.vectorJoins()
             for join in source_layer_joins:
                 source_layer.removeJoin(join.joinLayerId())
+
             fields = source_layer.fields()
             virtual_field_count = 0
             for i in range(len(fields)):
@@ -1443,6 +1462,7 @@ class LayerSource:
 
             if error != QgsVectorFileWriter.WriterError.NoError:
                 return None
+
             if returned_dest_file:
                 new_source = returned_dest_file
             else:

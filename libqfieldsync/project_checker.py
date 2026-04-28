@@ -37,8 +37,12 @@ class Feedback:
     ) -> None:
         self.level = level
         self.message = feedback_result.message
-        self.layer_id = layer.id() if layer else None
-        self.layer_name = layer.name() if layer else None
+        if layer:
+            self.layer_id = layer.id()
+            self.layer_name = layer.name()
+        else:
+            self.layer_id = None
+            self.layer_name = None
 
 
 class ProjectCheckerFeedback:
@@ -248,6 +252,7 @@ class ProjectChecker:
                         'Please change this configuration in "File -> Project settings -> QField" first.'
                     ).format(project_configuration.base_map_theme),
                 )
+
         return None
 
     def check_files_have_unsupported_characters(self) -> Optional[FeedbackResult]:

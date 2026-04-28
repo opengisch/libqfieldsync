@@ -179,6 +179,7 @@ class ProjectConfiguration:
             ProjectProperties.InitialMapMode.DIGITIZE,
         ):
             return initial_map_mode
+
         return ProjectProperties.InitialMapMode.BROWSE
 
     @initial_map_mode.setter
