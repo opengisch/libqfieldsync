@@ -160,6 +160,8 @@ crashlytics.properties
 crashlytics-build.properties
 fabric.properties
 
+# Mypy
+.mypy_cache/
 
 # My super new category
 .DS_Store
