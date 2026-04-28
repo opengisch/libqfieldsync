@@ -90,6 +90,13 @@ packages = ["libqfieldsync", "libqfieldsync.utils"]
 [tool.setuptools.dynamic]
 dependencies = { file = ["requirements.txt"] }
 
+[tool.flake8]
+exclude = [
+    ".git",
+    "__pycache__",
+]
+select = ["CLB100", "IF100"]
+
 [project]
 name = "libqfieldsync"
 description = "the qfieldsync library"
