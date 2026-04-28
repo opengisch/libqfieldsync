@@ -63,11 +63,11 @@ jobs:
         - name: Setup Python
           uses: actions/setup-python@v6
 
-        - name: Install toolchain
-          run: pip install build
+        - name: Install uv with all available options
+          uses: astral-sh/setup-uv@v8.1.0
 
-        - name: Package with build
-          run:  python -m build
+        - name: Package with uv
+          run:  uv build
 
         - name: Install with pip
-          run: pip install .
+          run: pip install . --break-system-packages
