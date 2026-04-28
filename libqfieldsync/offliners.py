@@ -84,15 +84,15 @@ class QgisCoreOffliner(BaseOffliner):
         # Check https://api.qgis.org/api/3.14/classQgsOfflineEditing.html#a59d2ebed32704f655868951eba6ef52e for more documentation of these signals
         # NOTE directly connecting the slot like `self.offliner.progress_mode_set.connect(self.progress_mode_set)` raises typing error
         self.qgs_offline_editing.layerProgressUpdated.connect(
-            lambda progress, layer_idx: self.layer_progress_updated.emit(
+            lambda progress, layer_idx: self.layer_progress_updated.emit(  # noqa: PLW0108
                 progress, layer_idx
             )
         )
         self.qgs_offline_editing.progressModeSet.connect(
-            lambda mode, maximum: self.progress_mode_set.emit(mode, maximum)
+            lambda mode, maximum: self.progress_mode_set.emit(mode, maximum)  # noqa: PLW0108
         )
         self.qgs_offline_editing.progressUpdated.connect(
-            lambda progress: self.progress_updated.emit(progress)
+            lambda progress: self.progress_updated.emit(progress)  # noqa: PLW0108
         )
 
     def convert_to_offline(
