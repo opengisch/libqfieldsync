@@ -3,7 +3,7 @@ import os
 import re
 import shutil
 from enum import Enum
-from typing import ClassVar, Dict, List, Optional
+from typing import ClassVar, Optional
 
 from qgis.core import (
     QgsAttributeEditorField,
@@ -80,7 +80,7 @@ class LayerSource:
         PackagePreventionReason.UNSUPPORTED_DATASOURCE,
     )
 
-    ATTACHMENT_EXPRESSIONS: ClassVar[Dict[AttachmentType, str]] = {
+    ATTACHMENT_EXPRESSIONS: ClassVar[dict[AttachmentType, str]] = {
         AttachmentType.FILE: "'files/{layername}_' || format_date(now(),'yyyyMMddhhmmsszzz') || '_{{filename}}'",
         AttachmentType.IMAGE: "'DCIM/{layername}_' || format_date(now(),'yyyyMMddhhmmsszzz') || '.{{extension}}'",
         AttachmentType.WEB: "",
@@ -645,7 +645,7 @@ class LayerSource:
         resource_type = ews.config().get("DocumentViewer", 0)
         return self.get_attachment_type_by_int_value(resource_type)
 
-    def get_attachment_fields(self) -> Dict[str, AttachmentType]:
+    def get_attachment_fields(self) -> dict[str, AttachmentType]:
         if self.layer.type() != QgsMapLayer.LayerType.VectorLayer:
             return {}
 
@@ -1138,7 +1138,7 @@ class LayerSource:
         )
 
     @property
-    def metadata(self) -> Dict:
+    def metadata(self) -> dict:
         if self.provider_metadata is None:
             return {}
 
@@ -1196,7 +1196,7 @@ class LayerSource:
     @property
     def package_prevention_reasons(
         self,
-    ) -> List["LayerSource.PackagePreventionReason"]:
+    ) -> list["LayerSource.PackagePreventionReason"]:
         reasons = []
 
         # remove unsupported layers from the packaged project

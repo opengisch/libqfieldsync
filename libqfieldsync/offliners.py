@@ -3,7 +3,7 @@ import os
 from collections import defaultdict
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, NamedTuple, NewType, Optional
+from typing import NamedTuple, NewType, Optional
 
 from osgeo import gdal, ogr, osr
 from qgis.core import (
@@ -62,7 +62,7 @@ class BaseOffliner(QObject):
     def convert_to_offline(
         self,
         offline_db_filename: str,
-        layers: List[QgsMapLayer],
+        layers: list[QgsMapLayer],
         bbox: Optional[QgsRectangle],
         exported_project_title: str = "",
     ) -> bool:
@@ -98,7 +98,7 @@ class QgisCoreOffliner(BaseOffliner):
     def convert_to_offline(
         self,
         offline_db_filename: str,
-        layers: List[QgsMapLayer],
+        layers: list[QgsMapLayer],
         bbox: Optional[QgsRectangle],
         exported_project_title: str = "",
     ) -> bool:
@@ -178,7 +178,7 @@ class PythonMiniOffliner(BaseOffliner):
     def convert_to_offline(
         self,
         offline_db_filename: str,
-        layers: List[QgsMapLayer],
+        layers: list[QgsMapLayer],
         bbox: Optional[QgsRectangle],
         exported_project_title: str = "",
     ) -> bool:
@@ -393,7 +393,7 @@ class PythonMiniOffliner(BaseOffliner):
     def _convert_to_offline_project(
         self,
         offline_gpkg_path: str,
-        offline_layers: Optional[List[QgsMapLayer]],
+        offline_layers: Optional[list[QgsMapLayer]],
         bbox: Optional[QgsRectangle],
         exported_project_title: str = "",
     ) -> None:
@@ -487,8 +487,8 @@ class PythonMiniOffliner(BaseOffliner):
         )
 
     def _get_filters_mapping(
-        self, datasource_mapping: Dict[str, List[LayerInfo]]
-    ) -> Dict[str, str]:
+        self, datasource_mapping: dict[str, list[LayerInfo]]
+    ) -> dict[str, str]:
         """Get mapping of filter strings to be applied for each datasource. If no filters to be applied, the value will be an empty string."""
         filters_by_datasource = {}
 
@@ -509,8 +509,8 @@ class PythonMiniOffliner(BaseOffliner):
     def _get_datasource_mapping(
         self,
         project: QgsProject,
-        offline_layers: Optional[List[QgsMapLayer]],
-    ) -> Dict[str, List[LayerInfo]]:
+        offline_layers: Optional[list[QgsMapLayer]],
+    ) -> dict[str, list[LayerInfo]]:
         """
         Create a dict of data sources (tables/files) to a list of layers that consume data from them.
 

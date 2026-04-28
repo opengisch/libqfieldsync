@@ -1,8 +1,7 @@
-import sys
 from collections import defaultdict
 from enum import Enum
 from pathlib import Path
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Optional, TypedDict
 
 from qgis.core import Qgis, QgsMapLayer, QgsProject
 from qgis.PyQt.QtCore import QObject
@@ -12,11 +11,6 @@ from libqfieldsync.project import ProjectConfiguration, ProjectProperties
 from libqfieldsync.utils.file_utils import is_valid_filepath, isascii
 
 from .offline_converter import ExportType
-
-if sys.version_info >= (3, 8):
-    from typing import TypedDict
-else:
-    TypedDict = Dict
 
 
 class FeedbackResult:
@@ -49,12 +43,12 @@ class ProjectCheckerFeedback:
     tr = QObject().tr
 
     def __init__(self) -> None:
-        self.feedbacks: Dict[str, List[Feedback]] = {
+        self.feedbacks: dict[str, list[Feedback]] = {
             # if the key is "", it is considered as project feedback
             "": [],
         }
         self.count = 0
-        self.error_feedbacks: List[Feedback] = []
+        self.error_feedbacks: list[Feedback] = []
         self.longest_level_name = len(Feedback.Level.WARNING.value)
 
     def add(self, feedback: Feedback):
@@ -78,7 +72,7 @@ class ProjectChecker:
 
     def __init__(self, project: QgsProject) -> None:
         self.project = project
-        self.project_checks: List[ProjectChecker.CheckConfig] = [
+        self.project_checks: list[ProjectChecker.CheckConfig] = [
             {
                 "level": Feedback.Level.ERROR,
                 "fn": self.check_no_absolute_filepaths,
@@ -110,7 +104,7 @@ class ProjectChecker:
                 "scope": ExportType.Cloud,
             },
         ]
-        self.layer_checks: List[ProjectChecker.CheckConfig] = [
+        self.layer_checks: list[ProjectChecker.CheckConfig] = [
             {
                 "level": Feedback.Level.WARNING,
                 "fn": self.check_layer_has_utf8_datasources,
@@ -296,7 +290,7 @@ class ProjectChecker:
             return None
 
     def check_for_conflicting_base_filenames(self) -> Optional[FeedbackResult]:
-        conflicting_files: List[Path] = []
+        conflicting_files: list[Path] = []
 
         project_file_path = Path(self.project.fileName())
         project_home_path = project_file_path.parent
@@ -528,7 +522,7 @@ class ProjectChecker:
 
     def check_project_layers_sources_actions(self) -> Optional[FeedbackResult]:
         """Check if layers from the same GeoPackage have offline and copy actions."""
-        layer_sources_by_filename: Dict[str, List[LayerSource]] = defaultdict(list)
+        layer_sources_by_filename: dict[str, list[LayerSource]] = defaultdict(list)
 
         for project_layer in self.project.mapLayers().values():
             layer_source = LayerSource(project_layer)

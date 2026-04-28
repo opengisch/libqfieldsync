@@ -20,7 +20,7 @@
 import tempfile
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, TypedDict, Union, cast
+from typing import Optional, TypedDict, Union, cast
 
 from qgis.core import (
     Qgis,
@@ -106,11 +106,11 @@ class OfflineConverter(QObject):
         export_filename: str,
         area_of_interest_wkt: str,
         area_of_interest_crs: Union[str, QgsCoordinateReferenceSystem],
-        attachment_dirs: List[str],
+        attachment_dirs: list[str],
         offliner: BaseOffliner,
         export_type: Optional[ExportType] = None,
         create_basemap: bool = True,
-        dirs_to_copy: Optional[Dict[str, bool]] = None,
+        dirs_to_copy: Optional[dict[str, bool]] = None,
         export_title: str = "",
     ) -> None:
         # NOTE: while it will be much more readable to pass `export_type` parameter to have a default value of `ExportType.Cable`,
@@ -122,8 +122,8 @@ class OfflineConverter(QObject):
         super().__init__(parent=None)
         self.__max_task_progress = 0
         self.__convertor_progress = None  # for processing feedback
-        self.__layer_data_by_id: Dict[str, LayerData] = {}
-        self.__offline_layer_names: List[str] = []
+        self.__layer_data_by_id: dict[str, LayerData] = {}
+        self.__offline_layer_names: list[str] = []
 
         # elipsis workaround
         self.trUtf8 = self.tr
@@ -178,7 +178,7 @@ class OfflineConverter(QObject):
 
             self.total_progress_updated.emit(100, 100, self.tr("Finished"))
 
-    def _get_additional_project_files(self, project: QgsProject) -> List[str]:
+    def _get_additional_project_files(self, project: QgsProject) -> list[str]:
         original_project_path = Path(self.original_filename).parent
         additional_project_files = []
 
@@ -255,8 +255,8 @@ class OfflineConverter(QObject):
         self._export_filename.parent.mkdir(parents=True, exist_ok=True)
         self.total_progress_updated.emit(0, 100, self.trUtf8("Converting project…"))
 
-        project_layers: List[QgsMapLayer] = list(project.mapLayers().values())
-        offline_layers: List[QgsMapLayer] = []
+        project_layers: list[QgsMapLayer] = list(project.mapLayers().values())
+        offline_layers: list[QgsMapLayer] = []
         copied_files = []
 
         if self.create_basemap and self.project_configuration.create_base_map:

@@ -21,7 +21,7 @@ import logging
 import os
 import tempfile
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 from qgis.core import QgsMapLayer, QgsProject
 
@@ -56,7 +56,7 @@ def make_temp_qgis_file(project: QgsProject) -> str:
     return backup_filename
 
 
-def get_memory_layers(project: QgsProject) -> List[QgsMapLayer]:
+def get_memory_layers(project: QgsProject) -> list[QgsMapLayer]:
     return [
         layer
         for layer in project.mapLayers().values()
@@ -64,6 +64,6 @@ def get_memory_layers(project: QgsProject) -> List[QgsMapLayer]:
     ]
 
 
-def get_qgis_files_within_dir(dirname: Union[str, Path]) -> List[Path]:
+def get_qgis_files_within_dir(dirname: Union[str, Path]) -> list[Path]:
     dirname = Path(dirname)
     return list(dirname.glob("*.qgs")) + list(dirname.glob("*.qgz"))
