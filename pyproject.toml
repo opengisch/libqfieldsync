@@ -123,3 +123,10 @@ tracker = "https://github.com/opengisch/libqfieldsync/issues"
 
 [project.optional-dependencies]
 dev = ["pre-commit"]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=2.21.0",
+    "pytest>=7.4.4",
+    "pytest-cov>=4.1.0",
+]
