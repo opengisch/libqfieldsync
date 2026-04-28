@@ -295,19 +295,23 @@ class OfflineConverter(QObject):
                 # do not attempt to package the layer
                 continue
 
+            if hasattr(layer, "fields"):
+                layer_fields = layer.fields()
+            else:
+                layer_fields = None
+
             layer_data: LayerData = {
                 "id": layer.id(),
                 "name": layer.name(),
                 "type": layer.type(),
                 "source": layer.source(),
-                "fields": layer.fields() if hasattr(layer, "fields") else None,
+                "fields": layer_fields,
             }
 
-            layer_action = (
-                layer_source.action
-                if self.export_type == ExportType.Cable
-                else layer_source.cloud_action
-            )
+            if self.export_type == ExportType.Cable:
+                layer_action = layer_source.action
+            else:
+                layer_action = layer_source.cloud_action
 
             if layer.isValid() and layer.type() == QgsMapLayer.LayerType.VectorLayer:
                 if layer_source.pk_attr_name:

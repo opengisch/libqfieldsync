@@ -52,6 +52,7 @@ def fileparts(filename: str, extension_dot: bool = True) -> Tuple[str, str, str]
         ext = "." + ext
     elif not extension_dot and ext.startswith("."):
         ext = ext[1:]
+
     return (path, name, ext)
 
 
@@ -72,10 +73,12 @@ def get_children_with_extension(
     extension_dot = False
     if specified_ext:
         extension_dot = specified_ext[0].startswith(".")
+
     for filename in os.listdir(parent):
         _, _, ext = fileparts(filename, extension_dot=extension_dot)
         if ext in specified_ext:
             res.append(os.path.join(parent, filename))
+
     if len(res) != count:
         raise QFieldSyncError(
             QCoreApplication.translate(

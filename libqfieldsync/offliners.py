@@ -222,6 +222,7 @@ class PythonMiniOffliner(BaseOffliner):
         ogr_field = ogr.FieldDefn(field.name(), ogr_type)
         if ogr_sub_type != ogr.OFSTNone:
             ogr_field.SetSubType(ogr_sub_type)
+
         ogr_field.SetWidth(ogr_width)
 
         return ogr_field
@@ -526,7 +527,9 @@ class PythonMiniOffliner(BaseOffliner):
                 reason = ""
                 if layer.dataProvider():
                     reason = layer.dataProvider().error()
+
                 logger.info(f"Skipping layer {layer.name()} :: invalid ({reason})")
+
                 continue
 
             if offline_layers is not None and layer not in offline_layers:
