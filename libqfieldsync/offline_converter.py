@@ -91,7 +91,6 @@ class ExportType(Enum):
 
 
 class OfflineConverter(QObject):
-    progress_stopped = pyqtSignal()
     warning = pyqtSignal(str, str)
     task_progress_updated = pyqtSignal(int, int)
     total_progress_updated = pyqtSignal(int, int, str)
