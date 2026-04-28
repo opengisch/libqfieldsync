@@ -17,14 +17,15 @@
  ***************************************************************************/
 """
 
-from typing import ClassVar, Dict, Iterable
+from collections.abc import Iterable
+from typing import ClassVar
 
 from qgis.core import QgsProject, QgsProjectBadLayerHandler
 from qgis.PyQt.QtXml import QDomNode
 
 
 class BadLayerHandler(QgsProjectBadLayerHandler):
-    invalid_layer_sources_by_id: ClassVar[Dict[str, str]] = {}
+    invalid_layer_sources_by_id: ClassVar[dict[str, str]] = {}
 
     def handleBadLayers(self, layers: Iterable[QDomNode]):  # noqa: N802
         super().handleBadLayers(layers)

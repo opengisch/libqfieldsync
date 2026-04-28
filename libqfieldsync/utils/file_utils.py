@@ -27,7 +27,7 @@ import shutil
 import subprocess
 import unicodedata
 from pathlib import Path
-from typing import List, Optional, Tuple, Union
+from typing import Optional, Union
 
 from qgis.core import (
     Qgis,
@@ -44,7 +44,7 @@ from qgis.PyQt.QtCore import QCoreApplication
 from .exceptions import NoProjectFoundError, QFieldSyncError
 
 
-def fileparts(filename: str, extension_dot: bool = True) -> Tuple[str, str, str]:
+def fileparts(filename: str, extension_dot: bool = True) -> tuple[str, str, str]:
     path = os.path.dirname(filename)
     basename = os.path.basename(filename)
     name, ext = os.path.splitext(basename)
@@ -57,8 +57,8 @@ def fileparts(filename: str, extension_dot: bool = True) -> Tuple[str, str, str]
 
 
 def get_children_with_extension(
-    parent: str, specified_ext: Union[str, List[str]], count: int = 1
-) -> List[str]:
+    parent: str, specified_ext: Union[str, list[str]], count: int = 1
+) -> list[str]:
     if not os.path.isdir(parent):
         raise QFieldSyncError(
             QCoreApplication.translate(
@@ -355,7 +355,7 @@ def set_relative_embed_layer_symbols_on_project(  # noqa: PLR0912
 
 def get_project_like_files(
     project_filename: Union[str, Path], glob_pattern: str
-) -> List[str]:
+) -> list[str]:
     """
     Get the list of files with names similar to given project name and glob pattern.
 
@@ -384,7 +384,7 @@ def get_project_like_files(
 def copy_additional_project_files(
     source_project_filename: Union[str, Path],
     export_project_filename: Union[str, Path],
-    additional_project_files: List[str],
+    additional_project_files: list[str],
 ):
     source_project_filename = Path(source_project_filename)
     export_project_filename = Path(export_project_filename)
