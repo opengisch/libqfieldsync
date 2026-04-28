@@ -33,46 +33,6 @@ class ExpectedVectorLayerError(Exception): ...
 class UnsupportedPrimaryKeyError(Exception): ...
 
 
-# When copying files, if any of the extension in any of the groups is found,
-# other files with the same extension in the same folder will be copied as well.
-file_extension_groups = [
-    [
-        ".shp",
-        ".shx",
-        ".dbf",
-        ".sbx",
-        ".sbn",
-        ".shp.xml",
-        ".prj",
-        ".cpg",
-        ".qpj",
-        ".qix",
-    ],
-    [".tab", ".dat", ".map", ".xls", ".xlsx", ".id", ".ind", ".wks", ".dbf"],
-    [".png", ".pgw"],
-    [".jpg", ".jgw"],
-    [".tif", ".tfw", ".wld"],
-]
-
-
-def get_file_extension_group(filename):
-    """
-    Return the basename and an extension group (if applicable)
-
-    Examples:
-         airports.shp -> 'airport', ['.shp', '.shx', '.dbf', '.sbx', '.sbn', '.shp.xml']
-         forests.gpkg -> 'forests', ['.gpkg']
-
-    """
-    for group in file_extension_groups:
-        for extension in group:
-            if filename.endswith(extension):
-                return filename[: -len(extension)], group
-
-    basename, ext = os.path.splitext(filename)
-    return basename, [ext]
-
-
 class SyncAction:
     """Enumeration of sync actions"""
 
@@ -914,10 +874,6 @@ class LayerSource:
     def is_supported(self):
         # ecw raster
         return not self.layer.source().endswith("ecw")
-
-    @property
-    def can_lock_geometry(self):
-        return self.layer.type() == QgsMapLayer.LayerType.VectorLayer
 
     @property
     def value_map_button_interface_threshold(self):

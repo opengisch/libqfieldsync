@@ -42,9 +42,11 @@ repos:
       # Run the formatter.
       - id: ruff-format
 
-  # Static type-checking with mypy
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: 'v1.17.1'
-    hooks:
-      - id: mypy
-        additional_dependencies: []
+  # Disabled dead code because most of the code in `libqfieldsync` is not directly used here, but called from QFieldCloud and QFieldSync.
+  # Kept because we should run it once in a while to check for dead code and remove it.
+  # - repo: https://github.com/asottile/dead
+  #   rev: v2.1.0
+  #   hooks:
+  #   - id: dead
+  #     # Exclude utils directory as it contains code used by QFieldCloud and QFieldSync, but not used by the library itself.
+  #     args: [--exclude, 'utils/.*\.py$']
