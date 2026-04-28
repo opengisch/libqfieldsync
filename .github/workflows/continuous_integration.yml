@@ -5,19 +5,11 @@ jobs:
     name: Code check
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v6
-
-      - name: Setup Python
-        uses: actions/setup-python@v6
-
-      - name: Install pipenv
-        run: pip install pipenv
-
-      - name: Check code formatting
-        run: |
-          pipenv install pre_commit
-          pipenv run python -m pre_commit run --all-files
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v3
+    - uses: pre-commit/action@v3.0.1
+      env:
+        SKIP: 'no-commit-to-branch'
 
   pyqt6-check:
     name: PyQt6 compatibility check
