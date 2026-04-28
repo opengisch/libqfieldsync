@@ -1325,7 +1325,7 @@ class LayerSource:
                 else:
                     new_source = os.path.join(target_path, file_name)
                     if suffix != "":
-                        new_source = "{}|{}".format(new_source, suffix)  # noqa: UP032
+                        new_source = "{}|{}".format(new_source, suffix)
 
             self._change_data_source(new_source)
 
@@ -1375,7 +1375,7 @@ class LayerSource:
             if new_source == "":
                 new_source = os.path.join(target_path, file_name)
                 if suffix != "":
-                    new_source = "{}|{}".format(new_source, suffix)  # noqa: UP032
+                    new_source = "{}|{}".format(new_source, suffix)
 
         layer_subset_string = self.layer.subsetString()
         if new_source == "":

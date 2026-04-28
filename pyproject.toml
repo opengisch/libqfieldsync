@@ -60,21 +60,30 @@ ignore = [
     "S607",
     # https://docs.astral.sh/ruff/rules/try-consider-else/
     "TRY300",
+    # https://docs.astral.sh/ruff/rules/raise-within-try/
+    "TRY301",
     # https://docs.astral.sh/ruff/rules/manual-list-comprehension/
     "PERF401",
     # https://docs.astral.sh/ruff/rules/missing-trailing-comma/
     "COM812",
     # https://docs.astral.sh/ruff/rules/blind-except/
     "BLE001",
-    # https://docs.astral.sh/ruff/rules/single-line-implicit-string-concatenation/
-    # NOTE: The following rule "ISC001" may cause conflicts when used with the formatter.
-    "ISC001",
     # https://docs.astral.sh/ruff/rules/future-rewritable-type-annotation/
     "FA100",
     # https://docs.astral.sh/ruff/rules/#flake8-use-pathlib-pth
     "PTH",
     # https://docs.astral.sh/ruff/rules/#flake8-annotations-ann
     "ANN",
+    # https://docs.astral.sh/ruff/rules/unnecessary-lambda/
+    # NOTE: ignored because we heavily `qobj.connect.signal(lambda arg: self._method(arg))` in the codebase
+    "PLW0108",
+    # NOTE: ignored because we heavily use `QObject.tr( "" ).format()`
+    "UP032",
+    # NOTE: we should eventually enable no commented out code
+    "ERA001",
+    # https://docs.astral.sh/ruff/rules/missing-todo-link/
+    # NOTE this should be ideally commented out, having a TODO with a task is a must
+    "TD003",
 ]
 
 [tool.ruff.lint.mccabe]
