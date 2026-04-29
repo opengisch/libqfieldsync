@@ -1,13 +1,27 @@
-[build-system]
-requires = [
-    "setuptools>=68.0",
-    "wheel",
+[project]
+name = "libqfieldsync"
+description = "the qfieldsync library"
+version = "1.0"
+authors = [
+    { name = "OPENGIS.ch", email = "info@opengis.ch" }
 ]
-build-backend = "setuptools.build_meta"
+requires-python = ">=3.9"
 
-[tool.ruff]
-# Support Python 3.9+.
-target-version = "py39"
+[project.urls]
+homepage = "https://github.com/opengisch/libqfieldsync"
+documentation = "https://docs.qfield.org/get-started/"
+repository = "https://github.com/opengisch/libqfieldsync"
+tracker = "https://github.com/opengisch/libqfieldsync/issues"
+
+[project.optional-dependencies]
+dev = ["pre-commit"]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=2.21.0",
+    "pytest>=7.4.4",
+    "pytest-cov>=4.1.0",
+]
 
 [tool.ruff.lint]
 select = ["ALL"]
@@ -105,28 +119,3 @@ exclude = [
     "__pycache__",
 ]
 select = ["CLB100", "IF100"]
-
-[project]
-name = "libqfieldsync"
-description = "the qfieldsync library"
-version = "1.0"
-authors = [
-    { name = "OPENGIS.ch", email = "info@opengis.ch" }
-]
-requires-python = ">=3.7"
-
-[project.urls]
-homepage = "https://github.com/opengisch/libqfieldsync"
-documentation = "https://docs.qfield.org/get-started/"
-repository = "https://github.com/opengisch/libqfieldsync"
-tracker = "https://github.com/opengisch/libqfieldsync/issues"
-
-[project.optional-dependencies]
-dev = ["pre-commit"]
-
-[dependency-groups]
-dev = [
-    "pre-commit>=2.21.0",
-    "pytest>=7.4.4",
-    "pytest-cov>=4.1.0",
-]
