@@ -2,4 +2,7 @@
 
 set -e
 
+echo "Running tests with QGIS version:"
+python3 -c "from qgis.core import Qgis; print(Qgis.version())"
+
 xvfb-run pytest
