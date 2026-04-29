@@ -105,6 +105,11 @@ class ProjectChecker:
                 "fn": self.check_for_conflicting_base_filenames,
                 "scope": ExportType.Cloud,
             },
+            {
+                "level": Feedback.Level.ERROR,
+                "fn": self.check_basemap_configuration,
+                "scope": None,
+            },
         ]
         self.layer_checks: List[ProjectChecker.CheckConfig] = [
             {
