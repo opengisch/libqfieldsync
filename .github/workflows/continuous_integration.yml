@@ -51,7 +51,7 @@ jobs:
       - name: Run tests
         run: |
           docker build -f .docker/Dockerfile --build-arg QGIS_TEST_VERSION=$QGIS_TEST_VERSION -t libqfieldsync-test .
-          docker run --rm libqfieldsync-test .docker/run-docker-tests.sh
+          docker run --rm libqfieldsync-test .docker/xvfb-pytest
 
   test_packaging:
       runs-on: ubuntu-latest

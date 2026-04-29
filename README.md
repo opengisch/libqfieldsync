@@ -40,5 +40,5 @@ uv run pytest
 If you want to test with a specific QGIS version, or you don't have QGIS installed, then:
 
 ```shell
-QGIS_TEST_VERSION=ltr docker run --rm $(docker build -q -f .docker/Dockerfile .) pytest
+docker run --rm $(docker build --build-arg QGIS_TEST_VERSION=ltr -q -f .docker/Dockerfile .) .docker/xvfb-pytest
 ```
