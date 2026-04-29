@@ -38,8 +38,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # TODO @suricactus: enable QGIS 4 tests
-        qgis_version: ["3.40", "3.44", "ltr"]
+        qgis_version: ["3.40", "3.44", "ltr", "stable"]
     env:
       QGIS_TEST_VERSION: ${{ matrix.qgis_version }}
     steps:
