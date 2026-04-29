@@ -103,6 +103,11 @@ class ProjectChecker:
                 "fn": self.check_for_conflicting_base_filenames,
                 "scope": ExportType.Cloud,
             },
+            {
+                "level": Feedback.Level.ERROR,
+                "fn": self.check_basemap_configuration,
+                "scope": None,
+            },
         ]
         self.layer_checks: list[ProjectChecker.CheckConfig] = [
             {
@@ -225,14 +230,14 @@ class ProjectChecker:
                 return FeedbackResult(
                     self.tr(
                         "No basemap layer selected. "
-                        'Please change this configuration in "File -> Project settings -> QField" first.'
+                        'Please change this configuration in "Project -> Properties... -> QField" first.'
                     )
                 )
             elif not basemap_layer:
                 return FeedbackResult(
                     self.tr(
                         'Cannot find the configured base layer with id "{}". '
-                        'Please change this configuration in "File -> Project settings -> QField" first.'
+                        'Please change this configuration in "Project -> Properties... -> QField" first.'
                     ).format(project_configuration.base_map_layer),
                 )
 
@@ -243,7 +248,7 @@ class ProjectChecker:
                 return FeedbackResult(
                     self.tr(
                         'Cannot find the configured base theme with name "{}".'
-                        'Please change this configuration in "File -> Project settings -> QField" first.'
+                        'Please change this configuration in "Project -> Properties... -> QField" first.'
                     ).format(project_configuration.base_map_theme),
                 )
 
