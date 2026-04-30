@@ -13,9 +13,6 @@ documentation = "https://docs.qfield.org/get-started/"
 repository = "https://github.com/opengisch/libqfieldsync"
 tracker = "https://github.com/opengisch/libqfieldsync/issues"
 
-[project.optional-dependencies]
-dev = ["pre-commit"]
-
 [dependency-groups]
 dev = [
     "pre-commit>=2.21.0",
