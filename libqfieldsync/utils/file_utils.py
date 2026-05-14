@@ -421,4 +421,4 @@ def copy_additional_project_files(
                     f"{export_project_stem_name}{match.group(1)}"
                 )
 
-        shutil.copy(additional_project_file, str(destination_file))
+        shutil.copyfile(additional_project_file, str(destination_file))
