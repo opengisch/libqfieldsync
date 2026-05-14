@@ -1299,7 +1299,7 @@ class LayerSource:
                 source_path, file_name = os.path.split(file_to_copy)
                 dest_file = os.path.join(target_path, file_name)
                 if keep_existent is False or not os.path.isfile(dest_file):
-                    shutil.copy(os.path.join(source_path, file_name), dest_file)
+                    shutil.copyfile(os.path.join(source_path, file_name), dest_file)
 
             source_path, file_name = os.path.split(self.filename)
             new_source = ""
@@ -1365,7 +1365,7 @@ class LayerSource:
             source_path, file_name = os.path.split(file_path)
             dest_file = os.path.join(target_path, file_name)
             if not os.path.isfile(dest_file):
-                shutil.copy(os.path.join(source_path, file_name), dest_file)
+                shutil.copyfile(os.path.join(source_path, file_name), dest_file)
 
             if self.provider_metadata is not None:
                 metadata = self.metadata
