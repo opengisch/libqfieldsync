@@ -89,6 +89,11 @@ class ProjectChecker:
                 "scope": None,
             },
             {
+                "level": Feedback.Level.ERROR,
+                "fn": self.check_no_qgis_4,
+                "scope": ExportType.Cloud,
+            },
+            {
                 "level": Feedback.Level.WARNING,
                 "fn": self.check_project_is_dirty,
                 "scope": ExportType.Cloud,
@@ -279,6 +284,17 @@ class ProjectChecker:
                     'Please make sure there are no files and directories with "<", ">", ":", "/", "\\", "|", "?", "*" or double quotes (") characters in their path.'
                     "and must not be reserved names like CON, PRN, AUX, NUL, etc."
                 ).format(", ".join([f'"{path}"' for path in problematic_paths]))
+            )
+        else:
+            return None
+
+    def check_no_qgis_4(self) -> Optional[FeedbackResult]:
+        if self.project.lastSaveVersion().majorVersion() >= 4:  # noqa: PLR2004
+            return FeedbackResult(
+                self.tr(
+                    "QFieldCloud does not yet support projects saved using QGIS >= 4.0. "
+                    "Please configure your projects using QGIS 3.44 until further notice."
+                )
             )
         else:
             return None
