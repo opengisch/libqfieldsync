@@ -282,18 +282,21 @@ class OfflineConverterTest(unittest.TestCase):
 
         # spatialite layer
         layer = exported_project.mapLayersByName("somedata")[0]
+        self.assertEqual(layer.featureCount(), 5)
         self.assertEqual(layer.customProperty("QFieldSync/sourceDataPrimaryKeys"), "pk")
         self.assertIsNone(layer.customProperty("QFieldSync/unsupported_source_pk"))
         self.assertFalse(layer.readOnly())
 
         # spatialite layer
         layer = exported_project.mapLayersByName("somepolydata")[0]
+        self.assertEqual(layer.featureCount(), 4)
         self.assertEqual(layer.customProperty("QFieldSync/sourceDataPrimaryKeys"), "pk")
         self.assertIsNone(layer.customProperty("QFieldSync/unsupported_source_pk"))
         self.assertFalse(layer.readOnly())
 
         # gpkg layer
         layer = exported_project.mapLayersByName("curved_polys polys CurvePolygon")[0]
+        self.assertEqual(layer.featureCount(), 4)
         self.assertEqual(
             layer.customProperty("QFieldSync/sourceDataPrimaryKeys"), "fid"
         )
@@ -302,6 +305,7 @@ class OfflineConverterTest(unittest.TestCase):
 
         # shp layer
         layer = exported_project.mapLayersByName("france_parts_shape")[0]
+        self.assertEqual(layer.featureCount(), 4)
         self.assertIsNone(layer.customProperty("QFieldSync/sourceDataPrimaryKeys"))
         self.assertEqual(layer.customProperty("QFieldSync/unsupported_source_pk"), "1")
         self.assertTrue(layer.readOnly())
