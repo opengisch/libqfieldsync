@@ -351,15 +351,17 @@ class PythonMiniOffliner(BaseOffliner):
             feature.setAttributes(attrs)
 
             if not feature.geometry().isNull():
-                geometry = new_layer.dataProvider().convertToProviderType(
-                    feature.geometry()
-                )
-                if geometry.isNull():
-                    # Skip feature containing a geometry that is incompatible with Geopackage
-                    logger.warning(
-                        f"Skipping feature ID {feature.id()} when offlining layer {layer.name()} due to problematic geometry."
+                geometry = feature.geometry()
+                if feature.geometry().wkbType() != new_layer.dataProvider().wkbType():
+                    geometry = new_layer.dataProvider().convertToProviderType(
+                        feature.geometry()
                     )
-                    continue
+                    if geometry.isNull():
+                        # Skip feature containing a geometry that is incompatible with Geopackage
+                        logger.warning(
+                            f"Skipping feature ID {feature.id()} when offlining layer {layer.name()} due to problematic geometry."
+                        )
+                        continue
 
                 feature.setGeometry(geometry)
 
