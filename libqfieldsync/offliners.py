@@ -21,6 +21,7 @@ from qgis.core import (
     QgsProject,
     QgsRectangle,
     QgsVectorLayer,
+    edit,
 )
 from qgis.PyQt.QtCore import QFileInfo, QMetaType, QObject, pyqtSignal
 
@@ -327,48 +328,25 @@ class PythonMiniOffliner(BaseOffliner):
                 f"We were not able to create the layer {layer.name()} ..."
             )
 
-        if not new_layer.startEditing():
-            raise RuntimeError(
-                f"Cannot write into the offline Geopackage for {layer.name()}"
-            )
+        with edit(new_layer):
+            new_fields = new_layer.fields()
 
-        new_fields = new_layer.fields()
+            for feature in layer.dataProvider().getFeatures(feature_request):
+                # Prepend an empty attribute for the new FID
+                attrs = [None, *feature.attributes()]
 
-        for feature in layer.dataProvider().getFeatures(feature_request):
-            # Prepend an empty attribute for the new FID
-            attrs = [None, *feature.attributes()]
+                # Fixup list and json attributes
+                for i in range(new_layer.fields().count()):
+                    field_type = new_layer.fields().at(i).type()
+                    if field_type in (
+                        QMetaType.Type.QStringList,
+                        QMetaType.Type.QVariantList,
+                    ):
+                        attrs[i] = QgsJsonUtils.encodeValue(attrs[i])
 
-            # Fixup list and json attributes
-            for i in range(new_layer.fields().count()):
-                field_type = new_layer.fields().at(i).type()
-                if field_type in (
-                    QMetaType.Type.QStringList,
-                    QMetaType.Type.QVariantList,
-                ):
-                    attrs[i] = QgsJsonUtils.encodeValue(attrs[i])
-
-            feature.setFields(new_fields)
-            feature.setAttributes(attrs)
-
-            if not feature.geometry().isNull():
-                geometry = new_layer.dataProvider().convertToProviderType(
-                    feature.geometry()
-                )
-                if geometry.isNull():
-                    # Skip feature containing a geometry that is incompatible with Geopackage
-                    logger.warning(
-                        f"Skipping feature ID {feature.id()} when offlining layer {layer.name()} due to problematic geometry."
-                    )
-                    continue
-
-                feature.setGeometry(geometry)
-
-            new_layer.addFeature(feature)
-
-        if not new_layer.commitChanges():
-            logger.warning(
-                f"Errors when writing features when offlining layer {layer.name()}: {new_layer.commitErrors()}"
-            )
+                feature.setFields(new_fields)
+                feature.setAttributes(attrs)
+                new_layer.addFeature(feature)
 
         return new_layer.source()
 
