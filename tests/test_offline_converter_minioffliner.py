@@ -22,7 +22,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from qgis.core import QgsProject
+from qgis.core import QgsFeature, QgsGeometry, QgsProject, QgsVectorLayer
 from qgis.testing import start_app
 from qgis.testing.mocked import get_iface
 
@@ -309,3 +309,56 @@ class OfflineConverterTest(unittest.TestCase):
         self.assertIsNone(layer.customProperty("QFieldSync/sourceDataPrimaryKeys"))
         self.assertEqual(layer.customProperty("QFieldSync/unsupported_source_pk"), "1")
         self.assertTrue(layer.readOnly())
+
+    def test_offline_convert_geometry(self):
+        project_instance = QgsProject.instance()
+        project = QgsProject()
+        QgsProject.setInstance(project)
+
+        memory_layer = QgsVectorLayer(
+            "MultiPolygon?crs=EPSG:4326&field=fid:integer(10,0)",
+            "multipolygons",
+            "memory",
+        )
+        memory_layer.setCustomProperty("QFieldSync/action", "offline")
+        project.setCrs(memory_layer.crs())
+        project.addMapLayer(memory_layer)
+
+        project_file = Path(tempfile.mkdtemp()).joinpath("project.qgz")
+        self.assertTrue(project.write(str(project_file)))
+
+        feature = QgsFeature(memory_layer.fields())
+        feature.setAttribute(0, 1)
+        feature.setGeometry(
+            QgsGeometry.fromWkt("Polygon ((104 12, 104 11, 105 11, 105 12, 104 12))")
+        )
+
+        memory_layer.dataProvider().addFeature(feature)
+        feature = memory_layer.getFeature(1)
+        self.assertEqual(
+            feature.geometry().asWkt(),
+            "Polygon ((104 12, 104 11, 105 11, 105 12, 104 12))",
+        )
+
+        offline_converter = OfflineConverter(
+            project,
+            self.target_dir.joinpath("project_qfield.qgs"),
+            "Polygon ((103 13, 103 10, 108 10, 108 13, 103 13))",
+            QgsProject.instance().crs().authid(),
+            ["DCIM"],
+            PythonMiniOffliner(),
+        )
+        offline_converter.convert()
+
+        exported_project = self.load_project(
+            self.target_dir.joinpath("project_qfield.qgs")
+        )
+        layer = exported_project.mapLayersByName("multipolygons")[0]
+        self.assertEqual(layer.featureCount(), 1)
+        feature = layer.getFeature(1)
+        self.assertEqual(
+            feature.geometry().asWkt(),
+            "MultiPolygon (((104 12, 104 11, 105 11, 105 12, 104 12)))",
+        )
+
+        QgsProject.setInstance(project_instance)
