@@ -7,7 +7,7 @@ jobs:
     name: Code check
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - uses: actions/setup-python@v6
 
@@ -23,7 +23,7 @@ jobs:
       image: ghcr.io/qgis/pyqgis4-checker:main-ubuntu
     steps:
       - name: Get source code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Check PyQt5 to PyQt6 compatibility
         run: |
@@ -48,7 +48,7 @@ jobs:
       QGIS_TEST_VERSION: ${{ matrix.qgis_version }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -61,7 +61,7 @@ jobs:
       runs-on: ubuntu-latest
       steps:
         - name: Checkout
-          uses: actions/checkout@v6
+          uses: actions/checkout@v7
           with:
             submodules: recursive
 
