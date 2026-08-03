@@ -14,8 +14,15 @@ from .offline_converter import ExportType
 
 
 class FeedbackResult:
-    def __init__(self, message: str) -> None:
+    def __init__(
+        self,
+        message: str,
+        action_text: Optional[str] = None,
+        action_callback: Optional[Callable[[], None]] = None,
+    ) -> None:
         self.message = message
+        self.action_text = action_text
+        self.action_callback = action_callback
 
 
 class Feedback:
@@ -31,6 +38,9 @@ class Feedback:
     ) -> None:
         self.level = level
         self.message = feedback_result.message
+        self.action_text = feedback_result.action_text
+        self.action_callback = feedback_result.action_callback
+
         if layer:
             self.layer_id = layer.id()
             self.layer_name = layer.name()
@@ -96,7 +106,7 @@ class ProjectChecker:
             {
                 "level": Feedback.Level.WARNING,
                 "fn": self.check_project_is_dirty,
-                "scope": ExportType.Cloud,
+                "scope": None,
             },
             {
                 "level": Feedback.Level.ERROR,
@@ -302,13 +312,16 @@ class ProjectChecker:
     def check_project_is_dirty(self) -> Optional[FeedbackResult]:
         if self.project.isDirty():
             return FeedbackResult(
-                self.tr(
-                    "QGIS project has unsaved changes. "
-                    "Unsaved changes will not be uploaded to QFieldCloud."
-                )
+                message=self.tr("QGIS project has unsaved changes. "),
+                action_text=self.tr("Save project changes now?"),
+                action_callback=self.save_project,
             )
         else:
             return None
+
+    def save_project(self) -> None:
+        """Saves the QGIS project."""
+        self.project.write()
 
     def check_for_conflicting_base_filenames(self) -> Optional[FeedbackResult]:
         conflicting_files: list[Path] = []
