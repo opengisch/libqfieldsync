@@ -13,8 +13,31 @@ from libqfieldsync.utils.file_utils import is_valid_filepath, isascii
 from .offline_converter import ExportType
 
 
+class FeedbackTypeId(Enum):
+    ABSOLUTE_FILEPATHS = "absolute_filepaths"
+    HOME_PATH = "home_path"
+    UNSUPPORTED_CHARACTERS = "unsupported_characters"
+    PROJECT_IS_DIRTY = "project_is_dirty"
+    CONFLICTING_BASE_FILENAMES = "conflicting_base_filenames"
+    BASEMAP_CONFIGURATION = "basemap_configuration"
+    LAYER_ENCODING = "layer_encoding"
+    LAYER_FILENAME_ASCII = "layer_filename_ascii"
+    LAYER_EXTERNAL = "layer_external"
+    LAYER_PRIMARY_KEY = "layer_primary_key"
+    LAYER_MEMORY = "layer_memory"
+    LAYER_CONFIGURED = "layer_configured"
+    LAYER_PACKAGE_PREVENTION = "layer_package_prevention"
+    EXPERIMENTAL_CLOUD = "experimental_cloud"
+    CONFLICTING_LAYER_ACTIONS = "conflicting_layer_actions"
+
+
 class FeedbackResult:
-    def __init__(self, message: str) -> None:
+    def __init__(
+        self,
+        type_id: FeedbackTypeId,
+        message: str,
+    ) -> None:
+        self.type_id = type_id
         self.message = message
 
 
@@ -30,6 +53,7 @@ class Feedback:
         layer: Optional[QgsMapLayer] = None,
     ) -> None:
         self.level = level
+        self.type_id = feedback_result.type_id
         self.message = feedback_result.message
         if layer:
             self.layer_id = layer.id()
@@ -91,7 +115,7 @@ class ProjectChecker:
             {
                 "level": Feedback.Level.WARNING,
                 "fn": self.check_project_is_dirty,
-                "scope": ExportType.Cloud,
+                "scope": None,
             },
             {
                 "level": Feedback.Level.ERROR,
@@ -196,10 +220,11 @@ class ProjectChecker:
     def check_no_absolute_filepaths(self) -> Optional[FeedbackResult]:
         if self.project.filePathStorage() == Qgis.FilePathType.Absolute:
             return FeedbackResult(
+                FeedbackTypeId.ABSOLUTE_FILEPATHS,
                 self.tr(
                     "QField does not support projects configured to use absolute paths. "
                     'Please change this configuration in "File -> Project settings" first.'
-                )
+                ),
             )
         else:
             return None
@@ -207,10 +232,11 @@ class ProjectChecker:
     def check_no_homepath(self) -> Optional[FeedbackResult]:
         if self.project.presetHomePath():
             return FeedbackResult(
+                FeedbackTypeId.HOME_PATH,
                 self.tr(
                     "QField does not support projects with configured home path. "
                     'Please change this configuration in "File -> Project settings" first.'
-                )
+                ),
             )
         else:
             return None
@@ -228,13 +254,15 @@ class ProjectChecker:
 
             if not project_config.base_map_layer.strip():
                 return FeedbackResult(
+                    FeedbackTypeId.BASEMAP_CONFIGURATION,
                     self.tr(
                         "No basemap layer selected. "
                         'Please change this configuration in "Project -> Properties... -> QField" first.'
-                    )
+                    ),
                 )
             elif not basemap_layer:
                 return FeedbackResult(
+                    FeedbackTypeId.BASEMAP_CONFIGURATION,
                     self.tr(
                         'Cannot find the configured base layer with id "{}". '
                         'Please change this configuration in "Project -> Properties... -> QField" first.'
@@ -246,6 +274,7 @@ class ProjectChecker:
                 project_config.base_map_theme
             ):
                 return FeedbackResult(
+                    FeedbackTypeId.BASEMAP_CONFIGURATION,
                     self.tr(
                         'Cannot find the configured base theme with name "{}".'
                         'Please change this configuration in "Project -> Properties... -> QField" first.'
@@ -274,11 +303,12 @@ class ProjectChecker:
 
         if problematic_paths:
             return FeedbackResult(
+                FeedbackTypeId.UNSUPPORTED_CHARACTERS,
                 self.tr(
                     'Forbidden characters in filesystem path(s) "{}". '
                     'Please make sure there are no files and directories with "<", ">", ":", "/", "\\", "|", "?", "*" or double quotes (") characters in their path.'
                     "and must not be reserved names like CON, PRN, AUX, NUL, etc."
-                ).format(", ".join([f'"{path}"' for path in problematic_paths]))
+                ).format(", ".join([f'"{path}"' for path in problematic_paths])),
             )
         else:
             return None
@@ -286,10 +316,11 @@ class ProjectChecker:
     def check_project_is_dirty(self) -> Optional[FeedbackResult]:
         if self.project.isDirty():
             return FeedbackResult(
+                FeedbackTypeId.PROJECT_IS_DIRTY,
                 self.tr(
                     "QGIS project has unsaved changes. "
-                    "Unsaved changes will not be uploaded to QFieldCloud."
-                )
+                    "Unsaved changes will not be included on the project."
+                ),
             )
         else:
             return None
@@ -313,13 +344,14 @@ class ProjectChecker:
 
         if conflicting_files:
             return FeedbackResult(
+                FeedbackTypeId.CONFLICTING_BASE_FILENAMES,
                 self.tr(
                     'The project "{}" shares its base file name ({}) with the following files, which might cause issues: {}.'
                 ).format(
                     project_base_name,
                     project_file_path.name,
                     ", ".join([f'"{path}"' for path in conflicting_files]),
-                )
+                ),
             )
 
         return None
@@ -337,6 +369,7 @@ class ProjectChecker:
             and layer.dataProvider().encoding() != ""
         ):
             return FeedbackResult(
+                FeedbackTypeId.LAYER_ENCODING,
                 self.tr(
                     'Layer does not use UTF-8, but "{}" encoding. '
                     "Working with layers that do not use UTF-8 encoding might cause problems. "
@@ -351,6 +384,7 @@ class ProjectChecker:
     ) -> Optional[FeedbackResult]:
         if layer_source.is_file and not isascii(layer_source.filename):
             return FeedbackResult(
+                FeedbackTypeId.LAYER_FILENAME_ASCII,
                 self.tr(
                     "Non ASCII character detected in the layer filename {}. "
                     "Working with file paths that are not in ASCII might cause problems. "
@@ -388,7 +422,9 @@ class ProjectChecker:
                     "The layer will be packaged **as a read-only layer on QFieldCloud**. "
                     "Geopackages are [the recommended data format for QFieldCloud](https://docs.qfield.org/get-started/tutorials/get-started-qfc/#configure-your-project-layers-for-qfield). "
                 )
-                return FeedbackResult(f"{err!s} {suffix}")
+                return FeedbackResult(
+                    FeedbackTypeId.LAYER_PRIMARY_KEY, f"{err!s} {suffix}"
+                )
 
         return None
 
@@ -397,6 +433,7 @@ class ProjectChecker:
 
         if layer.isValid() and layer.dataProvider().name() == "memory":
             return FeedbackResult(
+                FeedbackTypeId.LAYER_MEMORY,
                 self.tr(
                     "Memory layer features are only available during this QGIS session. "
                     "The layer will be empty on QField."
@@ -410,6 +447,7 @@ class ProjectChecker:
     ) -> Optional[FeedbackResult]:
         if not layer_source.is_configured and not layer_source.is_cloud_configured:
             return FeedbackResult(
+                FeedbackTypeId.LAYER_CONFIGURED,
                 self.tr(
                     "The layer is not configured with neither cable, nor cloud action yet. "
                     "Default action will be selected only for this time. "
@@ -458,7 +496,7 @@ class ProjectChecker:
             main_msg += "\n\n"
             main_msg += "\n".join(f"- {r}" for r in reason_msgs)
 
-            return FeedbackResult(main_msg)
+            return FeedbackResult(FeedbackTypeId.LAYER_PACKAGE_PREVENTION, main_msg)
 
         return None
 
@@ -477,11 +515,12 @@ class ProjectChecker:
 
         if home_path and home_path not in layer_path.parents:
             return FeedbackResult(
+                FeedbackTypeId.LAYER_EXTERNAL,
                 self.tr(
                     'Layer "{}" is outside the project\'s home directory. '
                     "QFieldSync may not transfer your layer. "
                     'Please move the file to "{}".'
-                ).format(layer_source.filename, home_path)
+                ).format(layer_source.filename, home_path),
             )
 
         return None
@@ -517,12 +556,13 @@ class ProjectChecker:
             return None
 
         return FeedbackResult(
+            FeedbackTypeId.EXPERIMENTAL_CLOUD,
             self.tr(
                 'The datasource type "{}" '
                 "has experimental support on QFieldCloud. "
                 "Consider converting your data to the officially supported "
                 "GeoPackage or PostGIS datasources."
-            ).format(storage_type)
+            ).format(storage_type),
         )
 
     def check_project_layers_sources_actions(self) -> Optional[FeedbackResult]:
@@ -562,6 +602,6 @@ class ProjectChecker:
                     ", ".join(f'"{layer.name}"' for layer in layer_sources),
                     filename,
                 )
-                return FeedbackResult(message)
+                return FeedbackResult(FeedbackTypeId.CONFLICTING_LAYER_ACTIONS, message)
 
         return None
