@@ -127,6 +127,11 @@ class ProjectChecker:
             },
             {
                 "level": Feedback.Level.WARNING,
+                "fn": self.check_pg_layer_no_hardcoded_credentials,
+                "scope": None,
+            },
+            {
+                "level": Feedback.Level.WARNING,
                 "fn": self.check_layer_primary_key,
                 "scope": ExportType.Cloud,
             },
@@ -482,6 +487,26 @@ class ProjectChecker:
                     "QFieldSync may not transfer your layer. "
                     'Please move the file to "{}".'
                 ).format(layer_source.filename, home_path)
+            )
+
+        return None
+
+    def check_pg_layer_no_hardcoded_credentials(
+        self, layer_source: LayerSource
+    ) -> Optional[FeedbackResult]:
+        """Check if PostgreSQL layer has no hardcoded credentials"""
+        layer = layer_source.layer
+
+        if layer.providerType() != "postgres":
+            return None
+
+        uri = layer.dataProvider().uri()
+        if uri.username() or uri.password():
+            return FeedbackResult(
+                self.tr(
+                    "The '{layer}' layer has hardcoded PostgreSQL credentials. "
+                    "Consider using a pg_service entry and a Secret in QFieldCloud."
+                ).format(layer=layer.name())
             )
 
         return None
