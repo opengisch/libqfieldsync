@@ -404,8 +404,13 @@ class PythonMiniOffliner(BaseOffliner):
                     field.constraints().constraints()
                     & QgsFieldConstraints.Constraint.ConstraintUnique
                 ):
+                    constraint_strength = field.constraints().constraintStrength(
+                        QgsFieldConstraints.Constraint.ConstraintUnique
+                    )
                     layer.setFieldConstraint(
-                        index, QgsFieldConstraints.Constraint.ConstraintUnique
+                        index,
+                        QgsFieldConstraints.Constraint.ConstraintUnique,
+                        constraint_strength,
                     )
 
                 # remove any undesired not null constraints coming from original data provider
