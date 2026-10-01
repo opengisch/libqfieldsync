@@ -13,7 +13,7 @@ from libqfieldsync.utils.file_utils import is_valid_filepath, isascii
 from .offline_converter import ExportType
 
 
-class FeedbackTypeId(Enum):
+class FeedbackTypeId(str, Enum):
     ABSOLUTE_FILEPATHS = "absolute_filepaths"
     HOME_PATH = "home_path"
     UNSUPPORTED_CHARACTERS = "unsupported_characters"
