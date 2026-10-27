@@ -23,6 +23,7 @@ class FeedbackTypeId(str, Enum):
     LAYER_ENCODING = "layer_encoding"
     LAYER_FILENAME_ASCII = "layer_filename_ascii"
     LAYER_EXTERNAL = "layer_external"
+    LAYER_PG_HARDCODED_CREDENTIALS = "layer_pg_hardcoded_credentials"
     LAYER_PRIMARY_KEY = "layer_primary_key"
     LAYER_MEMORY = "layer_memory"
     LAYER_CONFIGURED = "layer_configured"
@@ -506,10 +507,11 @@ class ProjectChecker:
         uri = layer.dataProvider().uri()
         if uri.username() or uri.password():
             return FeedbackResult(
+                FeedbackTypeId.LAYER_PG_HARDCODED_CREDENTIALS,
                 self.tr(
                     "The '{layer}' layer has hardcoded PostgreSQL credentials. "
                     "Consider using a pg_service entry and a Secret in QFieldCloud."
-                ).format(layer=layer.name())
+                ).format(layer=layer.name()),
             )
 
         return None
