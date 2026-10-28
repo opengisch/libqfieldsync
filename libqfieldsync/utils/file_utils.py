@@ -159,9 +159,9 @@ def copy_attachments(source: Path, dest: Path, dirname: Path) -> None:
         # create the folder
         if filename.is_dir():
             dest_filename.mkdir(parents=True, exist_ok=True)
-            copy_attachments(source, dest, relative_filename)
             continue
 
+        dest_filename.parent.mkdir(parents=True, exist_ok=True)
         # copy the file no matter if it exists or not
         shutil.copyfile(filename, dest_filename)
 
@@ -340,6 +340,8 @@ def set_relative_embed_layer_symbols_on_project(  # noqa: PLR0912
                 # Get a fresh category.
                 # The renderer doesn't update in-place modifications on categorized.
                 category = renderer.categories()[index]
+                if not category.symbol():
+                    continue
                 symbol = category.symbol().clone()
 
                 update_symbols_to_relative_embedded(

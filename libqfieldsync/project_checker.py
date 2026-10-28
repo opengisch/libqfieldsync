@@ -401,7 +401,11 @@ class ProjectChecker:
     def check_layer_memory(self, layer_source: LayerSource) -> Optional[FeedbackResult]:
         layer = layer_source.layer
 
-        if layer.isValid() and layer.dataProvider().name() == "memory":
+        if (
+            layer.isValid()
+            and layer.dataProvider()
+            and layer.dataProvider().name() == "memory"
+        ):
             return FeedbackResult(
                 FeedbackTypeId.LAYER_MEMORY,
                 self.tr(
@@ -501,7 +505,7 @@ class ProjectChecker:
         """Check if PostgreSQL layer has no hardcoded credentials"""
         layer = layer_source.layer
 
-        if layer.providerType() != "postgres":
+        if layer.providerType() != "postgres" or not layer.dataProvider():
             return None
 
         uri = layer.dataProvider().uri()
@@ -571,28 +575,28 @@ class ProjectChecker:
 
             layer_sources_by_filename[layer_source.filename].append(layer_source)
 
-            # Check for layers with mixed actions
-            for filename, layer_sources in layer_sources_by_filename.items():
-                assert layer_sources
+        # Check for layers with mixed actions
+        for filename, layer_sources in layer_sources_by_filename.items():
+            assert layer_sources
 
-                has_mixed_actions = False
-                first_layer_source_action = layer_sources[0].action
+            has_mixed_actions = False
+            first_layer_source_action = layer_sources[0].action
 
-                for layer_source in layer_sources:
-                    if layer_source.action != first_layer_source_action:
-                        has_mixed_actions = True
-                        break
+            for layer_source in layer_sources:
+                if layer_source.action != first_layer_source_action:
+                    has_mixed_actions = True
+                    break
 
-                if not has_mixed_actions:
-                    continue
+            if not has_mixed_actions:
+                continue
 
-                message = self.tr(
-                    "Layers having the same file datasource have conflicting sync actions that may cause data loss.\n"
-                    'Layers {} share the same file "{}".'
-                ).format(
-                    ", ".join(f'"{layer.name}"' for layer in layer_sources),
-                    filename,
-                )
-                return FeedbackResult(FeedbackTypeId.CONFLICTING_LAYER_ACTIONS, message)
+            message = self.tr(
+                "Layers having the same file datasource have conflicting sync actions that may cause data loss.\n"
+                'Layers {} share the same file "{}".'
+            ).format(
+                ", ".join(f'"{layer.name}"' for layer in layer_sources),
+                filename,
+            )
+            return FeedbackResult(FeedbackTypeId.CONFLICTING_LAYER_ACTIONS, message)
 
         return None
