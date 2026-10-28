@@ -251,7 +251,7 @@ class LayerSource:
         )
         self._tracking_erroneous_distance_safeguard_maximum_meters = (
             self.layer.customProperty(
-                "QFieldSync/tracking_erroneous_distance_safeguard_maximum_meters", False
+                "QFieldSync/tracking_erroneous_distance_safeguard_maximum_meters", 100
             )
         )
         self._tracking_measurement_type = self.layer.customProperty(
@@ -298,10 +298,8 @@ class LayerSource:
             != self.is_feature_addition_locked_expression_active
         )
         has_changed |= (
-            bool(
-                self.layer.customProperty(
-                    "QFieldSync/feature_addition_locked_expression"
-                )
+            self.layer.customProperty(
+                "QFieldSync/feature_addition_locked_expression", ""
             )
             != self.feature_addition_locked_expression
         )
@@ -318,10 +316,8 @@ class LayerSource:
             != self.is_attribute_editing_locked_expression_active
         )
         has_changed |= (
-            bool(
-                self.layer.customProperty(
-                    "QFieldSync/attribute_editing_locked_expression"
-                )
+            self.layer.customProperty(
+                "QFieldSync/attribute_editing_locked_expression", ""
             )
             != self.attribute_editing_locked_expression
         )
@@ -338,10 +334,8 @@ class LayerSource:
             != self.is_geometry_editing_locked_expression_active
         )
         has_changed |= (
-            bool(
-                self.layer.customProperty(
-                    "QFieldSync/geometry_editing_locked_expression"
-                )
+            self.layer.customProperty(
+                "QFieldSync/geometry_editing_locked_expression", ""
             )
             != self.geometry_editing_locked_expression
         )
@@ -358,10 +352,8 @@ class LayerSource:
             != self.is_feature_deletion_locked_expression_active
         )
         has_changed |= (
-            bool(
-                self.layer.customProperty(
-                    "QFieldSync/feature_deletion_locked_expression"
-                )
+            self.layer.customProperty(
+                "QFieldSync/feature_deletion_locked_expression", ""
             )
             != self.feature_deletion_locked_expression
         )
@@ -1312,7 +1304,7 @@ class LayerSource:
             if new_source == "":
                 if (
                     self.layer.dataProvider()
-                    and self.layer.dataProvider().name == "spatialite"
+                    and self.layer.dataProvider().name() == "spatialite"
                 ):
                     uri = QgsDataSourceUri()
                     uri.setDatabase(os.path.join(target_path, file_name))
@@ -1322,6 +1314,7 @@ class LayerSource:
                     uri = QgsDataSourceUri()
                     uri.setEncodedUri(self.layer.source())
                     uri.setParam("url", os.path.join(target_path, file_name))
+                    new_source = uri.encodedUri().data().decode()
                 else:
                     new_source = os.path.join(target_path, file_name)
                     if suffix != "":

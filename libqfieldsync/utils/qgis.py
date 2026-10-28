@@ -60,7 +60,9 @@ def get_memory_layers(project: QgsProject) -> list[QgsMapLayer]:
     return [
         layer
         for layer in project.mapLayers().values()
-        if layer.isValid() and layer.dataProvider().name() == "memory"
+        if layer.isValid()
+        and layer.dataProvider()
+        and layer.dataProvider().name() == "memory"
     ]
 
 

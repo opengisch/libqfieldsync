@@ -706,9 +706,13 @@ class OfflineConverter(QObject):
             with tempfile.NamedTemporaryFile(suffix=".qgz", delete=False) as temp_file:
                 temp_path = temp_file.name
 
-            current_project.write(temp_path)
-
-            cloned_project.read(temp_path)
+            original_project_filename = current_project.fileName()
+            try:
+                current_project.write(temp_path)
+                cloned_project.read(temp_path)
+            finally:
+                current_project.setFileName(original_project_filename)
+                Path(temp_path).unlink(missing_ok=True)
 
             cloned_themes_collection = QgsMapThemeCollection(cloned_project)
             for theme_name, (layers, visibility) in themes_data.items():
