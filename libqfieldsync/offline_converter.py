@@ -408,8 +408,16 @@ class OfflineConverter(QObject):
 
             self._check_canceled()
 
+            offline_data_path = self._export_filename.with_name("data.gpkg")
+            i = 0
+            while offline_data_path.exists():
+                i = i + 1
+                offline_data_path = self._export_filename.with_name(
+                    "data_{}.gpkg".format(i)
+                )
+
             is_success = self.offliner.convert_to_offline(
-                str(self._export_filename.with_name("data.gpkg")),
+                str(offline_data_path),
                 offline_layers,
                 bbox,
                 self._export_title,
