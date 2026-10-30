@@ -3,6 +3,7 @@ import os
 import re
 import shutil
 from enum import Enum
+from pathlib import Path
 from typing import ClassVar, Optional
 
 from qgis.core import (
@@ -1274,13 +1275,17 @@ class LayerSource:
 
         return pk_attr_name
 
-    def copy(self, target_path, copied_files, keep_existent=False):
+    def copy(  # noqa: PLR0912
+        self, target_root_path, copied_files, keep_existent=False, source_root_path=None
+    ):
         """
         Copy a layer to a new path and adjust its datasource.
 
         :param layer: The layer to copy
-        :param target_path: A path to a folder into which the data will be copied
+        :param target_root_path: A path to the project folder into which the data will be copied
+        :param copied_files: An array of files being copied (not used anymore)
         :param keep_existent: if True and target file already exists, keep it as it is
+        :param source_root_path: A path to the source project folder from which the data is being copied
         """
         if not self.is_file:
             # Copy will also be called on non-file layers like WMS. In this case, just do nothing.
@@ -1291,43 +1296,52 @@ class LayerSource:
         if len(uri_parts) > 1:
             suffix = uri_parts[1]
 
-        if self.is_file:
-            files_to_copy = QgsFileUtils.sidecarFilesForPath(self.filename)
-            files_to_copy.add(self.filename)
+        files_to_copy = QgsFileUtils.sidecarFilesForPath(self.filename)
+        files_to_copy.add(self.filename)
 
-            for file_to_copy in files_to_copy:
-                source_path, file_name = os.path.split(file_to_copy)
-                dest_file = os.path.join(target_path, file_name)
-                if keep_existent is False or not os.path.isfile(dest_file):
-                    shutil.copyfile(os.path.join(source_path, file_name), dest_file)
+        for file_to_copy in files_to_copy:
+            file_path = Path(file_to_copy)
+            if source_root_path and file_path.is_relative_to(source_root_path):
+                destination_file_path = target_root_path.joinpath(
+                    file_path.relative_to(source_root_path)
+                )
+                destination_path = destination_file_path.parent
+                destination_path.mkdir(parents=True, exist_ok=True)
+            else:
+                destination_file_path = target_root_path.joinpath(file_path.name)
 
-            source_path, file_name = os.path.split(self.filename)
-            new_source = ""
-            metadata = self.metadata
+            if not keep_existent or not destination_file_path.exists():
+                shutil.copyfile(file_to_copy, str(destination_file_path))
 
-            if self.provider_metadata:
-                metadata["path"] = os.path.join(target_path, file_name)
-                new_source = self.provider_metadata.encodeUri(metadata)
+            if file_to_copy == self.filename:
+                target_file_path = str(destination_file_path)
 
-            if new_source == "":
-                if (
-                    self.layer.dataProvider()
-                    and self.layer.dataProvider().name == "spatialite"
-                ):
-                    uri = QgsDataSourceUri()
-                    uri.setDatabase(os.path.join(target_path, file_name))
-                    uri.setTable(metadata["layerName"])
-                    new_source = uri.uri()
-                elif self.layer.type() == QgsMapLayer.LayerType.VectorTileLayer:
-                    uri = QgsDataSourceUri()
-                    uri.setEncodedUri(self.layer.source())
-                    uri.setParam("url", os.path.join(target_path, file_name))
-                else:
-                    new_source = os.path.join(target_path, file_name)
-                    if suffix != "":
-                        new_source = "{}|{}".format(new_source, suffix)
+        new_source = ""
+        metadata = self.metadata
 
-            self._change_data_source(new_source)
+        if self.provider_metadata:
+            metadata["path"] = target_file_path
+            new_source = self.provider_metadata.encodeUri(metadata)
+
+        if new_source == "":
+            if (
+                self.layer.dataProvider()
+                and self.layer.dataProvider().name == "spatialite"
+            ):
+                uri = QgsDataSourceUri()
+                uri.setDatabase(target_file_path)
+                uri.setTable(metadata["layerName"])
+                new_source = uri.uri()
+            elif self.layer.type() == QgsMapLayer.LayerType.VectorTileLayer:
+                uri = QgsDataSourceUri()
+                uri.setEncodedUri(self.layer.source())
+                uri.setParam("url", target_file_path)
+            else:
+                new_source = target_file_path
+                if suffix != "":
+                    new_source = "{}|{}".format(new_source, suffix)
+
+        self._change_data_source(new_source)
 
         return copied_files
 
