@@ -209,6 +209,7 @@ class OfflineConverter(QObject):
 
     def _convert(self, project: QgsProject) -> None:  # noqa: PLR0912, PLR0915
         xml_elements_to_preserve = {}
+        original_project_filename = Path(project.fileName())
         tmp_project_filename = ""
 
         if self.export_type == ExportType.Cable:
@@ -345,9 +346,15 @@ class OfflineConverter(QObject):
                 copied_files = layer_source.copy(
                     self._export_filename.parent,
                     copied_files,
+                    source_root_path=original_project_filename.parent,
                 )
             elif layer_action == SyncAction.KEEP_EXISTENT:
-                layer_source.copy(self._export_filename.parent, copied_files, True)
+                layer_source.copy(
+                    self._export_filename.parent,
+                    copied_files,
+                    True,
+                    original_project_filename.parent,
+                )
             elif layer_action == SyncAction.REMOVE:
                 project.removeMapLayer(layer)
 
@@ -401,8 +408,16 @@ class OfflineConverter(QObject):
 
             self._check_canceled()
 
+            offline_data_path = self._export_filename.with_name("data.gpkg")
+            i = 0
+            while offline_data_path.exists():
+                i = i + 1
+                offline_data_path = self._export_filename.with_name(
+                    "data_{}.gpkg".format(i)
+                )
+
             is_success = self.offliner.convert_to_offline(
-                str(self._export_filename.with_name("data.gpkg")),
+                str(offline_data_path),
                 offline_layers,
                 bbox,
                 self._export_title,
