@@ -1312,6 +1312,7 @@ class LayerSource:
 
             if not keep_existent or not destination_file_path.exists():
                 shutil.copyfile(file_to_copy, str(destination_file_path))
+                copied_files.append(str(destination_file_path))
 
             if file_to_copy == self.filename:
                 target_file_path = str(destination_file_path)

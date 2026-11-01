@@ -349,7 +349,7 @@ class OfflineConverter(QObject):
                     source_root_path=original_project_filename.parent,
                 )
             elif layer_action == SyncAction.KEEP_EXISTENT:
-                layer_source.copy(
+                copied_files = layer_source.copy(
                     self._export_filename.parent,
                     copied_files,
                     True,
@@ -408,16 +408,19 @@ class OfflineConverter(QObject):
 
             self._check_canceled()
 
-            offline_data_path = self._export_filename.with_name("data.gpkg")
+            offline_data_path = str(self._export_filename.with_name("data.gpkg"))
             i = 0
-            while offline_data_path.exists():
+            while (
+                offline_data_path in copied_files
+                or offline_data_path in additional_project_files
+            ):
                 i = i + 1
-                offline_data_path = self._export_filename.with_name(
-                    "data_{}.gpkg".format(i)
+                offline_data_path = str(
+                    self._export_filename.with_name("data_{}.gpkg".format(i))
                 )
 
             is_success = self.offliner.convert_to_offline(
-                str(offline_data_path),
+                offline_data_path,
                 offline_layers,
                 bbox,
                 self._export_title,
