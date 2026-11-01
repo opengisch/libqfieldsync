@@ -230,15 +230,17 @@ class PythonMiniOffliner(BaseOffliner):
         self, crs: QgsCoordinateReferenceSystem
     ) -> osr.SpatialReference:
         """Converts a QGIS CRS to an OGR CRS."""
-        auth_id = crs.authid()
-        srs_wkt = crs.toWkt(QgsCoordinateReferenceSystem.WktVariant.WKT_PREFERRED_GDAL)
         ogr_srs = osr.SpatialReference()
+        if not crs.isValid():
+            return ogr_srs
 
-        if auth_id:
-            ogr_srs.SetFromUserInput(auth_id)
-
-        if ogr_srs.Validate() != 0:
-            ogr_srs.SetFromUserInput(srs_wkt)
+        auth_id = crs.authid()
+        if auth_id.startswith("EPSG"):
+            epsg_id = int(auth_id[5:])
+            ogr_srs.ImportFromEPSG(epsg_id)
+        else:
+            wkt = crs.toWkt(QgsCoordinateReferenceSystem.WktVariant.WKT_PREFERRED_GDAL)
+            ogr_srs.ImportFromWkt(wkt)
 
         return ogr_srs
 
