@@ -1282,10 +1282,10 @@ class LayerSource:
         Copy a layer to a new path and adjust its datasource.
 
         :param layer: The layer to copy
-        :param target_root_path: A path to the project folder into which the data will be copied
+        :param target_root_path: A path to the project directory into which the data will be copied
         :param copied_files: An array of files being copied (not used anymore)
         :param keep_existent: if True and target file already exists, keep it as it is
-        :param source_root_path: A path to the source project folder from which the data is being copied
+        :param source_root_path: A path to the source project directory from which the data is being copied
         """
         if not self.is_file:
             # Copy will also be called on non-file layers like WMS. In this case, just do nothing.
@@ -1352,7 +1352,7 @@ class LayerSource:
         path.
 
         :param layer: The layer to copy
-        :param target_path: A path to a folder into which the data will be copied
+        :param target_path: A path to a directory into which the data will be copied
         :param keep_existent: if True and target file already exists, keep it as it is
         """
         if (

@@ -130,12 +130,10 @@ class OfflineConverterTest(unittest.TestCase):
         self.assertTrue(
             self.target_dir.joinpath("subfolder_b/france_parts_shape.dbf").exists()
         )
-        self.assertTrue(
-            self.target_dir.joinpath("data.gpkg").exists()
-        )  # data.gpkg is copied from source project
-        self.assertTrue(
-            self.target_dir.joinpath("data_1.gpkg").exists()
-        )  # data_1.gpkg is the offline database created by offliner
+        # data.gpkg is copied from source project
+        self.assertTrue(self.target_dir.joinpath("data.gpkg").exists())
+        # data_1.gpkg is the offline database created by offliner
+        self.assertTrue(self.target_dir.joinpath("data_1.gpkg").exists())
         self.assertTrue(self.target_dir.joinpath("subfolder_a/spatialite.db").exists())
         self.assertTrue(self.target_dir.joinpath("DCIM", "qfield-photo_1.jpg").exists())
         self.assertTrue(self.target_dir.joinpath("DCIM", "qfield-photo_2.jpg").exists())
