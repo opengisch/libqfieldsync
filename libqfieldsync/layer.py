@@ -1291,6 +1291,8 @@ class LayerSource:
             # Copy will also be called on non-file layers like WMS. In this case, just do nothing.
             return None
 
+        assert source_root_path is not None
+
         suffix = ""
         uri_parts = self.layer.source().split("|", 1)
         if len(uri_parts) > 1:
@@ -1301,7 +1303,7 @@ class LayerSource:
 
         for file_to_copy in files_to_copy:
             source_file_path = Path(file_to_copy)
-            if source_root_path and source_file_path.is_relative_to(source_root_path):
+            if source_file_path.is_relative_to(source_root_path):
                 destination_file_path = target_root_path.joinpath(
                     source_file_path.relative_to(source_root_path)
                 )
