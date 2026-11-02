@@ -1289,7 +1289,7 @@ class LayerSource:
         """
         if not self.is_file:
             # Copy will also be called on non-file layers like WMS. In this case, just do nothing.
-            return None
+            return copied_files
 
         assert source_root_path is not None
 
