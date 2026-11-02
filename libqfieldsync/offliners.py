@@ -231,7 +231,12 @@ class PythonMiniOffliner(BaseOffliner):
             project.transformContext(),
             writer_options,
         )
-        writer.finalize()
+
+        if Qgis.versionInt() >= 34200:  # noqa: PLR2004
+            writer.finalize()
+        else:
+            writer.flushBuffer()
+
         del writer
 
     def convert_to_offline_layer(
