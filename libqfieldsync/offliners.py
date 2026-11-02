@@ -3,34 +3,26 @@ import os
 from collections import defaultdict
 from enum import Enum
 from pathlib import Path
-from typing import NamedTuple, NewType, Optional
+from typing import NamedTuple, Optional
 
-from osgeo import gdal, ogr, osr
 from qgis.core import (
     Qgis,
-    QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
     QgsCsException,  # type: ignore[import]
     QgsDataSourceUri,
     QgsFeatureRequest,
-    QgsField,
     QgsFieldConstraints,
     QgsJsonUtils,
     QgsMapLayer,
     QgsOfflineEditing,
     QgsProject,
     QgsRectangle,
+    QgsVectorFileWriter,
     QgsVectorLayer,
 )
 from qgis.PyQt.QtCore import QFileInfo, QMetaType, QObject, pyqtSignal
 
 from .utils.logger import logger
-
-# In GDAL 3.10.0 the return value of `ogr.CreateDataSource` changed from `ogr.DataSource` to `gdal.Dataset`.
-if gdal.VersionInfo() > "3010000":
-    OgrDataset = NewType("OgrDataset", gdal.Dataset)  # type: ignore[valid-newtype]
-else:
-    OgrDataset = NewType("OgrDataset", ogr.DataSource)  # type: ignore[valid-newtype, misc, no-redef]
 
 FID_NULL = -4294967296
 MAX_SUPPORTED_FID_FIELDS = 1000
@@ -189,70 +181,10 @@ class PythonMiniOffliner(BaseOffliner):
         )
         return True
 
-    def ogr_field_type(self, field: QgsField) -> ogr.FieldDefn:
-        """Converts a QGIS field type to a matching OGR field type"""
-        ogr_sub_type = ogr.OFSTNone
-
-        field_type = field.type()
-
-        if field_type == QMetaType.Type.Int:
-            ogr_type = ogr.OFTInteger
-        elif field_type == QMetaType.Type.LongLong:
-            ogr_type = ogr.OFTInteger64
-        elif field_type == QMetaType.Type.Double:
-            ogr_type = ogr.OFTReal
-        elif field_type == QMetaType.Type.QTime:
-            ogr_type = ogr.OFTTime
-        elif field_type == QMetaType.Type.QDate:
-            ogr_type = ogr.OFTDate
-        elif field_type == QMetaType.Type.QDateTime:
-            ogr_type = ogr.OFTDateTime
-        elif field_type == QMetaType.Type.Bool:
-            ogr_type = ogr.OFTInteger
-            ogr_sub_type = ogr.OFSTBoolean
-        elif field_type in (QMetaType.Type.QStringList, QMetaType.Type.QVariantList):
-            ogr_type = ogr.OFTString
-            ogr_sub_type = ogr.OFSTJSON
-        else:
-            ogr_type = ogr.OFTString
-
-        ogr_width = field.length()
-
-        ogr_field = ogr.FieldDefn(field.name(), ogr_type)
-        if ogr_sub_type != ogr.OFSTNone:
-            ogr_field.SetSubType(ogr_sub_type)
-
-        ogr_field.SetWidth(ogr_width)
-
-        return ogr_field
-
-    def qgis_crs_to_ogr_srs(
-        self, crs: QgsCoordinateReferenceSystem
-    ) -> osr.SpatialReference:
-        """Converts a QGIS CRS to an OGR CRS."""
-        ogr_srs = osr.SpatialReference()
-        if not crs.isValid():
-            return ogr_srs
-
-        auth_id = crs.authid()
-        if auth_id.startswith("EPSG"):
-            epsg_id = int(auth_id[5:])
-            ogr_srs.ImportFromEPSG(epsg_id)
-        else:
-            wkt = crs.toWkt(QgsCoordinateReferenceSystem.WktVariant.WKT_PREFERRED_GDAL)
-            ogr_srs.ImportFromWkt(wkt)
-
-        return ogr_srs
-
-    def ogr_escape(self, data: str):
-        # There is no such thing as escaping for gdal options
-        # CSLFetchNameValue compares the name of an option followed by a `=` or `:` and treats everything after as value.
-        return data
-
     def create_layer(
         self,
         layer: QgsVectorLayer,
-        data_source: OgrDataset,
+        project: QgsProject,
         _offline_gpkg_path: str,
     ) -> None:
         """Will create a new layer for ``layer`` in the GeoPackage specified as ``data_source`` which is stored at ``offline_gpkg_path``."""
@@ -260,12 +192,9 @@ class PythonMiniOffliner(BaseOffliner):
             layer.dataProvider().dataSourceUri().encode()
         ).hexdigest()
 
-        layer_options = [
-            "OVERWRITE=YES",
-            f"IDENTIFIER={self.ogr_escape(identifier)}",
-            f"DESCRIPTION={self.ogr_escape(layer.dataComment())}",
-        ]
+        gpkg_path = Path(_offline_gpkg_path)
 
+        layer_options = []
         fid = "fid"
         counter = 1
         while layer.dataProvider().fields().lookupField(fid) >= 0:
@@ -278,30 +207,37 @@ class PythonMiniOffliner(BaseOffliner):
 
         layer_options.append(f"FID={fid}")
 
-        if layer.isSpatial():
-            layer_options.append("GEOMETRY_COLUMN=geom")
-            layer_options.append("SPATIAL_INDEX=YES")
+        writer_options = QgsVectorFileWriter.SaveVectorOptions()
 
-        ogr_srs = self.qgis_crs_to_ogr_srs(layer.crs())
+        if gpkg_path.exists():
+            writer_options.actionOnExistingFile = (
+                QgsVectorFileWriter.ActionOnExistingFile.CreateOrOverwriteLayer
+            )
+        else:
+            writer_options.actionOnExistingFile = (
+                QgsVectorFileWriter.ActionOnExistingFile.CreateOrOverwriteFile
+            )
 
-        ogr_layer = data_source.CreateLayer(
-            identifier, geom_type=layer.wkbType(), options=layer_options, srs=ogr_srs
+        writer_options.driverName = "GPKG"
+        writer_options.fileEncoding = "utf-8"
+        writer_options.layerName = identifier
+        writer_options.layerOptions = layer_options
+
+        writer = QgsVectorFileWriter.create(
+            _offline_gpkg_path,
+            layer.fields(),
+            layer.wkbType(),
+            layer.crs(),
+            project.transformContext(),
+            writer_options,
         )
-
-        fields = layer.dataProvider().fields()
-        for field in fields:
-            result = ogr_layer.CreateField(self.ogr_field_type(field))
-            if result:
-                raise RuntimeError(
-                    f"Creating field for {layer.name()}.{field.name()}({field.typeName()}) failed"
-                )
-
-        ogr_layer.SyncToDisk()
+        writer.finalize()
+        del writer
 
     def convert_to_offline_layer(
         self,
         layer: QgsVectorLayer,
-        _data_source: OgrDataset,
+        project: QgsProject,
         offline_gpkg_path: str,
         feature_request: Optional[QgsFeatureRequest] = None,
     ) -> str:
@@ -309,6 +245,8 @@ class PythonMiniOffliner(BaseOffliner):
         Will fill a copy of ``layer`` in the GeoPackage specified as ``data_source`` which is stored at ``offline_gpkg_path``.
         It will replace the dataProvider of the original layer.
         """
+        self.create_layer(layer, project, offline_gpkg_path)
+
         if not feature_request:
             feature_request = QgsFeatureRequest()
 
@@ -316,13 +254,11 @@ class PythonMiniOffliner(BaseOffliner):
             layer.dataProvider().dataSourceUri().encode()
         ).hexdigest()
 
-        qgis_uri = f"{offline_gpkg_path}|layername={identifier}"
-
-        qgis_layer_options = QgsVectorLayer.LayerOptions(
+        uri = f"{offline_gpkg_path}|layername={identifier}"
+        layer_options = QgsVectorLayer.LayerOptions(
             QgsProject.instance().transformContext()
         )
-
-        new_layer = QgsVectorLayer(qgis_uri, identifier, "ogr", qgis_layer_options)
+        new_layer = QgsVectorLayer(uri, identifier, "ogr", layer_options)
 
         if not new_layer.isValid():
             raise RuntimeError(
@@ -374,7 +310,10 @@ class PythonMiniOffliner(BaseOffliner):
                 f"Errors when writing features when offlining layer {layer.name()}: {new_layer.commitErrors()}"
             )
 
-        return new_layer.source()
+        layer_source = new_layer.source()
+        del new_layer
+
+        return layer_source
 
     def update_data_provider(self, layer: QgsVectorLayer, source: str) -> None:
         # Mark as offline layer
@@ -421,6 +360,17 @@ class PythonMiniOffliner(BaseOffliner):
                         index, QgsFieldConstraints.Constraint.ConstraintNotNull
                     )
 
+    def clear_gpkg_path(self, gpkg_path: Path):
+        if gpkg_path.suffix.lower() == ".gpkg":
+            paths_to_remove = [
+                gpkg_path,
+                gpkg_path.with_suffix(".gpkg-shm"),
+                gpkg_path.with_suffix(".gpkg-wal"),
+            ]
+            for path_to_remove in paths_to_remove:
+                if path_to_remove.exists():
+                    path_to_remove.unlink()
+
     def _convert_to_offline_project(
         self,
         offline_gpkg_path: str,
@@ -444,14 +394,12 @@ class PythonMiniOffliner(BaseOffliner):
 
         assert project
 
-        driver = ogr.GetDriverByName("GPKG")
-        data_source = driver.CreateDataSource(offline_gpkg_path)
+        # Manually delete data[_n].gpkg and its sidecar files to avoid
+        # errors down the line
+        self.clear_gpkg_path(Path(offline_gpkg_path))
+
         datasource_mapping = self._get_datasource_mapping(project, offline_layers)
         filters_mapping = self._get_filters_mapping(datasource_mapping)
-
-        for layer_infos in datasource_mapping.values():
-            layer_to_offline = layer_infos[0].layer
-            self.create_layer(layer_to_offline, data_source, offline_gpkg_path)
 
         for datasource_hash, layer_infos in datasource_mapping.items():
             request = QgsFeatureRequest()
@@ -494,7 +442,7 @@ class PythonMiniOffliner(BaseOffliner):
                 request.setFilterExpression(filters_mapping[datasource_hash])
 
             source = self.convert_to_offline_layer(
-                layer_to_offline, data_source, offline_gpkg_path, request
+                layer_to_offline, project, offline_gpkg_path, request
             )
 
             for layer_info in layer_infos:
