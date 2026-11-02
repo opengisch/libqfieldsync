@@ -1276,16 +1276,16 @@ class LayerSource:
         return pk_attr_name
 
     def copy(  # noqa: PLR0912
-        self, target_root_path, copied_files, keep_existent=False, source_root_path=None
+        self, source_root_path, target_root_path, copied_files, keep_existent=False
     ):
         """
         Copy a layer to a new path and adjust its datasource.
 
         :param layer: The layer to copy
-        :param target_root_path: A path to the project directory into which the data will be copied
-        :param copied_files: An array of files being copied (not used anymore)
-        :param keep_existent: if True and target file already exists, keep it as it is
         :param source_root_path: A path to the source project directory from which the data is being copied
+        :param target_root_path: A path to the project directory into which the data will be copied
+        :param copied_files: An array of files being copied
+        :param keep_existent: if True and target file already exists, keep it as it is
         """
         if not self.is_file:
             # Copy will also be called on non-file layers like WMS. In this case, just do nothing.
@@ -1300,15 +1300,15 @@ class LayerSource:
         files_to_copy.add(self.filename)
 
         for file_to_copy in files_to_copy:
-            file_path = Path(file_to_copy)
-            if source_root_path and file_path.is_relative_to(source_root_path):
+            source_file_path = Path(file_to_copy)
+            if source_root_path and source_file_path.is_relative_to(source_root_path):
                 destination_file_path = target_root_path.joinpath(
-                    file_path.relative_to(source_root_path)
+                    source_file_path.relative_to(source_root_path)
                 )
                 destination_path = destination_file_path.parent
                 destination_path.mkdir(parents=True, exist_ok=True)
             else:
-                destination_file_path = target_root_path.joinpath(file_path.name)
+                destination_file_path = target_root_path.joinpath(source_file_path.name)
 
             if not keep_existent or not destination_file_path.exists():
                 shutil.copyfile(file_to_copy, str(destination_file_path))

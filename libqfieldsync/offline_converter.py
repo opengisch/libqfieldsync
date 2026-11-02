@@ -344,16 +344,16 @@ class OfflineConverter(QObject):
                 self.__offline_layer_names.append(layer.name())
             elif layer_action in (SyncAction.COPY, SyncAction.NO_ACTION):
                 copied_files = layer_source.copy(
+                    original_project_filename.parent,
                     self._export_filename.parent,
                     copied_files,
-                    source_root_path=original_project_filename.parent,
                 )
             elif layer_action == SyncAction.KEEP_EXISTENT:
                 copied_files = layer_source.copy(
+                    original_project_filename.parent,
                     self._export_filename.parent,
                     copied_files,
                     True,
-                    original_project_filename.parent,
                 )
             elif layer_action == SyncAction.REMOVE:
                 project.removeMapLayer(layer)
