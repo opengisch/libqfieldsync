@@ -11,7 +11,9 @@ from qgis.core import (
     QgsCsException,  # type: ignore[import]
     QgsDataSourceUri,
     QgsFeatureRequest,
+    QgsField,
     QgsFieldConstraints,
+    QgsFields,
     QgsJsonUtils,
     QgsMapLayer,
     QgsOfflineEditing,
@@ -187,6 +189,9 @@ class PythonMiniOffliner(BaseOffliner):
         project: QgsProject,
         _offline_gpkg_path: str,
     ) -> None:
+        if not layer.isValid() or not layer.dataProvider():
+            return
+
         """Will create a new layer for ``layer`` in the GeoPackage specified as ``data_source`` which is stored at ``offline_gpkg_path``."""
         identifier = hashlib.sha256(
             layer.dataProvider().dataSourceUri().encode()
@@ -223,9 +228,45 @@ class PythonMiniOffliner(BaseOffliner):
         writer_options.layerName = identifier
         writer_options.layerOptions = layer_options
 
+        writer_fields = QgsFields()
+        for layer_field in layer.dataProvider().fields():
+            layer_field_type = layer_field.type()
+            if layer_field_type in {
+                QMetaType.Type.Int,
+                QMetaType.Type.LongLong,
+                QMetaType.Type.Double,
+                QMetaType.Type.QTime,
+                QMetaType.Type.QDate,
+                QMetaType.Type.QDateTime,
+                QMetaType.Type.Bool,
+            }:
+                writer_fields.append(layer_field)
+            elif layer_field_type in {
+                QMetaType.Type.QStringList,
+                QMetaType.Type.QVariantList,
+            }:
+                writer_fields.append(
+                    QgsField(
+                        layer_field.name(),
+                        QMetaType.Type.QVariantMap,
+                        "JSON",
+                        subType=QMetaType.Type.QString,
+                    )
+                )
+                self.warning.emit(
+                    self.tr("Converted field type"),
+                    self.tr(
+                        "Field '{}' from layer {} has been converted from a list to a JSON-formatted string value."
+                    ).format(layer_field.name(), layer.name()),
+                )
+            else:
+                writer_fields.append(
+                    QgsField(layer_field.name(), QMetaType.Type.QString)
+                )
+
         writer = QgsVectorFileWriter.create(
             _offline_gpkg_path,
-            layer.fields(),
+            writer_fields,
             layer.wkbType(),
             layer.crs(),
             project.transformContext(),
@@ -287,6 +328,7 @@ class PythonMiniOffliner(BaseOffliner):
                 if field_type in (
                     QMetaType.Type.QStringList,
                     QMetaType.Type.QVariantList,
+                    QMetaType.Type.QVariantMap,
                 ):
                     attrs[i] = QgsJsonUtils.encodeValue(attrs[i])
 
