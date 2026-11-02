@@ -284,6 +284,7 @@ class PythonMiniOffliner(BaseOffliner):
         else:
             writer.flushBuffer()
 
+        # Explicitly delete the writer object to insure wal and shm files are immediately deleted
         del writer
 
     def convert_to_offline_layer(
@@ -364,6 +365,7 @@ class PythonMiniOffliner(BaseOffliner):
             )
 
         layer_source = new_layer.source()
+        # Explicitly delete the new_layer object to insure wal and shm files are immediately deleted
         del new_layer
 
         return layer_source
