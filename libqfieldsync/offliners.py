@@ -189,10 +189,10 @@ class PythonMiniOffliner(BaseOffliner):
         project: QgsProject,
         _offline_gpkg_path: str,
     ) -> None:
+        """Will create a new layer for ``layer`` in the GeoPackage specified as ``data_source`` which is stored at ``offline_gpkg_path``."""
         if not layer.isValid() or not layer.dataProvider():
             return
 
-        """Will create a new layer for ``layer`` in the GeoPackage specified as ``data_source`` which is stored at ``offline_gpkg_path``."""
         identifier = hashlib.sha256(
             layer.dataProvider().dataSourceUri().encode()
         ).hexdigest()
@@ -231,7 +231,7 @@ class PythonMiniOffliner(BaseOffliner):
         writer_fields = QgsFields()
         for layer_field in layer.dataProvider().fields():
             layer_field_type = layer_field.type()
-            if layer_field_type in {
+            if layer_field_type in (
                 QMetaType.Type.Int,
                 QMetaType.Type.LongLong,
                 QMetaType.Type.Double,
@@ -239,12 +239,12 @@ class PythonMiniOffliner(BaseOffliner):
                 QMetaType.Type.QDate,
                 QMetaType.Type.QDateTime,
                 QMetaType.Type.Bool,
-            }:
+            ):
                 writer_fields.append(layer_field)
-            elif layer_field_type in {
+            elif layer_field_type in (
                 QMetaType.Type.QStringList,
                 QMetaType.Type.QVariantList,
-            }:
+            ):
                 writer_fields.append(
                     QgsField(
                         layer_field.name(),
@@ -262,6 +262,12 @@ class PythonMiniOffliner(BaseOffliner):
             else:
                 writer_fields.append(
                     QgsField(layer_field.name(), QMetaType.Type.QString)
+                )
+                self.warning.emit(
+                    self.tr("Converted field type"),
+                    self.tr(
+                        "Field '{}' from layer {} has been converted to a string value."
+                    ).format(layer_field.name(), layer.name()),
                 )
 
         writer = QgsVectorFileWriter.create(
