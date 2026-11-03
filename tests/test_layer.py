@@ -28,7 +28,7 @@ from qgis.testing.mocked import get_iface
 
 from libqfieldsync.layer import LayerSource
 
-start_app()
+start_app(False)
 
 
 class LayerTest(unittest.TestCase):
@@ -37,13 +37,13 @@ class LayerTest(unittest.TestCase):
         cls.iface = get_iface()
 
     def setUp(self):
-        QgsProject.instance().clear()
         self.source_dir = Path(tempfile.mkdtemp())
         self.target_dir = Path(tempfile.mkdtemp())
 
     def tearDown(self):
         shutil.rmtree(self.source_dir)
         shutil.rmtree(self.target_dir)
+        QgsProject.instance().clear()
 
     @property
     def data_dir(self) -> Path:
@@ -68,3 +68,7 @@ class LayerTest(unittest.TestCase):
         self.assertTrue(self.target_dir.joinpath("franceparts.gpkg").exists())
         self.assertEqual(str(self.target_dir.joinpath("franceparts.gpkg")), target_file)
         self.assertEqual(source_feature_count, target_feature_count)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -2,11 +2,8 @@ from enum import Enum
 
 import pytest
 from qgis.core import QgsProject
-from qgis.testing import start_app
 
 from libqfieldsync.utils.config_utils import Field, pfield
-
-start_app()
 
 
 class StringEnum(str, Enum):
