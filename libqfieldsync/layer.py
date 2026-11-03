@@ -1338,7 +1338,9 @@ class LayerSource:
             elif self.layer.type() == QgsMapLayer.LayerType.VectorTileLayer:
                 uri = QgsDataSourceUri()
                 uri.setEncodedUri(self.layer.source())
+                uri.removeParam("url")
                 uri.setParam("url", target_file_path)
+                new_source = uri.uri()
             else:
                 new_source = target_file_path
                 if suffix != "":
