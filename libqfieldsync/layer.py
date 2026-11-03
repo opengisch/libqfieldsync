@@ -1329,7 +1329,7 @@ class LayerSource:
         if new_source == "":
             if (
                 self.layer.dataProvider()
-                and self.layer.dataProvider().name == "spatialite"
+                and self.layer.dataProvider().name() == "spatialite"
             ):
                 uri = QgsDataSourceUri()
                 uri.setDatabase(target_file_path)
