@@ -28,7 +28,8 @@ from qgis.testing.mocked import get_iface
 
 from libqfieldsync.layer import LayerSource
 
-start_app(False)
+# Cleaning up the application is turned off to avoid segfaults upon exiting tests
+start_app(cleanup=False)
 
 
 class LayerTest(unittest.TestCase):

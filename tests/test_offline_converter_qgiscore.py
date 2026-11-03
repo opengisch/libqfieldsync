@@ -34,7 +34,9 @@ from libqfieldsync.utils.bad_layer_handler import (
     set_bad_layer_handler,
 )
 
-start_app(False)
+# Cleaning up the application is turned off to avoid segfaults upon exiting tests
+start_app(cleanup=False)
+
 bad_layer_handler = BadLayerHandler()
 
 
