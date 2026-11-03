@@ -2,7 +2,6 @@ import hashlib
 from pathlib import Path
 
 import pytest
-from qgis.testing import start_app
 
 from libqfieldsync.utils.exceptions import NoProjectFoundError, QFieldSyncError
 from libqfieldsync.utils.file_utils import (
@@ -22,8 +21,6 @@ from libqfieldsync.utils.file_utils import (
     open_folder,
     slugify,
 )
-
-start_app()
 
 
 def test_fileparts_with_and_without_extension_dot():

@@ -22,7 +22,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from qgis.core import QgsFeature, QgsGeometry, QgsProject, QgsVectorLayer
+from qgis.core import (
+    QgsFeature,
+    QgsGeometry,
+    QgsProject,
+    QgsProjectBadLayerHandler,
+    QgsVectorLayer,
+)
 from qgis.testing import start_app
 from qgis.testing.mocked import get_iface
 
@@ -30,17 +36,24 @@ from libqfieldsync.layer import LayerSource
 from libqfieldsync.offline_converter import ExportType, OfflineConverter
 from libqfieldsync.offliners import PythonMiniOffliner
 from libqfieldsync.utils.bad_layer_handler import (
-    bad_layer_handler,
+    BadLayerHandler,
     set_bad_layer_handler,
 )
 
-start_app()
+start_app(False)
+bad_layer_handler = BadLayerHandler()
 
 
 class OfflineConverterTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.iface = get_iface()
+        QgsProject.instance().setBadLayerHandler(bad_layer_handler)
+
+    @classmethod
+    def tearDownClass(cls):
+        QgsProject.instance().clear()
+        QgsProject.instance().setBadLayerHandler(QgsProjectBadLayerHandler())
 
     def setUp(self):
         QgsProject.instance().clear()
@@ -61,7 +74,6 @@ class OfflineConverterTest(unittest.TestCase):
         return project
 
     def test_copy(self):
-        return
         shutil.copytree(
             self.data_dir.joinpath("simple_project"),
             self.source_dir.joinpath("simple_project"),
@@ -264,7 +276,6 @@ class OfflineConverterTest(unittest.TestCase):
         )
 
         project = QgsProject.instance()
-        project.setBadLayerHandler(bad_layer_handler)
         with set_bad_layer_handler(project):
             project = self.load_project(
                 self.source_dir.joinpath("localized_project", "project.qgs")
@@ -411,4 +422,10 @@ class OfflineConverterTest(unittest.TestCase):
             "MultiPolygon (((104 12, 104 11, 105 11, 105 12, 104 12)))",
         )
 
+        project.clear()
+
         QgsProject.setInstance(project_instance)
+
+
+if __name__ == "__main__":
+    unittest.main()
