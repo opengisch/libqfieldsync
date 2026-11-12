@@ -712,14 +712,15 @@ class LayerSource:
     def attachment_accepted_types(
         self, field_name: str
     ) -> list["LayerSource.AttachmentAcceptedType"]:
-        values = {
+        accepted_values = {
             accepted_type.value for accepted_type in LayerSource.AttachmentAcceptedType
         }
-        return [
-            LayerSource.AttachmentAcceptedType(value)
-            for value in self._attachment_accepted_types.get(field_name, [])
-            if value in values
-        ]
+        accepted_types = []
+        for value in self._attachment_accepted_types.get(field_name, []):
+            if value in accepted_values:
+                accepted_types.append(LayerSource.AttachmentAcceptedType(value))
+
+        return accepted_types
 
     def set_attachment_accepted_types(
         self,

@@ -72,17 +72,19 @@ class LayerTest(unittest.TestCase):
 
     def test_attachment_accepted_types(self):
         vector_layer = QgsVectorLayer(
-            "Point?field=photo:string&field=other:string", "attachments", "memory"
+            "Point?field=the_photo_field:string&field=other:string",
+            "attachments",
+            "memory",
         )
         vector_layer.setEditorWidgetSetup(
             0, QgsEditorWidgetSetup("ExternalResource", {"DocumentViewer": 1})
         )
 
         layer_source = LayerSource(vector_layer)
-        self.assertEqual(layer_source.attachment_accepted_types("photo"), [])
+        self.assertEqual(layer_source.attachment_accepted_types("the_photo_field"), [])
 
         layer_source.set_attachment_accepted_types(
-            "photo",
+            "the_photo_field",
             [
                 LayerSource.AttachmentAcceptedType.IMAGE,
                 LayerSource.AttachmentAcceptedType.AUDIO,
@@ -91,12 +93,12 @@ class LayerTest(unittest.TestCase):
         layer_source.apply()
         self.assertEqual(
             vector_layer.customProperty("QFieldSync/attachment_accepted_types"),
-            '{"photo": ["image", "audio"]}',
+            '{"the_photo_field": ["image", "audio"]}',
         )
 
         layer_source = LayerSource(vector_layer)
         self.assertEqual(
-            layer_source.attachment_accepted_types("photo"),
+            layer_source.attachment_accepted_types("the_photo_field"),
             [
                 LayerSource.AttachmentAcceptedType.IMAGE,
                 LayerSource.AttachmentAcceptedType.AUDIO,
@@ -105,11 +107,12 @@ class LayerTest(unittest.TestCase):
         self.assertEqual(layer_source.attachment_accepted_types("other"), [])
 
         vector_layer.setCustomProperty(
-            "QFieldSync/attachment_accepted_types", '{"photo": ["video", "unknown"]}'
+            "QFieldSync/attachment_accepted_types",
+            '{"the_photo_field": ["video", "unknown"]}',
         )
         layer_source = LayerSource(vector_layer)
         self.assertEqual(
-            layer_source.attachment_accepted_types("photo"),
+            layer_source.attachment_accepted_types("the_photo_field"),
             [LayerSource.AttachmentAcceptedType.VIDEO],
         )
 
