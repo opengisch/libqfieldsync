@@ -22,7 +22,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from qgis.core import QgsProject, QgsVectorLayer
+from qgis.core import QgsEditorWidgetSetup, QgsProject, QgsVectorLayer
 from qgis.testing import start_app
 from qgis.testing.mocked import get_iface
 
@@ -69,6 +69,52 @@ class LayerTest(unittest.TestCase):
         self.assertTrue(self.target_dir.joinpath("franceparts.gpkg").exists())
         self.assertEqual(str(self.target_dir.joinpath("franceparts.gpkg")), target_file)
         self.assertEqual(source_feature_count, target_feature_count)
+
+    def test_attachment_accepted_types(self):
+        vector_layer = QgsVectorLayer(
+            "Point?field=the_photo_field:string&field=other:string",
+            "attachments",
+            "memory",
+        )
+        vector_layer.setEditorWidgetSetup(
+            0, QgsEditorWidgetSetup("ExternalResource", {"DocumentViewer": 1})
+        )
+
+        layer_source = LayerSource(vector_layer)
+        self.assertEqual(layer_source.attachment_accepted_types("the_photo_field"), [])
+
+        layer_source.set_attachment_accepted_types(
+            "the_photo_field",
+            [
+                LayerSource.AttachmentAcceptedType.IMAGE,
+                LayerSource.AttachmentAcceptedType.AUDIO,
+            ],
+        )
+        layer_source.apply()
+        self.assertEqual(
+            vector_layer.customProperty("QFieldSync/attachment_accepted_types"),
+            '{"the_photo_field": ["image", "audio"]}',
+        )
+
+        layer_source = LayerSource(vector_layer)
+        self.assertEqual(
+            layer_source.attachment_accepted_types("the_photo_field"),
+            [
+                LayerSource.AttachmentAcceptedType.IMAGE,
+                LayerSource.AttachmentAcceptedType.AUDIO,
+            ],
+        )
+        self.assertEqual(layer_source.attachment_accepted_types("other"), [])
+
+        vector_layer.setCustomProperty(
+            "QFieldSync/attachment_accepted_types",
+            '{"the_photo_field": ["video", "unknown"]}',
+        )
+        layer_source = LayerSource(vector_layer)
+        self.assertEqual(
+            layer_source.attachment_accepted_types("the_photo_field"),
+            [LayerSource.AttachmentAcceptedType.VIDEO],
+        )
 
 
 if __name__ == "__main__":

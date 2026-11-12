@@ -70,6 +70,11 @@ class LayerSource:
         AUDIO = 3  # QgsExternalResourceWidget.Audio
         VIDEO = 4  # QgsExternalResourceWidget.Video
 
+    class AttachmentAcceptedType(Enum):
+        IMAGE = "image"
+        VIDEO = "video"
+        AUDIO = "audio"
+
     class PackagePreventionReason(Enum):
         INVALID = 1
         UNSUPPORTED_DATASOURCE = 2
@@ -99,6 +104,7 @@ class LayerSource:
         self._action = None
         self._cloud_action = None
         self._attachment_naming = {}
+        self._attachment_accepted_types = {}
         # compatibility with QFieldSync <4.3 and QField <2.7
         self._photo_naming = {}
         self._relationship_maximum_visible = {}
@@ -135,6 +141,9 @@ class LayerSource:
         self._cloud_action = self.layer.customProperty("QFieldSync/cloud_action")
         self._attachment_naming = json.loads(
             self.layer.customProperty("QFieldSync/attachment_naming") or "{}"
+        )
+        self._attachment_accepted_types = json.loads(
+            self.layer.customProperty("QFieldSync/attachment_accepted_types") or "{}"
         )
         # compatibility with QFieldSync <4.3 and QField <2.7
         self._photo_naming = json.loads(
@@ -261,6 +270,7 @@ class LayerSource:
 
     def apply(self):  # noqa: PLR0912, PLR0915
         attachment_naming_json = json.dumps(self._attachment_naming)
+        attachment_accepted_types_json = json.dumps(self._attachment_accepted_types)
         # compatibility with QFieldSync <4.3 and QField <2.7
         photo_naming_json = json.dumps(self._photo_naming)
 
@@ -276,6 +286,10 @@ class LayerSource:
         has_changed |= (
             self.layer.customProperty("QFieldSync/attachment_naming")
             != attachment_naming_json
+        )
+        has_changed |= (
+            self.layer.customProperty("QFieldSync/attachment_accepted_types")
+            != attachment_accepted_types_json
         )
         has_changed |= (
             self.layer.customProperty("QFieldSync/relationship_maximum_visible")
@@ -441,6 +455,9 @@ class LayerSource:
         self.layer.setCustomProperty("QFieldSync/cloud_action", self.cloud_action)
         self.layer.setCustomProperty(
             "QFieldSync/attachment_naming", attachment_naming_json
+        )
+        self.layer.setCustomProperty(
+            "QFieldSync/attachment_accepted_types", attachment_accepted_types_json
         )
         # compatibility with QFieldSync <4.3 and QField <2.7
         self.layer.setCustomProperty("QFieldSync/photo_naming", photo_naming_json)
@@ -691,6 +708,28 @@ class LayerSource:
             self._photo_naming[field_name] = expression
 
         self._attachment_naming[field_name] = expression
+
+    def attachment_accepted_types(
+        self, field_name: str
+    ) -> list["LayerSource.AttachmentAcceptedType"]:
+        accepted_values = {
+            accepted_type.value for accepted_type in LayerSource.AttachmentAcceptedType
+        }
+        accepted_types = []
+        for value in self._attachment_accepted_types.get(field_name, []):
+            if value in accepted_values:
+                accepted_types.append(LayerSource.AttachmentAcceptedType(value))
+
+        return accepted_types
+
+    def set_attachment_accepted_types(
+        self,
+        field_name: str,
+        accepted_types: list["LayerSource.AttachmentAcceptedType"],
+    ):
+        self._attachment_accepted_types[field_name] = [
+            accepted_type.value for accepted_type in accepted_types
+        ]
 
     def relationship_maximum_visible(self, relation_id: str) -> int:
         return self._relationship_maximum_visible.get(
