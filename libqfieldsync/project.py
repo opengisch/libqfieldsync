@@ -23,6 +23,12 @@ class GeofencingBehavior(Enum):
     INFORM_ENTER_LEAVE_AREAS = 3
 
 
+class GeofencingAudio(Enum):
+    AUDIO_MUTED = 1
+    AUDIO_ALARM = 2
+    AUDIO_SPEECH = 3
+
+
 class InitialMapMode(str, Enum):
     BROWSE = "browse"
     DIGITIZE = "digitize"
@@ -40,7 +46,13 @@ class ProjectConfig:
     digitizing_logs_layer = pfield(str, "/digitizingLogsLayer")
     initial_active_layer = pfield(str, "/initialActiveLayer")
     initial_map_mode = pfield(InitialMapMode, "/initialMapMode", InitialMapMode.BROWSE)
+    geofencing_is_active = pfield(bool, "/geofencingIsActive", False)
+    geofencing_vibration = pfield(bool, "/geofencingVibration", True)
+    geofencing_audio = pfield(
+        GeofencingAudio, "/geofencingAudio", GeofencingAudio.AUDIO_SPEECH
+    )
     geofencing_layer = pfield(str, "/geofencingLayer")
+    geofencing_filter_expression = pfield(str, "/geofencingFilterExpression")
     geofencing_behavior = pfield(
         GeofencingBehavior, "/geofencingBehavior", GeofencingBehavior.ALERT_INSIDE_AREAS
     )
@@ -53,7 +65,6 @@ class ProjectConfig:
     stamping_details_template = pfield(str, "/stampingDetailsTemplate")
     force_stamping = pfield(bool, "/forceStamping", False)
     map_themes_active_layer = pfield(dict, "/mapThemesActiveLayers", dict)
-    geofencing_is_active = pfield(bool, "/geofencingIsActive", False)
     maximum_image_width_height = pfield(int, "/maximumImageWidthHeight", 0)
     force_auto_push = pfield(bool, "/forceAutoPush", False)
     force_auto_push_interval_mins = pfield(int, "/forceAutoPushIntervalMins", 30)
