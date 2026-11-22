@@ -207,7 +207,7 @@ class OfflineConverter(QObject):
 
         return additional_project_files
 
-    def _convert(self, project: QgsProject) -> None:  # noqa: PLR0912, PLR0915
+    def _convert(self, project: QgsProject) -> None:  # noqa: PLR0912, PLR0915, C901
         xml_elements_to_preserve = {}
         original_project_filename = Path(project.fileName())
         tmp_project_filename = ""
@@ -313,13 +313,10 @@ class OfflineConverter(QObject):
             else:
                 layer_action = layer_source.cloud_action
 
+            layer_pk_attr_name = None
             if layer.isValid() and layer.type() == QgsMapLayer.LayerType.VectorLayer:
-                if layer_source.pk_attr_name:
-                    # NOTE even though `QFieldSync/sourceDataPrimaryKeys` is in plural, we never supported composite (multi-column) PKs and always stored a single value
-                    layer.setCustomProperty(
-                        "QFieldSync/sourceDataPrimaryKeys", layer_source.pk_attr_name
-                    )
-                else:
+                layer_pk_attr_name = layer_source.pk_attr_name
+                if not layer_pk_attr_name:
                     # The layer has no supported PK, so we mark it as readonly and just copy it when packaging in the cloud
                     if self.export_type == ExportType.Cloud:
                         layer_action = SyncAction.NO_ACTION
@@ -328,8 +325,23 @@ class OfflineConverter(QObject):
 
             self.__layer_data_by_id[layer.id()] = layer_data
 
-            # `QFieldSync/remoteLayerId` should be equal to `remoteLayerId`, which is already set by `QgsOfflineEditing`. We add this as a copy to have control over this attribute that might suddenly change on QGIS.
-            layer.setCustomProperty("QFieldSync/remoteLayerId", layer.id())
+            layer_current_style = layer.styleManager().currentStyle()
+            layer_styles = layer.styleManager().styles()
+            for layer_style in layer_styles:
+                layer.styleManager().setCurrentStyle(layer_style)
+
+                if layer_pk_attr_name:
+                    # NOTE even though `QFieldSync/sourceDataPrimaryKeys` is in plural, we never supported composite (multi-column) PKs and always stored a single value
+                    layer.setCustomProperty(
+                        "QFieldSync/sourceDataPrimaryKeys",
+                        layer_pk_attr_name,
+                    )
+
+                # `QFieldSync/remoteLayerId` should be equal to `remoteLayerId`, which is already set by `QgsOfflineEditing`. We add this as a copy to have control over this attribute that might suddenly change on QGIS.
+                layer.setCustomProperty("QFieldSync/remoteLayerId", layer.id())
+
+            if layer_current_style != layer.styleManager().currentStyle():
+                layer.styleManager().setCurrentStyle(layer_current_style)
 
             self.total_progress_updated.emit(
                 layer_idx,
