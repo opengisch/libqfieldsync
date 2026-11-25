@@ -14,7 +14,6 @@ from qgis.core import (
     QgsField,
     QgsFieldConstraints,
     QgsFields,
-    QgsJsonUtils,
     QgsMapLayer,
     QgsOfflineEditing,
     QgsProject,
@@ -330,16 +329,7 @@ class PythonMiniOffliner(BaseOffliner):
             # Prepend an empty attribute for the new FID
             attrs = [None, *feature.attributes()]
 
-            # Fixup list and json attributes
-            for i in range(new_layer.fields().count()):
-                field_type = new_layer.fields().at(i).type()
-                if field_type in (
-                    QMetaType.Type.QStringList,
-                    QMetaType.Type.QVariantList,
-                    QMetaType.Type.QVariantMap,
-                ):
-                    attrs[i] = QgsJsonUtils.encodeValue(attrs[i])
-
+            # Do not JSON-encode list and map values: the OGR provider serializes them itself.
             feature.setFields(new_fields)
             feature.setAttributes(attrs)
 
