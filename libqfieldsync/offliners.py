@@ -244,6 +244,7 @@ class PythonMiniOffliner(BaseOffliner):
             elif layer_field_type in (
                 QMetaType.Type.QStringList,
                 QMetaType.Type.QVariantList,
+                QMetaType.Type.QVariantMap,
             ):
                 writer_fields.append(
                     QgsField(
@@ -256,7 +257,7 @@ class PythonMiniOffliner(BaseOffliner):
                 self.warning.emit(
                     self.tr("Converted field type"),
                     self.tr(
-                        "Field '{}' from layer {} has been converted from a list to a JSON-formatted string value."
+                        "Field '{}' from layer {} has been converted from a list or map to a JSON-formatted string value."
                     ).format(layer_field.name(), layer.name()),
                 )
             else:
